@@ -15,7 +15,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <body>
-        <div className="wrap">{children}</div>
+        <main className="wrap">{children}</main>
       </body>
     </html>
   );

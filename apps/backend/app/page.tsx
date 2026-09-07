@@ -1,11 +1,7 @@
-// page.tsx: landing — the guarantee, one asymmetric hero, links to a sample verify and the dashboard.
+// page.tsx: landing — the guarantee, one asymmetric hero, links to the explainer section and the dashboard.
 // Presentation only. The claims here must stay true to what the code does (no ZK / TEE / GDPR claim).
 
 import Link from "next/link";
-
-// A sample proof hash for the demo verify link. It resolves live against the api and shows an
-// honest "not indexed yet" state when nothing has synced, which is itself part of the story.
-const SAMPLE_HASH = "b6f1c0a2d4e6f80911223344556677889900aabbccddeeff0011223344556677";
 
 export default function Home() {
   return (
@@ -22,8 +18,8 @@ export default function Home() {
             signed, tied to a coarse area, and carrying zero personal data.
           </p>
           <div className="cta-row">
-            <Link className="btn" href={`/verify/${SAMPLE_HASH}`}>
-              See a sample proof
+            <Link className="btn" href="#how-it-holds-up">
+              How verification works
             </Link>
             <Link className="btn secondary" href="/dashboard">
               Open the dashboard
@@ -59,7 +55,7 @@ export default function Home() {
         </aside>
       </div>
 
-      <h2>How it holds up</h2>
+      <h2 id="how-it-holds-up">How it holds up</h2>
       <ul className="plain">
         <li>Capture, hash and signing run on the device with the radio off.</li>
         <li>The hash is anchored on Base Sepolia through the Ethereum Attestation Service.</li>

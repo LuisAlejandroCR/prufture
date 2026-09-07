@@ -12,7 +12,7 @@
   --border: #e2e5ea;
   --text: #10161d;
   --text-muted: #55606d;
-  --text-faint: #7b8592;
+  --text-faint: #59636f; /* kept >=4.5:1 on bg and surface, both themes (WCAG AA) */
   --brand: #1560d4;
   --brand-ink: #ffffff;
   --ok-bg: #dff3e4;
@@ -48,7 +48,7 @@
     --border: #2a313c;
     --text: #e8ebef;
     --text-muted: #9aa4b0;
-    --text-faint: #6e7885;
+    --text-faint: #949eaa;
     --brand: #4f8ff5;
     --brand-ink: #08101d;
     --ok-bg: #12331f;
@@ -187,6 +187,7 @@ ul.plain li { padding-left: var(--sp-1); }
 }
 
 @media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
   .fade-in { animation: fade-in 0.22s ease-out both; }
 }
 @keyframes fade-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
