@@ -84,6 +84,33 @@ export function encodeProofData(payload: ProofPublicPayload): Hex {
   ]);
 }
 
+/**
+ * Pure builder for the one contract call this relayer is allowed to make.
+ * Least-privilege invariant: it always targets env.easContract, always calls
+ * `attest`, always sends recipient=0x0 / value=0 / refUID=0x0 — no funds move,
+ * no other method is reachable. Tests assert these without touching the chain.
+ */
+export function buildAttestRequest(payload: ProofPublicPayload) {
+  return {
+    address: env.easContract as Hex,
+    abi: EAS_ATTEST_ABI,
+    functionName: "attest" as const,
+    args: [
+      {
+        schema: env.easSchemaUid as Hex,
+        data: {
+          recipient: ZERO_ADDRESS,
+          expirationTime: 0n,
+          revocable: true,
+          refUID: ZERO_BYTES32,
+          data: encodeProofData(payload),
+          value: 0n,
+        },
+      },
+    ] as const,
+  };
+}
+
 export async function submitAttestation(
   payload: ProofPublicPayload,
 ): Promise<ExternalResult<AttestResult>> {
@@ -109,24 +136,7 @@ export async function submitAttestation(
       transport: http(env.dwellirRpcUrl),
     });
 
-    const txHash = await wallet.writeContract({
-      address: env.easContract as Hex,
-      abi: EAS_ATTEST_ABI,
-      functionName: "attest",
-      args: [
-        {
-          schema: env.easSchemaUid as Hex,
-          data: {
-            recipient: ZERO_ADDRESS,
-            expirationTime: 0n,
-            revocable: true,
-            refUID: ZERO_BYTES32,
-            data: encodeProofData(payload),
-            value: 0n,
-          },
-        },
-      ],
-    });
+    const txHash = await wallet.writeContract(buildAttestRequest(payload));
 
     return { txHash, attester: account.address };
   });
