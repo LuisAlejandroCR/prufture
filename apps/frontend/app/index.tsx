@@ -1,17 +1,45 @@
 // index.tsx: queue screen — lists proofs and their sync state. Block 1 acceptance surface.
+// Status reads at a glance via a colored pill: "pending sync", "synced", "attested by N".
+// Styling is token-driven (src/theme.ts). Presentation only, no protocol change.
 
 import { Link, useFocusEffect } from "expo-router";
-import { useCallback, useState } from "react";
-import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { useCallback, useRef, useState } from "react";
+import {
+  AccessibilityInfo,
+  FlatList,
+  LayoutAnimation,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  UIManager,
+  View,
+} from "react-native";
 import type { QueuedProof } from "@proof/core";
 import { listProofs } from "../src/queue";
+import { color, radius, space, target, type } from "../src/theme";
+
+if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 export default function QueueScreen() {
   const [proofs, setProofs] = useState<QueuedProof[]>([]);
+  const known = useRef(0);
 
   useFocusEffect(
     useCallback(() => {
-      listProofs().then(setProofs).catch(() => setProofs([]));
+      listProofs()
+        .then(async (next) => {
+          // MOTION_INTENSITY 2: animate only when a new row actually arrives.
+          const reduced = await AccessibilityInfo.isReduceMotionEnabled().catch(() => false);
+          if (!reduced && next.length !== known.current) {
+            LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+          }
+          known.current = next.length;
+          setProofs(next);
+        })
+        .catch(() => setProofs([]));
     }, []),
   );
 
@@ -20,21 +48,43 @@ export default function QueueScreen() {
       <FlatList
         data={proofs}
         keyExtractor={(p) => p.id}
-        ListEmptyComponent={<Text style={styles.empty}>No proofs yet. Capture one — works offline.</Text>}
+        contentContainerStyle={proofs.length === 0 ? styles.emptyWrap : styles.listContent}
+        ListEmptyComponent={
+          <View style={styles.empty}>
+            <Text style={styles.emptyTitle}>Nothing captured yet</Text>
+            <Text style={styles.emptyBody}>
+              Capture works with no signal. Each proof is signed on this device and waits here
+              until coverage returns.
+            </Text>
+          </View>
+        }
         renderItem={({ item }) => (
           <View style={styles.row}>
             <View style={styles.rowMain}>
-              <Text style={styles.task}>{item.taskId}</Text>
-              <Text style={styles.meta}>
-                #{item.proofHash.slice(0, 10)} · {item.geohash || "no geo"} · sig {item.signature.slice(0, 8)}…
+              <Text style={styles.task} numberOfLines={1}>
+                {item.taskId}
+              </Text>
+              <Text style={styles.meta} numberOfLines={1}>
+                #{item.proofHash.slice(0, 10)} · {item.geohash || "no geo cell"} · sig{" "}
+                {item.signature.slice(0, 8)}…
               </Text>
             </View>
-            <Text style={styles.status}>{statusLabel(item)}</Text>
+            <StatusPill proof={item} />
           </View>
         )}
       />
+
+      <Text style={styles.privacy}>
+        What leaves your device: a hash, the task id, a coarse area, and the capture time. No photo,
+        no name, no exact location.
+      </Text>
+
       <Link href="/capture" asChild>
-        <Pressable style={styles.cta}>
+        <Pressable
+          style={({ pressed }) => [styles.cta, pressed && styles.ctaPressed]}
+          accessibilityRole="button"
+          accessibilityLabel="Capture evidence"
+        >
           <Text style={styles.ctaText}>Capture evidence</Text>
         </Pressable>
       </Link>
@@ -42,20 +92,56 @@ export default function QueueScreen() {
   );
 }
 
-function statusLabel(p: QueuedProof): string {
-  if (p.status === "pending_sync") return "pending sync";
-  if (p.status === "synced") return "synced";
-  return `attested by ${p.attestationCount}`;
+function StatusPill({ proof }: { proof: QueuedProof }) {
+  const map = {
+    pending_sync: { label: "pending sync", bg: color.pendingBg, fg: color.pendingText },
+    synced: { label: "synced", bg: color.syncedBg, fg: color.syncedText },
+    attested: { label: `attested by ${proof.attestationCount}`, bg: color.attestedBg, fg: color.attestedText },
+  } as const;
+  const s = map[proof.status];
+  return (
+    <View style={[styles.pill, { backgroundColor: s.bg }]}>
+      <Text style={[styles.pillText, { color: s.fg }]}>{s.label}</Text>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, padding: 16, backgroundColor: "#fff" },
-  empty: { textAlign: "center", marginTop: 48, color: "#555" },
-  row: { paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "#eee", flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  rowMain: { flex: 1, gap: 2 },
-  meta: { fontSize: 12, color: "#888" },
-  task: { fontSize: 16, fontWeight: "600" },
-  status: { fontSize: 14, color: "#555" },
-  cta: { minHeight: 48, borderRadius: 12, backgroundColor: "#1560d4", alignItems: "center", justifyContent: "center", marginTop: 12 },
-  ctaText: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  screen: { flex: 1, padding: space.lg, backgroundColor: color.bg },
+  listContent: { paddingBottom: space.sm },
+  emptyWrap: { flexGrow: 1, justifyContent: "center" },
+  empty: { alignItems: "center", paddingHorizontal: space.md, gap: space.sm },
+  emptyTitle: { ...type.title, color: color.text },
+  emptyBody: { ...type.body, color: color.textMuted, textAlign: "center", lineHeight: 21 },
+  row: {
+    paddingVertical: space.md,
+    borderBottomWidth: 1,
+    borderBottomColor: color.border,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: space.md,
+  },
+  rowMain: { flex: 1, gap: space.xs },
+  task: { ...type.title, color: color.text },
+  meta: { ...type.meta, color: color.textFaint },
+  pill: { paddingVertical: space.xs, paddingHorizontal: space.md, borderRadius: radius.pill },
+  pillText: { fontSize: type.meta.fontSize, fontWeight: "700" },
+  privacy: {
+    ...type.meta,
+    color: color.textMuted,
+    lineHeight: 17,
+    paddingVertical: space.md,
+    borderTopWidth: 1,
+    borderTopColor: color.border,
+  },
+  cta: {
+    minHeight: target.primary,
+    borderRadius: radius.md,
+    backgroundColor: color.brand,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  ctaPressed: { opacity: 0.85 },
+  ctaText: { ...type.action, color: color.brandText },
 });

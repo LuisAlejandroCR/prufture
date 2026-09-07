@@ -1,0 +1,192 @@
+/* globals.css: design tokens and base styles for the Prufture public site.
+   Tokens (color, type scale, spacing, radius) are declared once here; components use
+   the classes and CSS variables below, never raw hex or px. Theme-aware: light default,
+   dark via prefers-color-scheme. No body horizontal scroll. */
+
+:root {
+  color-scheme: light dark;
+
+  --bg: #ffffff;
+  --surface: #f6f7f9;
+  --surface-2: #eef0f4;
+  --border: #e2e5ea;
+  --text: #10161d;
+  --text-muted: #55606d;
+  --text-faint: #7b8592;
+  --brand: #1560d4;
+  --brand-ink: #ffffff;
+  --ok-bg: #dff3e4;
+  --ok-text: #10603a;
+  --wait-bg: #fbeecb;
+  --wait-text: #6f5500;
+  --link: #1560d4;
+
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 40px;
+  --sp-7: 64px;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --pill: 999px;
+
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+  --maxw: 760px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0e1116;
+    --surface: #161b22;
+    --surface-2: #1c232c;
+    --border: #2a313c;
+    --text: #e8ebef;
+    --text-muted: #9aa4b0;
+    --text-faint: #6e7885;
+    --brand: #4f8ff5;
+    --brand-ink: #08101d;
+    --ok-bg: #12331f;
+    --ok-text: #7fd4a0;
+    --wait-bg: #3a2f10;
+    --wait-text: #e5c66b;
+    --link: #6ea8ff;
+  }
+}
+
+* { box-sizing: border-box; }
+
+html, body { max-width: 100%; overflow-x: hidden; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrap { max-width: var(--maxw); margin: 0 auto; padding: var(--sp-5) var(--sp-4); }
+
+a { color: var(--link); text-underline-offset: 2px; }
+
+h1 { font-size: clamp(1.7rem, 4vw, 2.4rem); line-height: 1.15; letter-spacing: -0.02em; margin: 0 0 var(--sp-3); }
+h2 { font-size: 1.15rem; letter-spacing: -0.01em; margin: var(--sp-6) 0 var(--sp-3); }
+
+p { margin: 0 0 var(--sp-3); }
+
+code, .mono { font-family: var(--mono); font-size: 0.9em; }
+
+.muted { color: var(--text-muted); }
+.faint { color: var(--text-faint); }
+
+.lede { font-size: 1.1rem; color: var(--text-muted); max-width: 54ch; }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--sp-4);
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-1) var(--sp-3);
+  border-radius: var(--pill);
+  font-size: 0.85rem;
+  font-weight: 650;
+  line-height: 1.4;
+}
+.pill.ok { background: var(--ok-bg); color: var(--ok-text); }
+.pill.wait { background: var(--wait-bg); color: var(--wait-text); }
+
+.dot { width: 7px; height: 7px; border-radius: var(--pill); background: currentColor; }
+
+/* Buttons and inputs: >=44px touch targets. */
+.btn {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 var(--sp-4);
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: var(--brand);
+  color: var(--brand-ink);
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+  text-decoration: none;
+}
+.btn.secondary { background: transparent; border-color: var(--border); color: var(--text); }
+.btn:focus-visible, .field:focus-visible, a:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.field {
+  min-height: 44px;
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+
+/* Definition list used on the verify page. */
+.fields { display: grid; grid-template-columns: max-content 1fr; gap: var(--sp-2) var(--sp-4); margin: var(--sp-4) 0; }
+.fields dt { color: var(--text-faint); font-size: 0.9rem; }
+.fields dd { margin: 0; word-break: break-word; }
+@media (max-width: 480px) {
+  .fields { grid-template-columns: 1fr; gap: var(--sp-1); }
+  .fields dd { margin-bottom: var(--sp-3); }
+}
+
+/* Table wrapper keeps wide content scrolling inside itself, not the page. */
+.table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+table.data { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+table.data th { text-align: left; border-bottom: 2px solid var(--border); padding: var(--sp-2) var(--sp-2); color: var(--text-faint); font-weight: 600; }
+table.data td { border-bottom: 1px solid var(--border); padding: var(--sp-2) var(--sp-2); }
+table.data td:last-child, table.data th:last-child { text-align: right; }
+
+.filters { display: flex; gap: var(--sp-3); flex-wrap: wrap; align-items: flex-end; margin: var(--sp-4) 0; }
+.filters label { display: grid; gap: var(--sp-1); font-size: 0.8rem; color: var(--text-muted); }
+
+/* Landing hero: DESIGN_VARIANCE 4 — one confident asymmetric moment. */
+.hero {
+  display: grid;
+  grid-template-columns: 1.55fr 1fr;
+  gap: var(--sp-5);
+  align-items: start;
+  margin: var(--sp-5) 0 var(--sp-6);
+}
+.hero-copy h1 { margin-bottom: var(--sp-4); }
+.accent { color: var(--brand); }
+.cta-row { display: flex; flex-wrap: wrap; gap: var(--sp-3); margin-top: var(--sp-5); }
+.payload { display: grid; gap: var(--sp-3); margin-top: var(--sp-2); }
+.payload-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-2); }
+.payload-list li { display: grid; gap: 2px; padding-bottom: var(--sp-2); border-bottom: 1px solid var(--border); }
+.payload-list li:last-child { border-bottom: 0; padding-bottom: 0; }
+.payload-list span { font-size: 0.85rem; }
+ul.plain { padding-left: 1.1rem; display: grid; gap: var(--sp-2); color: var(--text-muted); }
+ul.plain li { padding-left: var(--sp-1); }
+
+@media (max-width: 640px) {
+  .hero { grid-template-columns: 1fr; gap: var(--sp-4); margin-bottom: var(--sp-5); }
+  .payload { order: 2; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .fade-in { animation: fade-in 0.22s ease-out both; }
+}
+@keyframes fade-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
