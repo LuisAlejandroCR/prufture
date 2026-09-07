@@ -19,7 +19,10 @@
       "extends": "base",
       "distribution": "internal",
       "developmentClient": false,
-      "channel": "preview"
+      "channel": "preview",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "<<api url>>"
+      }
     },
     "production": {
       "extends": "base",
