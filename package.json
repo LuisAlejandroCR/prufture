@@ -1,0 +1,21 @@
+{
+  "name": "proof-at-capture",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Proof-at-Capture: offline field-evidence capture, signed and anchored on-chain with zero PII.",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "mobile": "npm run start --workspace apps/mobile",
+    "web": "npm run dev --workspace apps/web",
+    "api": "npm run dev --workspace apps/api"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

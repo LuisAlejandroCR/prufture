@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react-native",
+    "lib": ["ES2022", "DOM"],
+    "moduleResolution": "Bundler",
+    "types": ["react"],
+    "paths": {
+      "@proof/core": ["../../packages/core/src/index.ts"]
+    }
+  },
+  "include": ["app", "src", "*.ts", "*.tsx"]
+}

@@ -1,0 +1,29 @@
+# Private project files — never in the public repo (AGENTS.md rule)
+CLAUDE.md
+AGENTS.md
+LEARNINGS.md
+docs/
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Dependencies / build
+node_modules/
+dist/
+build/
+.expo/
+.next/
+web-build/
+*.tsbuildinfo
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.log
+
+# Demo captures that may contain field data
+demo-captures/
+*.mp4
+!docs/**/*.mp4
