@@ -56,7 +56,7 @@ are declared as next steps.
 
 ## Planned Stack
 
-- Expo SDK 54, Expo Router, and TypeScript for the mobile app.
+- Expo SDK 57, Expo Router, and TypeScript for the mobile app.
 - `expo-camera`, `expo-location`, `expo-secure-store`, and `expo-sqlite`.
 - `@noble/curves` for ed25519 signatures in JavaScript.
 - Base Sepolia, Dwellir RPC, `viem`, and Ethereum Attestation Service.
@@ -70,6 +70,10 @@ Hackathon build in progress. An npm-workspaces monorepo is scaffolded: `packages
 ed25519 sign/verify and sha256 hash), `apps/frontend` (Expo mobile app), `apps/api` (relayer), and
 `apps/backend` (Next.js verification page). Early work on offline capture and the relayer exists on
 feature branches; the on-chain attestation has not yet been run against a live network.
+
+Preview APK for the demo (not yet run here; needs an Expo account): after `eas login` and
+`eas init` (which fills `extra.eas.projectId`), run
+`npx eas build --profile preview --platform android`.
 
 Acceptance criteria for the demo:
 
