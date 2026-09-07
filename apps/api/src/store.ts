@@ -9,9 +9,17 @@ export interface AttestationRecord {
   attestedAt: string;
 }
 
+/** A verified attribute recorded against a proof. Boolean only — zero PII by construction. */
+export interface VerifiedAttributeRecord {
+  attribute: string;
+  value: boolean;
+  checkedAt: string;
+}
+
 interface Entry {
   payload: ProofPublicPayload;
   attestations: AttestationRecord[];
+  verifiedAttribute?: VerifiedAttributeRecord;
 }
 
 const byHash = new Map<string, Entry>();
@@ -25,6 +33,14 @@ export function addAttestation(proofHash: string, rec: AttestationRecord): void 
   if (entry && !entry.attestations.some((a) => a.attester === rec.attester)) {
     entry.attestations.push(rec);
   }
+}
+
+/** Record a verified attribute against a proof. Only the boolean + name + timestamp are kept. */
+export function setVerifiedAttribute(proofHash: string, rec: VerifiedAttributeRecord): boolean {
+  const entry = byHash.get(proofHash);
+  if (!entry) return false;
+  entry.verifiedAttribute = { attribute: rec.attribute, value: rec.value, checkedAt: rec.checkedAt };
+  return true;
 }
 
 export function getProof(proofHash: string): Entry | undefined {
