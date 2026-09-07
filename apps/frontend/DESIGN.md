@@ -24,6 +24,19 @@ All tokens live in `src/theme.ts`. Screens import `color`, `space`, `radius`, `t
 - Radius: 8 (chips), 12 (cards, buttons), 999 (pills).
 - Targets: 44px minimum, 56px for the primary capture and CTA buttons.
 
+## Theme
+
+Volunteers capture outdoors in daylight; the app commits to a single high-contrast light theme.
+Dark mode is a post-hackathon item. This is deliberate, not an oversight:
+
+- `app.json` sets `userInterfaceStyle: "light"`.
+- `_layout.tsx` sets `<StatusBar style="dark" />`.
+- `src/theme.ts` carries one light-only token set; there is no `useColorScheme()` branch.
+
+When dark mode is picked up later: add a dark token set in `src/theme.ts` keyed off
+`useColorScheme()`, switch `app.json` to `userInterfaceStyle: "automatic"` and the status bar to
+`style="auto"`.
+
 ## Rules
 
 - Em-dash is banned in UI copy.
