@@ -4,10 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
-    "start": "tsx src/index.ts",
+    "dev": "tsx watch --env-file-if-exists=.env src/index.ts",
+    "start": "tsx --env-file-if-exists=.env src/index.ts",
     "typecheck": "tsc --noEmit",
-    "register-schema": "tsx scripts/register-schema.ts",
+    "register-schema": "tsx --env-file=.env scripts/register-schema.ts",
     "test": "node --import tsx --test \"test/**/*.test.ts\""
   },
   "dependencies": {
