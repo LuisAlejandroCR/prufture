@@ -49,3 +49,41 @@ export function encodeGeohash(lat: number, lng: number, precision = 5): string {
   }
   return hash;
 }
+
+export interface GeohashBounds {
+  latMin: number;
+  latMax: number;
+  lngMin: number;
+  lngMax: number;
+}
+
+/**
+ * Decode a geohash back to the bounding box of its cell.
+ * Used to check that the encoder never drops the real point outside its own cell.
+ */
+export function decodeGeohashBounds(hash: string): GeohashBounds {
+  let latMin = -90;
+  let latMax = 90;
+  let lngMin = -180;
+  let lngMax = 180;
+  let even = true;
+
+  for (const c of hash.toLowerCase()) {
+    const idx = BASE32.indexOf(c);
+    if (idx < 0) throw new Error(`invalid geohash char: ${c}`);
+    for (let bit = 4; bit >= 0; bit -= 1) {
+      const on = (idx >> bit) & 1;
+      if (even) {
+        const mid = (lngMin + lngMax) / 2;
+        if (on) lngMin = mid;
+        else lngMax = mid;
+      } else {
+        const mid = (latMin + latMax) / 2;
+        if (on) latMin = mid;
+        else latMax = mid;
+      }
+      even = !even;
+    }
+  }
+  return { latMin, latMax, lngMin, lngMax };
+}

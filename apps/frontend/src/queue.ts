@@ -1,25 +1,12 @@
 // queue.ts: offline proof queue on expo-sqlite. States: pending_sync -> synced -> attested.
 // The table is created on first open (migration). Every capture lands here before any network.
-// Distinct from capture.ts (builds the signed proof) — this only persists and reads it.
+// Row<->proof mapping lives in queue-row.ts so it stays unit-testable off-device.
 
 import * as SQLite from "expo-sqlite";
-import type { ProofStatus, QueuedProof, SignedProof } from "@proof/core";
+import type { QueuedProof, SignedProof } from "@proof/core";
+import { buildQueueRow, COLUMNS, fromRow, insertParams, type ProofRow } from "./queue-row";
 
 const DB_NAME = "proofs.db";
-
-interface Row {
-  id: string;
-  proofHash: string;
-  taskId: string;
-  geohash: string;
-  capturedAt: string;
-  signature: string;
-  publicKey: string;
-  status: string;
-  mediaUri: string;
-  attestationCount: number;
-  createdAt: string;
-}
 
 let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
 
@@ -49,57 +36,20 @@ async function getDb(): Promise<SQLite.SQLiteDatabase> {
   return dbPromise;
 }
 
-function toProof(r: Row): QueuedProof {
-  return {
-    id: r.id,
-    proofHash: r.proofHash,
-    taskId: r.taskId,
-    geohash: r.geohash,
-    capturedAt: r.capturedAt,
-    signature: r.signature,
-    publicKey: r.publicKey,
-    status: r.status as ProofStatus,
-    mediaUri: r.mediaUri,
-    attestationCount: r.attestationCount,
-    createdAt: r.createdAt,
-  };
-}
-
 export async function enqueueProof(signed: SignedProof, mediaUri: string): Promise<QueuedProof> {
   const db = await getDb();
-  const row: QueuedProof = {
-    ...signed,
-    id: `${signed.proofHash.slice(0, 12)}-${Date.now()}`,
-    status: "pending_sync",
-    mediaUri,
-    attestationCount: 0,
-    createdAt: new Date().toISOString(),
-  };
+  const row = buildQueueRow(signed, mediaUri);
   await db.runAsync(
-    `INSERT INTO proofs
-       (id, proofHash, taskId, geohash, capturedAt, signature, publicKey, status, mediaUri, attestationCount, createdAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      row.id,
-      row.proofHash,
-      row.taskId,
-      row.geohash,
-      row.capturedAt,
-      row.signature,
-      row.publicKey,
-      row.status,
-      row.mediaUri,
-      row.attestationCount,
-      row.createdAt,
-    ],
+    `INSERT INTO proofs (${COLUMNS.join(", ")}) VALUES (${COLUMNS.map(() => "?").join(", ")})`,
+    insertParams(row) as SQLite.SQLiteBindValue[],
   );
   return row;
 }
 
 export async function listProofs(): Promise<QueuedProof[]> {
   const db = await getDb();
-  const rows = await db.getAllAsync<Row>(`SELECT * FROM proofs ORDER BY createdAt DESC`);
-  return rows.map(toProof);
+  const rows = await db.getAllAsync<ProofRow>(`SELECT * FROM proofs ORDER BY createdAt DESC`);
+  return rows.map(fromRow);
 }
 
 export async function markSynced(id: string): Promise<void> {
