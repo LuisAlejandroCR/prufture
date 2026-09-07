@@ -1,48 +1,56 @@
 // theme.ts: single source of design tokens for the Prufture reporter app.
-// Warm ivory ground, white surfaces, terracotta primary, muted brown text, and four
-// status tints (sage / amber / pink / blue). Screens import these tokens and never
-// inline raw hex or px. Distinct from src/capture.ts and src/queue.ts (logic, not style).
+// One warm humanitarian palette (ivory ground, white surfaces, terracotta primary,
+// muted brown text, sage / amber / blue / pink status). Screens import these tokens
+// and never inline raw hex or px. Distinct from src/capture.ts and src/queue.ts (logic).
 
-// DESIGN_VARIANCE 5 / MOTION_INTENSITY 2 / VISUAL_DENSITY 3 (mobile). Calm and guided:
-// one primary action per screen, generous spacing, large targets.
+// DESIGN_VARIANCE 4 / MOTION_INTENSITY 2 / VISUAL_DENSITY 3 (mobile). Calm and guided:
+// one primary action per screen, generous spacing, large targets, no gradients.
+
+// Contrast (WCAG AA, computed 2026-09-07):
+//   text #1C1208   on #FBF6EF -> 15.0:1   on #FFFFFF -> 16.1:1  (pass, body)
+//   muted #806F5C  on #FBF6EF -> 4.50:1   on #FFFFFF -> 4.83:1  (pass, body >= 4.5)
+//   disabled #B8A998 is decorative / disabled-state only, never body text.
+//   Status pills and notices render their label in `text`; the hue is carried by the
+//   dot / icon only, so no low-contrast soft-on-solid text pair is ever used.
 
 export const color = {
   // Surfaces
   background: "#FBF6EF",
   surface: "#FFFFFF",
-  surfaceSoft: "#F4ECE0",
-  border: "#EAE0D1",
+  surfaceSoft: "#F7F2EA",
+  border: "#EDE5D8",
 
-  // Text (contrast checked against background and surface for WCAG AA)
+  // Text
   text: "#1C1208",
-  muted: "#63513C",
-  faint: "#7A6952",
+  muted: "#806F5C",
+  faint: "#806F5C",
+  disabled: "#B8A998",
   onPrimary: "#FFFFFF",
 
-  // Primary action
+  // Primary action (terracotta)
   primary: "#C8533A",
   primaryPressed: "#A8402B",
   primarySoft: "#FDF0EC",
 
-  // Status: sent / confirmed / ok
-  success: "#2C7350",
-  successSoft: "#E7F3EC",
-  // Status: waiting / ready to send
-  warning: "#8A5A12",
-  warningSoft: "#FAF1DF",
-  // Status: needs attention
-  attention: "#A2385D",
-  attentionSoft: "#FAE8EF",
-  // Status: sending / in progress / information
-  information: "#1B647C",
-  informationSoft: "#E4F0F4",
+  // Status: sent / confirmed / privacy-safe (sage)
+  success: "#3D9970",
+  successSoft: "#EBF7F2",
+  // Status: waiting / attention (amber)
+  warning: "#C88720",
+  warningSoft: "#FDF5E6",
+  // Status: sending / in progress / information (blue)
+  information: "#2982A1",
+  informationSoft: "#E7F3F8",
+  // Health category ONLY (pink)
+  attention: "#C04B7A",
+  attentionSoft: "#FBEAF1",
 
   // Programme category accents (small dots and tint chips only)
-  education: "#1B647C",
-  water: "#2C7350",
-  health: "#A2385D",
-  nutrition: "#8A5A12",
-  training: "#63513C",
+  education: "#2982A1",
+  water: "#3D9970",
+  health: "#C04B7A",
+  nutrition: "#C88720",
+  training: "#806F5C",
 } as const;
 
 // Selected bottom-navigation background tint.
@@ -63,18 +71,21 @@ export const shadow = {
   raised: {
     shadowColor: "#3A2A18",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.18,
+    shadowOpacity: 0.16,
     shadowRadius: 12,
     elevation: 6,
   },
 } as const;
 
+// Type scale (humanist sans, phone): page title 28 / section 20 / card 17 / body 15
+// / support 13 / label 11. No landing-page-sized type inside the app.
 export const type = {
-  display: { fontSize: 26, fontWeight: "700" as const, letterSpacing: -0.4, lineHeight: 32 },
-  title: { fontSize: 19, fontWeight: "700" as const, letterSpacing: -0.2, lineHeight: 25 },
-  subtitle: { fontSize: 16, fontWeight: "600" as const, lineHeight: 22 },
+  display: { fontSize: 28, fontWeight: "700" as const, letterSpacing: -0.4, lineHeight: 34 },
+  title: { fontSize: 20, fontWeight: "700" as const, letterSpacing: -0.2, lineHeight: 26 },
+  subtitle: { fontSize: 17, fontWeight: "600" as const, lineHeight: 23 },
   body: { fontSize: 15, fontWeight: "400" as const, lineHeight: 22 },
   meta: { fontSize: 13, fontWeight: "400" as const, lineHeight: 18 },
+  label: { fontSize: 11, fontWeight: "700" as const, letterSpacing: 0.6, lineHeight: 14 },
   action: { fontSize: 17, fontWeight: "700" as const, letterSpacing: 0.1 },
 } as const;
 
@@ -92,13 +103,13 @@ export type FriendlyStatus =
   | "confirmed" // attested
   | "attention"; // recoverable error
 
-export const statusStyle: Record<FriendlyStatus, { label: string; bg: string; fg: string }> = {
-  ready: { label: "Ready to send", bg: color.warningSoft, fg: color.warning },
-  sending: { label: "Sending", bg: color.informationSoft, fg: color.information },
-  sent: { label: "Sent", bg: color.informationSoft, fg: color.information },
-  waiting: { label: "Waiting for another report", bg: color.warningSoft, fg: color.warning },
-  confirmed: { label: "Confirmed", bg: color.successSoft, fg: color.success },
-  attention: { label: "Needs your attention", bg: color.attentionSoft, fg: color.attention },
+export const statusStyle: Record<FriendlyStatus, { label: string; tint: string; hue: string }> = {
+  ready: { label: "Ready to send", tint: color.warningSoft, hue: color.warning },
+  sending: { label: "Sending", tint: color.informationSoft, hue: color.information },
+  sent: { label: "Sent", tint: color.informationSoft, hue: color.information },
+  waiting: { label: "Waiting for another community report", tint: color.warningSoft, hue: color.warning },
+  confirmed: { label: "Confirmed", tint: color.successSoft, hue: color.success },
+  attention: { label: "Needs your attention", tint: color.attentionSoft, hue: color.attention },
 };
 
 /** Map a stored queue status to the reporter-facing status. */

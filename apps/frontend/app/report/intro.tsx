@@ -6,7 +6,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { Icon } from "../../src/components/icons/Icon";
-import { BackLink, PrimaryButton, Reassurance, Screen } from "../../src/components/ui";
+import { BackLink, PrimaryButton, Reassurance, ReportProgress, Screen } from "../../src/components/ui";
 import { startDraft } from "../../src/report-draft";
 import { getTask } from "../../src/tasks";
 import { color, radius, space, type } from "../../src/theme";
@@ -15,7 +15,6 @@ export default function ReportIntroScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const task = getTask(id ?? "");
-  const steps = task.photos.length + (task.questions.length > 0 ? 1 : 0) + 1; // photos + questions + area
 
   useEffect(() => {
     startDraft(task.id);
@@ -27,12 +26,13 @@ export default function ReportIntroScreen() {
   return (
     <Screen footer={<PrimaryButton label="Begin" onPress={begin} />}>
       <BackLink label="Back" onPress={() => router.back()} />
+      <ReportProgress step={1} label="Instructions" />
       <Text style={styles.title} accessibilityRole="header">
         {task.title}
       </Text>
 
       <View style={styles.facts}>
-        <Fact icon="review" text={`This report has ${steps} quick steps`} />
+        <Fact icon="review" text={`${task.photos.length} photos, then ${task.questions.length} short ${task.questions.length === 1 ? "question" : "questions"}`} />
         <Fact icon="clock" text={`About ${task.minutes} minutes`} />
         <Fact icon="offline" text="You can finish without signal" tint={color.success} />
       </View>

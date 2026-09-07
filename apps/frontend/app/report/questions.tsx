@@ -6,7 +6,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Icon } from "../../src/components/icons/Icon";
-import { BackLink, PrimaryButton, ProgressDots, Screen } from "../../src/components/ui";
+import { BackLink, PrimaryButton, ReportProgress, Screen } from "../../src/components/ui";
 import { ensureDraft, getDraft, setAnswer } from "../../src/report-draft";
 import { getTask } from "../../src/tasks";
 import { color, radius, space, target, type } from "../../src/theme";
@@ -58,7 +58,7 @@ export default function ReportQuestionsScreen() {
       }
     >
       <BackLink label="Back" onPress={back} />
-      <ProgressDots total={questions.length} index={index} />
+      <ReportProgress step={3} label="Questions" />
       <Text style={styles.count}>
         Question {index + 1} of {questions.length}
         {q.required ? "" : "  ·  optional"}

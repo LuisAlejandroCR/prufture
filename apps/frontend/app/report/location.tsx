@@ -8,7 +8,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { Icon } from "../../src/components/icons/Icon";
-import { BackLink, Notice, PrimaryButton, Screen, SecondaryButton } from "../../src/components/ui";
+import { BackLink, Notice, PrimaryButton, ReportProgress, Screen, SecondaryButton } from "../../src/components/ui";
 import { encodeGeohash } from "../../src/geohash";
 import { ensureDraft, setArea } from "../../src/report-draft";
 import { getTask } from "../../src/tasks";
@@ -78,6 +78,7 @@ export default function ReportLocationScreen() {
       }
     >
       <BackLink label="Back" onPress={() => router.back()} />
+      <ReportProgress step={4} label="Review" />
 
       {state === "checking" ? (
         <View style={styles.center}>

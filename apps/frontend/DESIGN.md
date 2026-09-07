@@ -9,21 +9,28 @@ never needs to know anything about wallets, keys, hashes, or chains.
 
 ## Dials
 
-- DESIGN_VARIANCE 5: mostly conventional vertical layout; asymmetry only where it aids focus
+- DESIGN_VARIANCE 4: mostly conventional vertical layout; asymmetry only where it aids focus
   (the raised Report control in the tab bar, the recommended-task card on Home).
 - MOTION_INTENSITY 2: state transitions only (queue row ease-in, help row expand, stack slide).
-  Respects reduce-motion via `AccessibilityInfo.isReduceMotionEnabled`.
+  Respects reduce-motion via `AccessibilityInfo.isReduceMotionEnabled`. No gradients.
 - VISUAL_DENSITY 3: large targets, generous spacing, one primary action visible at a time.
 
 ## Tokens
 
 All tokens live in `src/theme.ts`. Screens import `color`, `space`, `radius`, `shadow`, `type`,
-`target`, `motion`, `statusStyle`, `friendlyStatus` and never inline raw hex or px.
+`target`, `motion`, `statusStyle`, `friendlyStatus` and never inline raw hex or px. This is the
+same one warm palette used by `apps/backend/app/globals.css`.
 
-- Colour: warm ivory ground `#FBF6EF`, white surface, terracotta primary `#C8533A`, muted brown
-  text. Four status tints: sage (confirmed), amber (waiting), pink (attention), blue (sending).
-  Contrast checked against background and surface for WCAG AA.
-- Type scale: display / title / subtitle / body / meta / action. No other sizes.
+- Colour: ivory ground `#FBF6EF`, white surface, `surfaceSoft #F7F2EA`, `border #EDE5D8`,
+  text `#1C1208`, muted `#806F5C`, `disabled #B8A998`. Primary terracotta `#C8533A`
+  (`primarySoft #FDF0EC`). Status: sage `#3D9970` = confirmed / privacy-safe, amber `#C88720`
+  = waiting / attention, blue `#2982A1` = sending / info, pink `#C04B7A` = **health category
+  only**. No gradients.
+- WCAG AA (computed 2026-09-07): text on ivory 15.0:1, on white 16.1:1; muted `#806F5C` on
+  ivory 4.50:1, on white 4.83:1 (pass, body). `StatusPill` and `Notice` render their label in
+  `color.text`; the hue is carried by the dot / icon only, so no soft-tint text pair below
+  4.5:1 is ever used. `disabled` is decorative / disabled-state only.
+- Type scale: display 28 / title 20 / subtitle 17 / body 15 / meta 13 / label 11 / action 17.
 - Spacing: 4 / 8 / 12 / 16 / 24 / 40. Radius: 10 / 14 / 20 / pill.
 - Targets: 44px minimum, 56px for the primary and capture buttons.
 
@@ -37,9 +44,10 @@ details" section for demo or expert users; it still shows no PII and no exact lo
 
 ## Icons
 
-`src/components/icons/Icon.tsx` is the single SVG set (`react-native-svg`). Unselected nav icons
-are outlined, selected are filled and sit on a `primarySoft` pill. Every icon-only control carries
-an `accessibilityLabel`. No emoji as interface icons.
+`src/components/icons/Icon.tsx` is the single SVG set (`react-native-svg`), one 24x24 grid, 2px
+stroke, rounded caps. Unselected nav icons are outlined + `muted`; selected are filled `primary`
+on a `primarySoft` pill. Every icon-only control carries an `accessibilityLabel`. No emoji as
+interface icons.
 
 ## Navigation
 
@@ -54,6 +62,19 @@ report flow (`app/report/*`) and the detail screens (`app/task/[id]`, `app/statu
 being built now. On "Finish report" it calls the existing `src/capture.ts` path once per photo:
 `captureProof` -> `enqueueProof`, status `pending_sync`. No new protocol, no new proof fields, no
 endpoint or sync-retry change. The auto-sync loop drains the queue exactly as before.
+
+The flow is presented as four steps via `ReportProgress` ("Step X of 4 · label"): 1 Instructions
+(`report/intro`), 2 Capture (`report/capture`), 3 Questions (`report/questions`), 4 Review
+(`report/location` area confirm, then `report/review`). Questions are large Yes / No / "I could
+not confirm" controls, one at a time, no free text, no PII. Review shows only photo count, answer
+count, approximate area, and capture time.
+
+## Contribution (Pilot 1)
+
+No reward, points, gift, token, cash, or leaderboard wording anywhere (grep-verified: 0 hits).
+The Me screen shows a **private contribution summary** ("Your contribution — N reports confirmed
+· M programme activities supported"), visible only to the reporter and never linked to a public
+report. Full model in `docs/pilot_engagement.md`.
 
 ## Theme
 

@@ -10,6 +10,7 @@ import {
   BackLink,
   Notice,
   PrimaryButton,
+  ReportProgress,
   Screen,
   SecondaryButton,
   SectionLabel,
@@ -59,6 +60,7 @@ export default function ReportReviewScreen() {
       }
     >
       <BackLink label="Back" onPress={() => router.back()} />
+      <ReportProgress step={4} label="Review" />
       <Text style={styles.title} accessibilityRole="header">
         Review your report
       </Text>

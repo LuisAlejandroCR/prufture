@@ -8,23 +8,46 @@ import { StyleSheet, Text, View } from "react-native";
 import type { QueuedProof } from "@proof/core";
 import { Row, Screen, ScreenTitle, SectionLabel } from "../../src/components/ui";
 import { listProofs } from "../../src/queue";
-import { color, space, type } from "../../src/theme";
+import { color, radius, space, type } from "../../src/theme";
 
 export default function MeScreen() {
   const router = useRouter();
   const [pending, setPending] = useState(0);
+  const [confirmed, setConfirmed] = useState(0);
+  const [activities, setActivities] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
       listProofs()
-        .then((rows: QueuedProof[]) => setPending(rows.filter((r) => r.status === "pending_sync").length))
-        .catch(() => setPending(0));
+        .then((rows: QueuedProof[]) => {
+          setPending(rows.filter((r) => r.status === "pending_sync").length);
+          setConfirmed(
+            rows.filter((r) => r.status === "attested" || r.attestationCount > 0).length,
+          );
+          setActivities(new Set(rows.map((r) => r.taskId)).size);
+        })
+        .catch(() => {
+          setPending(0);
+          setConfirmed(0);
+          setActivities(0);
+        });
     }, []),
   );
 
   return (
     <Screen>
       <ScreenTitle>Me</ScreenTitle>
+
+      <View style={styles.contribution}>
+        <Text style={styles.contributionLabel}>Your contribution</Text>
+        <Text style={styles.contributionText}>
+          {confirmed} {confirmed === 1 ? "report" : "reports"} confirmed ·{" "}
+          {activities} programme {activities === 1 ? "activity" : "activities"} supported
+        </Text>
+        <Text style={styles.contributionNote}>
+          Only you see this. It is never linked to a public report.
+        </Text>
+      </View>
 
       <View style={styles.storage}>
         <Text style={styles.storageText}>
@@ -72,11 +95,20 @@ export default function MeScreen() {
 }
 
 const styles = StyleSheet.create({
+  contribution: {
+    padding: space.lg,
+    borderRadius: radius.md,
+    backgroundColor: color.primarySoft,
+    gap: space.xs,
+  },
+  contributionLabel: { ...type.label, color: color.primary, textTransform: "uppercase" },
+  contributionText: { ...type.subtitle, color: color.text },
+  contributionNote: { ...type.meta, color: color.muted },
   storage: {
     padding: space.md,
-    borderRadius: 14,
+    borderRadius: radius.md,
     backgroundColor: color.surfaceSoft,
   },
   storageText: { ...type.body, color: color.text, fontWeight: "600" },
-  about: { ...type.meta, color: color.faint },
+  about: { ...type.meta, color: color.muted },
 });

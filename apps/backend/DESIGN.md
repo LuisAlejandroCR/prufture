@@ -5,16 +5,19 @@
 # Design - Prufture web
 
 Two audiences on one codebase: the public trust surface (landing, /verify) and the stakeholder
-dashboard. Both keep a calm infrastructure identity, not a pitch. The reporter app carries the
-warm scratch palette; the web keeps the neutral blue token set already documented here.
+dashboard. Both keep a calm identity, not a pitch. The web uses the **same one warm palette** as
+the reporter app (`apps/frontend/src/theme.ts`): ivory ground, white surface, terracotta primary,
+muted brown text, sage / amber / blue / pink status. The dashboard must not look like a different
+product from the mobile app.
 
 ## Dials
 
 - DESIGN_VARIANCE 5: one asymmetric moment on the landing (1.5fr copy vs 1fr "what a report
   carries" card). Every public page is otherwise a single calm column.
 - MOTION_INTENSITY 2: one 0.22s fade-in per view, gated behind `prefers-reduced-motion`.
-- VISUAL_DENSITY 3 on landing and /verify, 7 on the dashboard (sidebar, metric grid, filter row,
-  dense operational table).
+- VISUAL_DENSITY 3 on landing and /verify, 5 on the dashboard (sidebar, four-metric row, one
+  filtered table, one attention panel). Less is more: the Overview answers only what happened
+  this week, what needs attention, and which reports to review now.
 
 ## Tokens
 
@@ -22,8 +25,11 @@ All tokens live in `app/globals.css` as CSS custom properties. Components use th
 (`.card`, `.pill`, `.btn`, `.field`, `.fields`, `.data`, `.filters`, `.steps`, `.timeline`,
 `.tech`, `.dash*`, `.metric`, `.attn-item`) and never inline raw hex or px.
 
-- Colour: one brand blue, a neutral surface ramp, four status tints (ok / wait / attn / info).
-  Full light and dark palettes; dark via `prefers-color-scheme`.
+- Colour: ivory `#FBF6EF` ground, white surface, terracotta brand `#C8533A`, muted `#806F5C`
+  text, four status tints ok `#EBF7F2` / wait `#FDF5E6` / attn `#FBEAF1` / info `#E7F3F8`. Full
+  light and warm-dark palettes; dark via `prefers-color-scheme`. WCAG AA (computed 2026-09-07):
+  text 15:1, muted 4.5:1 on ivory. `.pill` labels use `--text`; the hue is on the dot / left
+  border only, so no soft-tint text pair drops below 4.5:1.
 - Type: fluid `h1` via `clamp()`, fixed `h2`/`h3`, 16px body. Monospace only for the coarse
   region and the public reference.
 - Spacing: 4 / 8 / 12 / 16 / 24 / 40 / 64. Radius: 8 / 12 / 20 / pill.
@@ -45,6 +51,12 @@ horizontal scroller and a "built for desktop" note shows; the report table alway
 `.table-scroll`, never the page. All aggregation is pure (`lib/dashboard.ts`) over the coarse
 `/proofs` list; no new API endpoint, no invented approve/reject action (review actions are shown
 disabled and labelled).
+
+Overview = exactly four metrics (Reports this week / Ready to review / Need another report /
+Programmes covered), one attention panel (max two items + "See all alerts"), one recent-report
+table. Table columns: Activity / Programme / Approximate area / Submitted / Status / Action; the
+row action is a keyboard-focusable "Open ->". Filters show Programme / Status by default;
+Search / From / To sit behind a `<details>` "More filters"; "Clear" resets all.
 
 ## Rules
 
