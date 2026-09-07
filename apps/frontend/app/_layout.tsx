@@ -1,11 +1,17 @@
 // _layout.tsx: root navigation stack for the Expo Router app.
 // Header styling comes from src/theme.ts tokens; no raw colors here.
+// NOTE: if worker/crypto-polyfill lands, its `import "react-native-get-random-values";`
+// must stay the FIRST statement of this file, above these imports.
 
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { color, type } from "../src/theme";
+import { useAutoSync } from "../src/useAutoSync";
 
 export default function RootLayout() {
+  // Drain the offline queue when coverage returns or the app is foregrounded.
+  useAutoSync();
+
   return (
     <>
       <StatusBar style="dark" />
