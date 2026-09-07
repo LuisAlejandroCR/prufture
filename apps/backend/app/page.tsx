@@ -1,72 +1,120 @@
-// page.tsx: landing — the guarantee, one asymmetric hero, links to the explainer section and the dashboard.
-// Presentation only. The claims here must stay true to what the code does (no ZK / TEE / GDPR claim).
+// page.tsx: landing for judges, partners, and community organizations. Not the
+// reporter workflow. Plain-language proposition, offline-first, privacy, a three-step
+// process, links to a sample report and the dashboard, open-source and honest status.
+// Every claim stays true to what the code does: no ZK, TEE, or deployment claim.
 
 import Link from "next/link";
 
+const SAMPLE_HASH =
+  process.env.NEXT_PUBLIC_SAMPLE_HASH ??
+  "992f8d6232210e99a6ed60a9c23dc22b3a304cd0c0d13bbdecf16f3c573d5d75";
+
 export default function Home() {
   return (
-    <section>
+    <main className="wrap fade-in">
       <div className="hero">
         <div className="hero-copy">
           <h1>
-            Proof from the field,
-            <br />
-            <span className="accent">without the person attached.</span>
+            Show what is happening <span className="accent">nearby.</span>
           </h1>
           <p className="lede">
-            A volunteer photographs an installed asset offline. The proof reaches the organization
-            signed, tied to a coarse area, and carrying zero personal data.
+            A simple way for communities to document completed activities, even when the connection
+            drops. Photos and a few short answers, no account, no personal data.
           </p>
           <div className="cta-row">
-            <Link className="btn" href="#how-it-holds-up">
-              How verification works
+            <Link className="btn" href={`/verify/${SAMPLE_HASH}`}>
+              See a sample report
             </Link>
             <Link className="btn secondary" href="/dashboard">
-              Open the dashboard
+              Open the stakeholder dashboard
             </Link>
           </div>
         </div>
 
-        <aside className="payload card" aria-label="What is made public">
-          <p className="faint" style={{ margin: 0, fontSize: "0.8rem", letterSpacing: "0.04em", textTransform: "uppercase" }}>
-            Everything that goes public
+        <aside className="payload card" aria-label="What a report carries">
+          <p
+            className="faint"
+            style={{ margin: 0, fontSize: "0.8rem", letterSpacing: "0.04em", textTransform: "uppercase" }}
+          >
+            What a report carries
           </p>
           <ul className="payload-list">
             <li>
-              <code>proofHash</code>
-              <span className="muted">sha256 of the photo bytes</span>
+              <strong>The activity</strong>
+              <span className="muted">which field task was done</span>
             </li>
             <li>
-              <code>taskId</code>
-              <span className="muted">which field task, not who</span>
+              <strong>An approximate area</strong>
+              <span className="muted">a coarse region, never an exact location</span>
             </li>
             <li>
-              <code>geohash</code>
-              <span className="muted">a coarse area, never GPS</span>
+              <strong>The capture time</strong>
+              <span className="muted">when the photo was taken</span>
             </li>
             <li>
-              <code>capturedAt</code>
-              <span className="muted">capture time, UTC</span>
+              <strong>A public reference</strong>
+              <span className="muted">so anyone can check the report later</span>
             </li>
           </ul>
           <p className="faint" style={{ margin: 0, fontSize: "0.85rem" }}>
-            No photo, no name, no exact location leaves the device.
+            No photo, no name, and no exact location leaves the phone with the report.
           </p>
         </aside>
       </div>
 
-      <h2 id="how-it-holds-up">How it holds up</h2>
+      <h2 id="how-it-works">How it works</h2>
+      <div className="steps">
+        <div className="step">
+          <span className="n" aria-hidden>
+            1
+          </span>
+          <h3>Capture offline</h3>
+          <p>
+            A community reporter photographs the completed work and answers a couple of short
+            questions. No signal needed.
+          </p>
+        </div>
+        <div className="step">
+          <span className="n" aria-hidden>
+            2
+          </span>
+          <h3>Send when there is signal</h3>
+          <p>
+            The report waits safely on the phone and sends itself once a connection returns. Nothing
+            is lost.
+          </p>
+        </div>
+        <div className="step">
+          <span className="n" aria-hidden>
+            3
+          </span>
+          <h3>Confirm and review</h3>
+          <p>
+            The programme team reviews the report. When another community member reports the same
+            activity, it is marked confirmed.
+          </p>
+        </div>
+      </div>
+
+      <h2>Privacy, in plain language</h2>
       <ul className="plain">
-        <li>Capture, hash and signing run on the device with the radio off.</li>
-        <li>The hash is anchored on Base Sepolia through the Ethereum Attestation Service.</li>
-        <li>A second reviewer can attest the same hash, so verification has more than one witness.</li>
-        <li>Anyone can check a proof at its link with no account.</li>
+        <li>A report never includes the reporter&apos;s name, phone number, or any identity document.</li>
+        <li>Only an approximate area is shared, never the exact spot.</li>
+        <li>The original photo stays on the reporter&apos;s phone unless they choose to share it.</li>
+        <li>Anyone can open a report&apos;s status page with no account and no login.</li>
       </ul>
 
-      <p className="faint" style={{ fontSize: "0.85rem" }}>
-        The device key lives in the operating system secure store. Hardware attestation and an
-        on-device zero-knowledge age proof are named next steps, not current guarantees.
+      <h2>Open source, honest about status</h2>
+      <p className="muted">
+        Prufture is an open prototype built for a hackathon. It is not a UNICEF product and carries
+        no endorsement or deployment. The device key is kept in the phone&apos;s operating system
+        secure store. Hardware attestation and an on-device zero-knowledge identity proof are named
+        next steps, not current guarantees.
       </p>
-    </section>
+      <p className="faint" style={{ fontSize: "0.9rem" }}>
+        Check any shared report at <code>/verify/&lt;reference&gt;</code>. Programme staff use the{" "}
+        <Link href="/dashboard">dashboard</Link>.
+      </p>
+    </main>
   );
 }
