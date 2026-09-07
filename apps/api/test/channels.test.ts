@@ -63,7 +63,7 @@ test("unknown channel degrades", async () => {
 test("fuzz: hostile inputs never throw and keep the source tag", async () => {
   clearEnv();
   for (let i = 0; i < 400; i++) {
-    const channel = CHANNELS[rand(CHANNELS.length)];
+    const channel = CHANNELS[rand(CHANNELS.length)]!;
     const r = await sendVerifyUrl(channel, junk(), junk());
     assert.equal(r.available, false);
     assert.equal(r.source, `channel/${channel}`);
@@ -75,16 +75,16 @@ test("invariant: the wire body carries the url and no PII / payload field", asyn
   const forbidden = ["signature", "publicKey", "mediaUri", "privateKey", "lat", "lng", "0xdeadbeef"];
   try {
     for (let i = 0; i < 120; i++) {
-      const channel = CHANNELS[rand(CHANNELS.length)];
+      const channel = CHANNELS[rand(CHANNELS.length)]!;
       const url = `https://prufture.test/verify/${Array.from({ length: 8 + rand(56) }, () => "0123456789abcdef"[rand(16)]).join("")}`;
       const cap: { url: string; body: string }[] = [];
       stubFetch(cap);
       const r = await sendVerifyUrl(channel, "recipient-" + i, url);
       assert.equal(r.available, true, `${channel} should succeed with stubbed fetch`);
       assert.equal(cap.length, 1);
-      assert.ok(cap[0].body.includes(url), `${channel} body must contain the verifyUrl`);
+      assert.ok(cap[0]!.body.includes(url), `${channel} body must contain the verifyUrl`);
       for (const f of forbidden) {
-        assert.ok(!cap[0].body.includes(f), `${channel} body must not contain "${f}"`);
+        assert.ok(!cap[0]!.body.includes(f), `${channel} body must not contain "${f}"`);
       }
     }
   } finally {

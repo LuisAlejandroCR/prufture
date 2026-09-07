@@ -65,7 +65,7 @@ test("fuzz: distinct attesters count once each; order and volume do not matter",
   upsertProof(payload("2".repeat(64)));
   const attesters = Array.from({ length: 8 }, (_, i) => `0x${i}`);
   for (let i = 0; i < 300; i++) {
-    const a = attesters[Math.floor(Math.random() * attesters.length)];
+    const a = attesters[Math.floor(Math.random() * attesters.length)]!;
     addAttestation("2".repeat(64), { attester: a, txHash: "0x" + i, attestedAt: String(i) });
   }
   assert.equal(getProof("2".repeat(64))!.attestations.length, attesters.length);
