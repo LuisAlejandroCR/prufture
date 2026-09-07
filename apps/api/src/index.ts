@@ -16,12 +16,19 @@ const app = new Hono();
 app.get("/health", (c) => c.json({ ok: true, chainId: env.chainId }));
 
 app.post("/sync", async (c) => {
-  const body = (await c.req.json()) as SignedProof;
+  let body: SignedProof;
+  try {
+    body = (await c.req.json()) as SignedProof;
+  } catch {
+    return c.json({ error: "invalid json" }, 400);
+  }
   if (!verifyProof(body)) return c.json({ error: "invalid signature" }, 400);
 
   const payload = { proofHash: body.proofHash, taskId: body.taskId, geohash: body.geohash, capturedAt: body.capturedAt };
   upsertProof(payload);
 
+  // On-chain attestation is best-effort. A degraded relayer must not fail the sync:
+  // the proof is safely queued server-side and returns 200 with status "synced".
   const attestation = await submitAttestation(payload);
   if (attestation.available) {
     addAttestation(payload.proofHash, {
@@ -30,7 +37,7 @@ app.post("/sync", async (c) => {
       attestedAt: new Date().toISOString(),
     });
   }
-  return c.json({ status: attestation.available ? "attested" : "synced", attestation });
+  return c.json({ status: attestation.available ? "attested" : "synced", attestation }, 200);
 });
 
 app.post("/attest", async (c) => {
