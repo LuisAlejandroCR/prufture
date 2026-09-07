@@ -4,8 +4,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { generateKeyPair, hashBytes, signPayload, verifyProof } from "@proof/core";
 import type { SignedProof } from "@proof/core";
-import { encodeGeohash } from "./geohash.js";
-import { buildQueueRow, COLUMNS, fromRow, insertParams, toRow } from "./queue-row.js";
+import { encodeGeohash } from "../src/geohash.js";
+import { buildQueueRow, COLUMNS, fromRow, insertParams, toRow } from "../src/queue-row.js";
 
 const ALLOWED_KEYS = new Set(COLUMNS);
 

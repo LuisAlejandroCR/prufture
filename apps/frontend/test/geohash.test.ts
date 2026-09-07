@@ -2,7 +2,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { decodeGeohashBounds, encodeGeohash } from "./geohash.js";
+import { decodeGeohashBounds, encodeGeohash } from "../src/geohash.js";
 
 const BASE32 = "0123456789bcdefghjkmnpqrstuvwxyz";
 

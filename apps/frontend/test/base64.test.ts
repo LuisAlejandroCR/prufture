@@ -2,7 +2,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { base64ToBytes } from "./base64.js";
+import { base64ToBytes } from "../src/base64.js";
 
 test("decodes a known string", () => {
   assert.deepEqual([...base64ToBytes("aGVsbG8=")], [...Buffer.from("hello")]);

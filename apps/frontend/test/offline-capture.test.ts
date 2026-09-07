@@ -4,9 +4,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { generateKeyPair, hashBytes, signPayload, verifyProof } from "@proof/core";
-import { base64ToBytes } from "./base64.js";
-import { encodeGeohash } from "./geohash.js";
-import { buildQueueRow } from "./queue-row.js";
+import { base64ToBytes } from "../src/base64.js";
+import { encodeGeohash } from "../src/geohash.js";
+import { buildQueueRow } from "../src/queue-row.js";
 
 function captureOffline(photoB64: string, lat: number, lng: number, taskId: string) {
   const kp = generateKeyPair();
