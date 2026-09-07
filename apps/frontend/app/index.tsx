@@ -15,6 +15,7 @@ import {
   UIManager,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { QueuedProof } from "@proof/core";
 import { listProofs } from "../src/queue";
 import { color, radius, space, target, type } from "../src/theme";
@@ -26,6 +27,7 @@ if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental
 export default function QueueScreen() {
   const [proofs, setProofs] = useState<QueuedProof[]>([]);
   const known = useRef(0);
+  const insets = useSafeAreaInsets();
 
   useFocusEffect(
     useCallback(() => {
@@ -44,8 +46,9 @@ export default function QueueScreen() {
   );
 
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, { paddingBottom: insets.bottom + space.lg }]}>
       <FlatList
+        style={styles.list}
         data={proofs}
         keyExtractor={(p) => p.id}
         contentContainerStyle={proofs.length === 0 ? styles.emptyWrap : styles.listContent}
@@ -74,20 +77,22 @@ export default function QueueScreen() {
         )}
       />
 
-      <Text style={styles.privacy}>
-        What leaves your device: a hash, the task id, a coarse area, and the capture time. No photo,
-        no name, no exact location.
-      </Text>
+      <View style={styles.footer}>
+        <Text style={styles.privacy}>
+          What leaves your device: a hash, the task id, a coarse area, and the capture time. No photo,
+          no name, no exact location.
+        </Text>
 
-      <Link href="/capture" asChild>
-        <Pressable
-          style={({ pressed }) => [styles.cta, pressed && styles.ctaPressed]}
-          accessibilityRole="button"
-          accessibilityLabel="Capture evidence"
-        >
-          <Text style={styles.ctaText}>Capture evidence</Text>
-        </Pressable>
-      </Link>
+        <Link href="/capture" asChild>
+          <Pressable
+            style={({ pressed }) => [styles.cta, pressed && styles.ctaPressed]}
+            accessibilityRole="button"
+            accessibilityLabel="Capture evidence"
+          >
+            <Text style={styles.ctaText}>Capture evidence</Text>
+          </Pressable>
+        </Link>
+      </View>
     </View>
   );
 }
@@ -108,6 +113,8 @@ function StatusPill({ proof }: { proof: QueuedProof }) {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, padding: space.lg, backgroundColor: color.bg },
+  list: { flex: 1 },
+  footer: { flexShrink: 0, gap: space.md },
   listContent: { paddingBottom: space.sm },
   emptyWrap: { flexGrow: 1, justifyContent: "center" },
   empty: { alignItems: "center", paddingHorizontal: space.md, gap: space.sm },
