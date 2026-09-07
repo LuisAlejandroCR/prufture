@@ -1,33 +1,54 @@
-// page.tsx: public /verify/[hash] — shows attestation status without login. Block 4 acceptance surface.
-// Three honest states: verified proof, proof not indexed yet, verification service unreachable.
-// Only a coarse region is shown; no volunteer identity, no exact geohash, no GPS.
+// page.tsx: public /verify/[hash]. No login, ever. Plain-language lifecycle:
+// Report received / Waiting for more confirmation / Report confirmed, plus honest
+// "not found" and "temporarily unavailable" states. Shows the activity, an
+// approximate area (coarse region only), the capture date, the status, the number
+// of confirmations, and a public reference. The full reference and any external
+// record link live inside a collapsed technical section. No reporter identity, no
+// exact location, no private media.
 
 import Link from "next/link";
 import { fetchProof } from "../../../lib/api";
+import { activityLabel } from "../../../lib/dashboard";
 import { ShareLink } from "./ShareLink";
 
 const VERIFY_BASE = process.env.NEXT_PUBLIC_VERIFY_BASE_URL ?? "http://localhost:3000";
 
-function StatusPill({ count }: { count: number }) {
-  const attested = count > 0;
-  return (
-    <span className={`pill ${attested ? "ok" : "wait"}`}>
-      <span className="dot" aria-hidden />
-      {attested ? `attested by ${count}` : "synced, not yet attested"}
-    </span>
-  );
+type Stage = "received" | "waiting" | "confirmed";
+
+function stageFor(count: number): Stage {
+  if (count >= 2) return "confirmed";
+  if (count === 1) return "waiting";
+  return "received";
 }
+
+const STAGE_COPY: Record<Stage, { pill: string; cls: string; line: string }> = {
+  received: {
+    pill: "Report received",
+    cls: "info",
+    line: "The programme team can review this report. It is not confirmed by another community report yet.",
+  },
+  waiting: {
+    pill: "Waiting for more confirmation",
+    cls: "wait",
+    line: "One community report is in. It is marked confirmed once a second community member reports the same activity.",
+  },
+  confirmed: {
+    pill: "Report confirmed",
+    cls: "ok",
+    line: "More than one community member has reported this activity.",
+  },
+};
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <section className="fade-in">
+    <main className="wrap fade-in">
       <p style={{ marginBottom: "var(--sp-4)" }}>
         <Link href="/" className="faint" style={{ fontSize: "0.9rem", textDecoration: "none" }}>
-          ← Prufture
+          Prufture
         </Link>
       </p>
       {children}
-    </section>
+    </main>
   );
 }
 
@@ -39,12 +60,11 @@ export default async function VerifyPage({ params }: { params: Promise<{ hash: s
   if (result.state === "unreachable") {
     return (
       <Shell>
-        <h1>Verification service unavailable</h1>
+        <h1>Verification temporarily unavailable</h1>
         <p className="muted">
-          The public index could not be reached right now. The proof for <code>{hash}</code> is not
-          lost: attestations live on-chain. Try again shortly.
+          The public index could not be reached right now. This report is not lost. Please try again
+          shortly.
         </p>
-        <ShareLink url={shareUrl} />
       </Shell>
     );
   }
@@ -52,65 +72,95 @@ export default async function VerifyPage({ params }: { params: Promise<{ hash: s
   if (result.state === "not_found") {
     return (
       <Shell>
-        <h1>Proof not indexed yet</h1>
+        <h1>Report not found</h1>
         <p className="muted">
-          No attestation is indexed for <code>{hash}</code> yet. If a volunteer just captured it, the
-          offline queue may not have synced.
+          No report is on file for this reference yet. If a reporter just finished it, the phone may
+          not have had signal to send it.
         </p>
-        <ShareLink url={shareUrl} />
       </Shell>
     );
   }
 
   const { proof } = result;
+  const stage = stageFor(proof.attestationCount);
+  const copy = STAGE_COPY[stage];
+  const captured = new Date(proof.capturedAt);
+  const capturedText = Number.isNaN(captured.getTime())
+    ? proof.capturedAt
+    : captured.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
 
   return (
     <Shell>
-      <h1>Verified proof</h1>
-      <StatusPill count={proof.attestationCount} />
+      <h1>{copy.pill}</h1>
+      <span className={`pill ${copy.cls}`}>
+        <span className="dot" aria-hidden />
+        {copy.pill}
+      </span>
+      <p className="muted" style={{ marginTop: "var(--sp-3)" }}>
+        {copy.line}
+      </p>
 
       <dl className="fields">
-        <dt>Hash</dt>
+        <dt>Activity</dt>
+        <dd>{activityLabel(proof.taskId)}</dd>
+        <dt>Approximate area</dt>
         <dd>
-          <code>{proof.proofHash}</code>
-        </dd>
-        <dt>Task</dt>
-        <dd>{proof.taskId}</dd>
-        <dt>Region</dt>
-        <dd>
-          <code>{proof.geohashRegion}</code> <span className="faint">coarse geohash, approximate area only</span>
+          <code>{proof.geohashRegion || "not recorded"}</code>{" "}
+          <span className="faint">coarse region only</span>
         </dd>
         <dt>Captured</dt>
-        <dd>{proof.capturedAt}</dd>
+        <dd>{capturedText}</dd>
+        <dt>Confirmations</dt>
+        <dd>{proof.attestationCount}</dd>
+        <dt>Public reference</dt>
+        <dd>
+          <code>{proof.proofHash.slice(0, 12)}...</code>
+        </dd>
       </dl>
 
-      {proof.attestations.length > 0 ? (
-        <>
-          <h2>Attestations</h2>
-          <ul className="plain">
-            {proof.attestations.map((a) => (
-              <li key={a.txHash}>
-                <a href={`https://sepolia.basescan.org/tx/${a.txHash}`} rel="noreferrer noopener">
-                  {a.txHash.slice(0, 18)}…
-                </a>{" "}
-                by <code>{a.attester.slice(0, 10)}…</code> · {a.attestedAt}
-              </li>
-            ))}
-          </ul>
-        </>
-      ) : (
-        <p className="pill wait" style={{ marginTop: "var(--sp-4)" }}>
-          Synced to the index. No on-chain attestation yet: a second reviewer can still attest, or
-          the relayer is degraded.
-        </p>
-      )}
-
-      <h2>Share</h2>
+      <h2>Share this report</h2>
       <p className="muted">
-        This link carries only the hash. No volunteer identity, media, or exact location is stored or
-        shown, so it is safe to send over WhatsApp or email.
+        This link carries only the public reference. No reporter identity, photo, or exact location
+        is stored or shown, so it is safe to send over a chat or email.
       </p>
       <ShareLink url={shareUrl} />
+
+      <details className="tech">
+        <summary>Technical details</summary>
+        <div>
+          <dl className="fields">
+            <dt>Full reference</dt>
+            <dd>
+              <code>{proof.proofHash}</code>
+            </dd>
+            <dt>Captured (UTC)</dt>
+            <dd>
+              <code>{proof.capturedAt}</code>
+            </dd>
+          </dl>
+          {proof.attestations.length > 0 ? (
+            <ul className="plain">
+              {proof.attestations.map((a) => (
+                <li key={a.txHash}>
+                  <a
+                    href={`https://sepolia.basescan.org/tx/${a.txHash}`}
+                    rel="noreferrer noopener"
+                    target="_blank"
+                  >
+                    External record {a.txHash.slice(0, 14)}...
+                  </a>{" "}
+                  <span className="faint">{a.attestedAt}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="faint" style={{ marginBottom: 0 }}>
+              No external record yet. A second community report, or the delivery service coming back
+              online, will add one.
+            </p>
+          )}
+        </div>
+      </details>
     </Shell>
   );
 }

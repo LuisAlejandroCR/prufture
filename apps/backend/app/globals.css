@@ -1,7 +1,9 @@
 /* globals.css: design tokens and base styles for the Prufture public site.
    Tokens (color, type scale, spacing, radius) are declared once here; components use
    the classes and CSS variables below, never raw hex or px. Theme-aware: light default,
-   dark via prefers-color-scheme. No body horizontal scroll. */
+   dark via prefers-color-scheme. The reporter page journey speaks plain language; the
+   public site keeps a calm infrastructure identity (see apps/backend/DESIGN.md).
+   No body horizontal scroll. */
 
 :root {
   color-scheme: light dark;
@@ -19,6 +21,10 @@
   --ok-text: #10603a;
   --wait-bg: #fbeecb;
   --wait-text: #6f5500;
+  --attn-bg: #f7e0e5;
+  --attn-text: #8a2c48;
+  --info-bg: #e3f0f5;
+  --info-text: #0f5b70;
   --link: #1560d4;
 
   --sp-1: 4px;
@@ -38,6 +44,7 @@
   --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
 
   --maxw: 760px;
+  --sidebar-w: 232px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -55,6 +62,10 @@
     --ok-text: #7fd4a0;
     --wait-bg: #3a2f10;
     --wait-text: #e5c66b;
+    --attn-bg: #3a2028;
+    --attn-text: #ec9db2;
+    --info-bg: #10303a;
+    --info-text: #86ccdd;
     --link: #6ea8ff;
   }
 }
@@ -79,6 +90,7 @@ a { color: var(--link); text-underline-offset: 2px; }
 
 h1 { font-size: clamp(1.7rem, 4vw, 2.4rem); line-height: 1.15; letter-spacing: -0.02em; margin: 0 0 var(--sp-3); }
 h2 { font-size: 1.15rem; letter-spacing: -0.01em; margin: var(--sp-6) 0 var(--sp-3); }
+h3 { font-size: 1rem; margin: var(--sp-4) 0 var(--sp-2); }
 
 p { margin: 0 0 var(--sp-3); }
 
@@ -108,6 +120,9 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
 }
 .pill.ok { background: var(--ok-bg); color: var(--ok-text); }
 .pill.wait { background: var(--wait-bg); color: var(--wait-text); }
+.pill.attn { background: var(--attn-bg); color: var(--attn-text); }
+.pill.info { background: var(--info-bg); color: var(--info-text); }
+.pill.neutral { background: var(--surface-2); color: var(--text-muted); }
 
 .dot { width: 7px; height: 7px; border-radius: var(--pill); background: currentColor; }
 
@@ -128,7 +143,8 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
   text-decoration: none;
 }
 .btn.secondary { background: transparent; border-color: var(--border); color: var(--text); }
-.btn:focus-visible, .field:focus-visible, a:focus-visible {
+.btn.small { min-height: 36px; padding: 0 var(--sp-3); font-size: 0.9rem; }
+.btn:focus-visible, .field:focus-visible, a:focus-visible, summary:focus-visible {
   outline: 2px solid var(--brand);
   outline-offset: 2px;
 }
@@ -153,19 +169,29 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
 }
 
 /* Table wrapper keeps wide content scrolling inside itself, not the page. */
-.table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; border: 1px solid var(--border); border-radius: var(--radius-md); }
 table.data { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
-table.data th { text-align: left; border-bottom: 2px solid var(--border); padding: var(--sp-2) var(--sp-2); color: var(--text-faint); font-weight: 600; }
-table.data td { border-bottom: 1px solid var(--border); padding: var(--sp-2) var(--sp-2); }
+table.data th { text-align: left; border-bottom: 2px solid var(--border); padding: var(--sp-3); color: var(--text-faint); font-weight: 600; white-space: nowrap; }
+table.data td { border-bottom: 1px solid var(--border); padding: var(--sp-3); }
+table.data tr:last-child td { border-bottom: 0; }
 table.data td:last-child, table.data th:last-child { text-align: right; }
+table.data tbody tr:hover { background: var(--surface); }
 
 .filters { display: flex; gap: var(--sp-3); flex-wrap: wrap; align-items: flex-end; margin: var(--sp-4) 0; }
 .filters label { display: grid; gap: var(--sp-1); font-size: 0.8rem; color: var(--text-muted); }
 
-/* Landing hero: DESIGN_VARIANCE 4 — one confident asymmetric moment. */
+/* Collapsible technical section: closed by default. */
+details.tech { border: 1px solid var(--border); border-radius: var(--radius-md); padding: 0 var(--sp-4); margin: var(--sp-4) 0; background: var(--surface); }
+details.tech > summary { cursor: pointer; padding: var(--sp-3) 0; font-weight: 600; font-size: 0.95rem; list-style: none; }
+details.tech > summary::-webkit-details-marker { display: none; }
+details.tech > summary::before { content: "+ "; color: var(--text-faint); }
+details.tech[open] > summary::before { content: "- "; }
+details.tech > div { padding-bottom: var(--sp-4); }
+
+/* Landing: hero + three-step process. DESIGN_VARIANCE 5, one asymmetric moment. */
 .hero {
   display: grid;
-  grid-template-columns: 1.55fr 1fr;
+  grid-template-columns: 1.5fr 1fr;
   gap: var(--sp-5);
   align-items: start;
   margin: var(--sp-5) 0 var(--sp-6);
@@ -181,9 +207,85 @@ table.data td:last-child, table.data th:last-child { text-align: right; }
 ul.plain { padding-left: 1.1rem; display: grid; gap: var(--sp-2); color: var(--text-muted); }
 ul.plain li { padding-left: var(--sp-1); }
 
-@media (max-width: 640px) {
+.steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-4); margin: var(--sp-4) 0; }
+.step { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: var(--sp-4); }
+.step .n {
+  display: inline-flex; width: 28px; height: 28px; align-items: center; justify-content: center;
+  border-radius: var(--pill); background: var(--brand); color: var(--brand-ink);
+  font-weight: 700; font-size: 0.9rem; margin-bottom: var(--sp-2);
+}
+.step h3 { margin: 0 0 var(--sp-1); }
+.step p { margin: 0; color: var(--text-muted); font-size: 0.95rem; }
+
+@media (max-width: 720px) {
   .hero { grid-template-columns: 1fr; gap: var(--sp-4); margin-bottom: var(--sp-5); }
   .payload { order: 2; }
+  .steps { grid-template-columns: 1fr; }
+}
+
+/* Verify page lifecycle timeline. */
+.timeline { list-style: none; margin: var(--sp-4) 0; padding: 0; display: grid; gap: 0; }
+.timeline li { display: grid; grid-template-columns: 24px 1fr; gap: var(--sp-3); }
+.timeline .node {
+  width: 22px; height: 22px; border-radius: var(--pill); border: 2px solid var(--border);
+  background: var(--bg); display: grid; place-items: center; font-size: 0.7rem; color: var(--brand-ink);
+}
+.timeline li.done .node { background: var(--ok-text); border-color: var(--ok-text); }
+.timeline li.current .node { border-color: var(--brand); }
+.timeline .rail { width: 2px; background: var(--border); justify-self: center; min-height: 20px; }
+.timeline li.done .rail { background: var(--ok-text); }
+.timeline .stage { padding-bottom: var(--sp-4); }
+.timeline .stage b { display: block; }
+.timeline li.upcoming .stage b { color: var(--text-faint); font-weight: 600; }
+
+/* Dashboard shell: persistent sidebar + operational main. VISUAL_DENSITY 7. */
+.dash { display: grid; grid-template-columns: var(--sidebar-w) 1fr; min-height: 100vh; }
+.dash-side {
+  border-right: 1px solid var(--border);
+  background: var(--surface);
+  padding: var(--sp-4);
+  display: flex; flex-direction: column; gap: var(--sp-4);
+  position: sticky; top: 0; align-self: start; height: 100vh;
+}
+.dash-brand { font-weight: 700; font-size: 1.05rem; letter-spacing: -0.01em; }
+.dash-nav { display: grid; gap: 2px; }
+.dash-nav a {
+  display: block; padding: var(--sp-2) var(--sp-3); border-radius: var(--radius-sm);
+  color: var(--text-muted); text-decoration: none; font-size: 0.95rem; font-weight: 550;
+}
+.dash-nav a:hover { background: var(--surface-2); color: var(--text); }
+.dash-nav a[aria-current="page"] { background: var(--brand); color: var(--brand-ink); }
+.dash-main { padding: var(--sp-5) var(--sp-6); max-width: 1400px; }
+.dash-main > header { margin-bottom: var(--sp-5); }
+.dash-main h1 { font-size: 1.6rem; }
+
+.metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--sp-3); margin: var(--sp-4) 0 var(--sp-5); }
+.metric { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: var(--sp-4); }
+.metric .n { font-size: 1.7rem; font-weight: 700; letter-spacing: -0.02em; display: block; }
+.metric .k { font-size: 0.85rem; color: var(--text-muted); }
+
+.rowlink { color: var(--link); text-decoration: none; font-weight: 600; }
+.attn-list { display: grid; gap: var(--sp-3); margin: var(--sp-4) 0; }
+.attn-item { border: 1px solid var(--border); border-left: 3px solid var(--wait-text); border-radius: var(--radius-md); padding: var(--sp-4); background: var(--surface); }
+.attn-item.high { border-left-color: var(--attn-text); }
+.attn-item h3 { margin: 0 0 var(--sp-1); }
+.attn-item p { margin: 0 0 var(--sp-1); color: var(--text-muted); font-size: 0.95rem; }
+
+.dash-narrow-note { display: none; }
+
+@media (max-width: 960px) {
+  .dash { grid-template-columns: 1fr; }
+  .dash-side {
+    position: static; height: auto; flex-direction: row; align-items: center;
+    gap: var(--sp-3); overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--border);
+  }
+  .dash-nav { grid-auto-flow: column; gap: var(--sp-1); }
+  .dash-nav a { white-space: nowrap; }
+  .dash-main { padding: var(--sp-4); }
+  .dash-narrow-note {
+    display: block; background: var(--info-bg); color: var(--info-text);
+    border-radius: var(--radius-md); padding: var(--sp-3); font-size: 0.9rem; margin-bottom: var(--sp-4);
+  }
 }
 
 @media (prefers-reduced-motion: no-preference) {

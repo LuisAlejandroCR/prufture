@@ -1,62 +1,71 @@
-<!-- apps/frontend/DESIGN.md: design tokens and rules for the Prufture Expo app.
-     Covers the volunteer-facing capture and queue screens only.
-     Distinct from apps/backend/DESIGN.md, which governs the public web verifier. -->
+<!-- apps/frontend/DESIGN.md: design tokens and rules for the Prufture reporter app.
+     Covers the guided report flow and the five bottom-nav screens.
+     Distinct from apps/backend/DESIGN.md, which governs the public web verifier and dashboard. -->
 
-# Design — Prufture mobile
+# Design - Prufture mobile
 
-Humanitarian field tool, not a startup splash. Calm, legible, one task per screen.
+Humanitarian field tool, not a startup splash. Calm, guided, one task per screen. The reporter
+never needs to know anything about wallets, keys, hashes, or chains.
 
 ## Dials
 
-- DESIGN_VARIANCE 4: conventional vertical layout, trust over flair.
-- MOTION_INTENSITY 2: state transitions only (a new queue row eases in). Respects reduce-motion.
+- DESIGN_VARIANCE 5: mostly conventional vertical layout; asymmetry only where it aids focus
+  (the raised Report control in the tab bar, the recommended-task card on Home).
+- MOTION_INTENSITY 2: state transitions only (queue row ease-in, help row expand, stack slide).
+  Respects reduce-motion via `AccessibilityInfo.isReduceMotionEnabled`.
 - VISUAL_DENSITY 3: large targets, generous spacing, one primary action visible at a time.
 
 ## Tokens
 
-All tokens live in `src/theme.ts`. Screens import `color`, `space`, `radius`, `type`, `target`,
-`motion` and never inline raw hex or px.
+All tokens live in `src/theme.ts`. Screens import `color`, `space`, `radius`, `shadow`, `type`,
+`target`, `motion`, `statusStyle`, `friendlyStatus` and never inline raw hex or px.
 
-- Color: single brand blue `#1560d4`; status is carried by three tinted pills
-  (pending / synced / attested), each with an accessible text color.
-- Type scale: display / title / body / meta / action. No other sizes.
-- Spacing: 4 / 8 / 12 / 16 / 24 / 40.
-- Radius: 8 (chips), 12 (cards, buttons), 999 (pills).
-- Targets: 44px minimum, 56px for the primary capture and CTA buttons.
+- Colour: warm ivory ground `#FBF6EF`, white surface, terracotta primary `#C8533A`, muted brown
+  text. Four status tints: sage (confirmed), amber (waiting), pink (attention), blue (sending).
+  Contrast checked against background and surface for WCAG AA.
+- Type scale: display / title / subtitle / body / meta / action. No other sizes.
+- Spacing: 4 / 8 / 12 / 16 / 24 / 40. Radius: 10 / 14 / 20 / pill.
+- Targets: 44px minimum, 56px for the primary and capture buttons.
+
+## Product language
+
+The reporter journey uses friendly words only. `friendlyStatus()` maps the stored queue status
+to: Ready to send / Sending / Sent / Waiting for another report / Confirmed / Needs your attention.
+The words blockchain, wallet, gas, relayer, hash, signature, attestation, transaction, and
+zero-knowledge do not appear in any screen. `status/[id].tsx` keeps a collapsed "Technical
+details" section for demo or expert users; it still shows no PII and no exact location.
+
+## Icons
+
+`src/components/icons/Icon.tsx` is the single SVG set (`react-native-svg`). Unselected nav icons
+are outlined, selected are filled and sit on a `primarySoft` pill. Every icon-only control carries
+an `accessibilityLabel`. No emoji as interface icons.
+
+## Navigation
+
+`app/(tabs)/_layout.tsx` renders a custom bottom bar: Home, Tasks, [Report], Updates, Me. Report
+is a raised terracotta control that opens `/report/intro` for the recommended task. The guided
+report flow (`app/report/*`) and the detail screens (`app/task/[id]`, `app/status/[id]`,
+`app/help`) are plain stack screens with in-screen back controls.
+
+## Report flow
+
+`src/report-draft.ts` holds the in-memory draft (photos, answers, coarse area) for the report
+being built now. On "Finish report" it calls the existing `src/capture.ts` path once per photo:
+`captureProof` -> `enqueueProof`, status `pending_sync`. No new protocol, no new proof fields, no
+endpoint or sync-retry change. The auto-sync loop drains the queue exactly as before.
 
 ## Theme
 
-Volunteers capture outdoors in daylight; the app commits to a single high-contrast light theme.
-Dark mode is a post-hackathon item. This is deliberate, not an oversight:
-
-- `app.json` sets `userInterfaceStyle: "light"`.
-- `_layout.tsx` sets `<StatusBar style="dark" />`.
-- `src/theme.ts` carries one light-only token set; there is no `useColorScheme()` branch.
-
-When dark mode is picked up later: add a dark token set in `src/theme.ts` keyed off
-`useColorScheme()`, switch `app.json` to `userInterfaceStyle: "automatic"` and the status bar to
-`style="auto"`.
+Reporters capture outdoors in daylight; the app commits to a single high-contrast light theme.
+`app.json` sets `userInterfaceStyle: "light"`, `_layout.tsx` sets `<StatusBar style="dark" />`,
+and `src/theme.ts` carries one light-only token set. Dark mode is a post-hackathon item.
 
 ## Rules
 
 - Em-dash is banned in UI copy.
-- Every screen states what leaves the device (queue screen footer line).
-- Busy and error states are always explicit: the capture button shows a spinner plus "Signing…"
-  and errors render in a tinted box with a polite live region.
-- Status must be readable at a glance: color + word, never color alone.
-
-## Sync
-
-- The queue drains itself: `useAutoSync()` (mounted in `_layout.tsx`) runs `syncPending()` once
-  when connectivity returns and on app-foreground, de-duplicated so runs never overlap.
-- The queue screen footer also has a secondary "Sync now" button (44px, `color.surface` +
-  `color.border`, `radius.md`) beside the primary capture CTA, with a one-line result underneath
-  ("3 synced, 1 attested" / "No connection, will retry").
-- Only the six `SignedProof` fields leave the device (`toSignedProof()` whitelist in `src/sync.ts`).
-  `mediaUri` and the local queue columns are never sent.
-
-## Config
-
-`EXPO_PUBLIC_API_URL` — base URL of the proof api (`apps/api`). The queue POSTs pending proofs to
-`${EXPO_PUBLIC_API_URL}/sync`. Expo inlines `EXPO_PUBLIC_*` at build time. Local-dev fallback when
-unset: `http://localhost:8787`. See `.env.example`. Deploy wires the real value.
+- One primary action per screen.
+- Offline-saved uses success styling, never error styling.
+- Original media is described as private; nothing uploads without the existing consent path.
+- Empty, loading, offline, sending, success, partial-success, and error states are designed.
+- Status is readable without colour: a dot plus the word, never colour alone.
