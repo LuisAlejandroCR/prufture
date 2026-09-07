@@ -8,5 +8,5 @@
       "@proof/core": ["../../packages/core/src/index.ts"]
     }
   },
-  "include": ["src/**/*", "scripts/**/*"]
+  "include": ["src/**/*", "scripts/**/*", "test/**/*"]
 }

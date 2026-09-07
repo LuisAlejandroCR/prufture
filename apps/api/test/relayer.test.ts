@@ -4,7 +4,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { decodeAbiParameters, parseAbiParameters } from "viem";
-import { encodeProofData, submitAttestation } from "./relayer.js";
+import { encodeProofData, submitAttestation } from "../src/relayer.js";
 
 const PARAMS = parseAbiParameters("bytes32 proofHash, string taskId, string geohash, uint64 capturedAt");
 
