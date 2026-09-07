@@ -9,6 +9,5 @@
       "@proof/core": ["../../packages/core/src/index.ts"]
     }
   },
-  "include": ["app", "src", "*.ts", "*.tsx"],
-  "exclude": ["src/**/*.test.ts"]
+  "include": ["app", "src", "*.ts", "*.tsx"]
 }
