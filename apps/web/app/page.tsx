@@ -3,7 +3,7 @@
 export default function Home() {
   return (
     <section>
-      <h1>Proof-at-Capture</h1>
+      <h1>Prufture</h1>
       <p>
         A volunteer photographs field evidence offline. The proof reaches the organization signed,
         geolocated to a coarse region, and with zero personal data.

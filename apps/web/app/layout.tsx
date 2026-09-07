@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 
 export const metadata = {
-  title: "Proof-at-Capture",
+  title: "Prufture",
   description: "Verify field-evidence proofs without login. Zero personal data.",
 };
 

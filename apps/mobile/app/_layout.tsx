@@ -8,7 +8,7 @@ export default function RootLayout() {
     <>
       <StatusBar style="dark" />
       <Stack screenOptions={{ headerShown: true }}>
-        <Stack.Screen name="index" options={{ title: "Proof-at-Capture" }} />
+        <Stack.Screen name="index" options={{ title: "Prufture" }} />
         <Stack.Screen name="capture" options={{ title: "Capture evidence" }} />
       </Stack>
     </>
