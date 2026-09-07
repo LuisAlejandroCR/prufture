@@ -9,6 +9,10 @@ docs/
 .env.*
 !.env.example
 
+# Local durable store for apps/api (file-backed persistence)
+.data/
+apps/api/.data/
+
 # Dependencies / build
 node_modules/
 dist/
