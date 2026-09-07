@@ -2,8 +2,11 @@
 // No network here: hash + sign + SQLite insert all run offline. Distinct from queue.ts (storage).
 
 import { hashBytes, signPayload, type ProofPublicPayload } from "@proof/core";
+import { base64ToBytes } from "./base64";
 import { getOrCreatePrivateKey } from "./keystore";
 import { enqueueProof } from "./queue";
+
+export { base64ToBytes };
 
 export interface CaptureInput {
   taskId: string;
@@ -13,15 +16,6 @@ export interface CaptureInput {
   geohash: string;
   /** On-device file URI of the photo. Stays local, never uploaded by default. */
   mediaUri: string;
-}
-
-/** Decode a base64 string (from expo-file-system / expo-camera) to raw bytes. */
-export function base64ToBytes(b64: string): Uint8Array {
-  const clean = b64.includes(",") ? b64.slice(b64.indexOf(",") + 1) : b64;
-  const bin = globalThis.atob(clean);
-  const out = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i += 1) out[i] = bin.charCodeAt(i);
-  return out;
 }
 
 export async function captureProof(input: CaptureInput) {
