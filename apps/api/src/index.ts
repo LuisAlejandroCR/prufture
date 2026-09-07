@@ -2,6 +2,7 @@
 // POST /sync   - receive a signed proof, verify signature, attest on-chain (or degrade).
 // POST /attest - a second attester confirms the same proofHash ("more eyes").
 // POST /notify - send the public verifyUrl over a delivery channel (url only, no payload).
+// POST /verify-identity - attach a verified attribute (boolean) to a proof via Neuro, or degrade.
 // GET  /proof/:hash - public verification data, zero PII.
 // GET  /proofs      - aggregate list for the stakeholder dashboard.
 
@@ -9,8 +10,9 @@ import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { verifyProof, type SignedProof } from "@proof/core";
 import { env } from "./env.js";
-import { addAttestation, allProofs, getProof, upsertProof } from "./store.js";
+import { addAttestation, allProofs, getProof, setVerifiedAttribute, upsertProof } from "./store.js";
 import { submitAttestation } from "./relayer.js";
+import { getVerifiedAttribute } from "./neuro.js";
 import { sendVerifyUrl, type Channel } from "./channels.js";
 
 const VERIFY_BASE = process.env.VERIFY_BASE_URL ?? "http://localhost:3000";
@@ -86,6 +88,37 @@ app.post("/notify", async (c) => {
   return c.json({ sent: result.available, result });
 });
 
+app.post("/verify-identity", async (c) => {
+  let body: { proofHash?: string; attribute?: string; subjectRef?: string };
+  try {
+    body = (await c.req.json()) as typeof body;
+  } catch {
+    return c.json({ error: "invalid json" }, 400);
+  }
+  if (!body.proofHash || !getProof(body.proofHash)) {
+    return c.json({ error: "unknown proofHash" }, 404);
+  }
+
+  const result = await getVerifiedAttribute({ attribute: body.attribute, subjectRef: body.subjectRef });
+
+  // Degraded (sandbox down / unconfigured): 200 with the typed result, proof unchanged.
+  if (!result.available) {
+    return c.json({ status: "degraded", verifiedAttribute: null, result }, 200);
+  }
+
+  // Available: record ONLY { attribute, value } — no identity field is ever persisted.
+  setVerifiedAttribute(body.proofHash, {
+    attribute: result.data.attribute,
+    value: result.data.value,
+    checkedAt: result.checkedAt,
+  });
+  return c.json({
+    status: "recorded",
+    verifiedAttribute: { attribute: result.data.attribute, value: result.data.value },
+    result,
+  });
+});
+
 // REGION_PREFIX_LEN: how many geohash chars leave the api. 5 ≈ ~5 km cell, never exact GPS.
 // The full geohash never leaves this process — not on /proof/:hash, not on /proofs.
 const REGION_PREFIX_LEN = 5;
@@ -100,6 +133,10 @@ app.get("/proof/:hash", (c) => {
     capturedAt: entry.payload.capturedAt,
     attestationCount: entry.attestations.length,
     attestations: entry.attestations,
+    // Boolean-only: { attribute, value }. Never an identity field. Absent until /verify-identity.
+    verifiedAttribute: entry.verifiedAttribute
+      ? { attribute: entry.verifiedAttribute.attribute, value: entry.verifiedAttribute.value }
+      : null,
   });
 });
 
