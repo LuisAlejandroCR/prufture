@@ -1,0 +1,63 @@
+# render.yaml: Render Blueprint for the Prufture relayer/index API (apps/api, Hono + Node).
+# Needs a persistent writable disk so proofs survive a redeploy (worker/api-persist store.ts,
+# STORE_PATH). Distinct from vercel.json, which deploys the Next.js public site (apps/backend).
+#
+# NOTE: persistent disks require a paid instance ("starter" or above) — Render's free web
+# service has an ephemeral filesystem. On free tier the store resets on every cold start and
+# redeploy; see docs/delivery.md for the Fly.io / Railway volume alternatives.
+
+services:
+  - type: web
+    name: prufture-api
+    runtime: node
+    plan: starter
+    region: frankfurt
+    rootDir: .
+    buildCommand: npm ci
+    startCommand: npm run start --workspace apps/api
+    healthCheckPath: /health
+    autoDeploy: false
+    disk:
+      name: prufture-store
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: NODE_VERSION
+        value: "20.18.0"
+      # Durable proof store on the mounted disk (worker/api-persist).
+      - key: STORE_PATH
+        value: /data/store.json
+      # Public site base, used to build the verifyUrl in POST /notify. Set to the Vercel URL.
+      - key: VERIFY_BASE_URL
+        sync: false
+      # On-chain attestation (Base Sepolia via Dwellir). Absent -> /sync degrades to "synced".
+      - key: DWELLIR_RPC_URL
+        sync: false
+      - key: RELAYER_PRIVATE_KEY
+        sync: false
+      - key: EAS_SCHEMA_UID
+        sync: false
+      - key: EAS_CONTRACT_ADDRESS
+        value: "0x4200000000000000000000000000000000000021"
+      - key: BASE_SEPOLIA_CHAIN_ID
+        value: "84532"
+      # Identity (Neuro). Absent -> /verify-identity degrades.
+      - key: NEURO_AGENT_API_URL
+        sync: false
+      - key: NEURO_AGENT_API_TOKEN
+        sync: false
+      # Delivery channels. Absent -> each channel degrades, /notify returns sent:false.
+      - key: KAPSO_API_KEY
+        sync: false
+      - key: KAPSO_PHONE_NUMBER_ID
+        sync: false
+      - key: KAPSO_API_BASE
+        value: https://app.kapso.ai/api/v1
+      - key: EMAIL_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+      - key: EMAIL_API_BASE
+        value: https://api.resend.com
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
