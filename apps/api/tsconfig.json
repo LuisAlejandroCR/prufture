@@ -1,12 +1,12 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "rootDir": "src",
+    "rootDir": ".",
     "outDir": "dist",
     "types": ["node"],
     "paths": {
       "@proof/core": ["../../packages/core/src/index.ts"]
     }
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*", "scripts/**/*"]
 }
