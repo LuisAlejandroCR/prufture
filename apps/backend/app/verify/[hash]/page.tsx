@@ -2,27 +2,32 @@
 // Three honest states: verified proof, proof not indexed yet, verification service unreachable.
 // Only a coarse region is shown; no volunteer identity, no exact geohash, no GPS.
 
+import Link from "next/link";
 import { fetchProof } from "../../../lib/api";
 import { ShareLink } from "./ShareLink";
 
 const VERIFY_BASE = process.env.NEXT_PUBLIC_VERIFY_BASE_URL ?? "http://localhost:3000";
 
-function StatusBadge({ count }: { count: number }) {
+function StatusPill({ count }: { count: number }) {
   const attested = count > 0;
   return (
-    <span
-      style={{
-        display: "inline-block",
-        padding: "4px 10px",
-        borderRadius: 999,
-        fontWeight: 600,
-        fontSize: 14,
-        background: attested ? "#1a7f37" : "#8a6d00",
-        color: "#fff",
-      }}
-    >
-      {attested ? `attested by ${count}` : "synced · not yet attested"}
+    <span className={`pill ${attested ? "ok" : "wait"}`}>
+      <span className="dot" aria-hidden />
+      {attested ? `attested by ${count}` : "synced, not yet attested"}
     </span>
+  );
+}
+
+function Shell({ children }: { children: React.ReactNode }) {
+  return (
+    <section className="fade-in">
+      <p style={{ marginBottom: "var(--sp-4)" }}>
+        <Link href="/" className="faint" style={{ fontSize: "0.9rem", textDecoration: "none" }}>
+          ← Prufture
+        </Link>
+      </p>
+      {children}
+    </section>
   );
 }
 
@@ -33,57 +38,56 @@ export default async function VerifyPage({ params }: { params: Promise<{ hash: s
 
   if (result.state === "unreachable") {
     return (
-      <section>
+      <Shell>
         <h1>Verification service unavailable</h1>
-        <p>
+        <p className="muted">
           The public index could not be reached right now. The proof for <code>{hash}</code> is not
-          lost — attestations live on-chain. Try again shortly.
+          lost: attestations live on-chain. Try again shortly.
         </p>
         <ShareLink url={shareUrl} />
-      </section>
+      </Shell>
     );
   }
 
   if (result.state === "not_found") {
     return (
-      <section>
+      <Shell>
         <h1>Proof not indexed yet</h1>
-        <p>
+        <p className="muted">
           No attestation is indexed for <code>{hash}</code> yet. If a volunteer just captured it, the
           offline queue may not have synced.
         </p>
         <ShareLink url={shareUrl} />
-      </section>
+      </Shell>
     );
   }
 
   const { proof } = result;
 
   return (
-    <section>
+    <Shell>
       <h1>Verified proof</h1>
-      <p>
-        <StatusBadge count={proof.attestationCount} />
-      </p>
-      <dl>
+      <StatusPill count={proof.attestationCount} />
+
+      <dl className="fields">
         <dt>Hash</dt>
         <dd>
           <code>{proof.proofHash}</code>
         </dd>
         <dt>Task</dt>
         <dd>{proof.taskId}</dd>
-        <dt>Region (coarse geohash)</dt>
+        <dt>Region</dt>
         <dd>
-          <code>{proof.geohashRegion}</code> <span style={{ color: "#777" }}>— approximate area only</span>
+          <code>{proof.geohashRegion}</code> <span className="faint">coarse geohash, approximate area only</span>
         </dd>
-        <dt>Captured at</dt>
+        <dt>Captured</dt>
         <dd>{proof.capturedAt}</dd>
       </dl>
 
       {proof.attestations.length > 0 ? (
         <>
           <h2>Attestations</h2>
-          <ul>
+          <ul className="plain">
             {proof.attestations.map((a) => (
               <li key={a.txHash}>
                 <a href={`https://sepolia.basescan.org/tx/${a.txHash}`} rel="noreferrer noopener">
@@ -95,18 +99,18 @@ export default async function VerifyPage({ params }: { params: Promise<{ hash: s
           </ul>
         </>
       ) : (
-        <p style={{ color: "#8a6d00" }}>
-          Synced to the index. No on-chain attestation has been recorded yet (a second reviewer can
-          still attest, or the relayer is degraded).
+        <p className="pill wait" style={{ marginTop: "var(--sp-4)" }}>
+          Synced to the index. No on-chain attestation yet: a second reviewer can still attest, or
+          the relayer is degraded.
         </p>
       )}
 
       <h2>Share</h2>
-      <p style={{ color: "#555" }}>
+      <p className="muted">
         This link carries only the hash. No volunteer identity, media, or exact location is stored or
-        shown — safe to send over WhatsApp or email.
+        shown, so it is safe to send over WhatsApp or email.
       </p>
       <ShareLink url={shareUrl} />
-    </section>
+    </Shell>
   );
 }

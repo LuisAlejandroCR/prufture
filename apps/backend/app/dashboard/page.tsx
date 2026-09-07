@@ -2,6 +2,7 @@
 // Shows region-level geohash only, never exact GPS, never per-volunteer identity.
 // Fetch is server-side; the client component only filters what is already coarse.
 
+import Link from "next/link";
 import { fetchProofs } from "../../lib/api";
 import { DashboardTable } from "./DashboardTable";
 
@@ -9,12 +10,17 @@ export default async function DashboardPage() {
   const { proofs, degraded } = await fetchProofs();
 
   return (
-    <section>
+    <section className="fade-in">
+      <p style={{ marginBottom: "var(--sp-4)" }}>
+        <Link href="/" className="faint" style={{ fontSize: "0.9rem", textDecoration: "none" }}>
+          ← Prufture
+        </Link>
+      </p>
       <h1>Stakeholder dashboard</h1>
-      <p style={{ color: "#555" }}>Region-level only. No login, no PII.</p>
+      <p className="muted">Region level only. No login, no personal data, no exact location.</p>
       {degraded ? (
-        <p style={{ color: "#8a6d00" }}>
-          The proof index is unreachable right now. Showing no rows — this is a service degradation,
+        <p className="pill wait" style={{ marginTop: "var(--sp-4)" }}>
+          The proof index is unreachable right now. Showing no rows: this is a service degradation,
           not an empty program.
         </p>
       ) : (
