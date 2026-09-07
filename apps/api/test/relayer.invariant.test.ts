@@ -9,7 +9,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, resolve } from "node:path";
 import { randomBytes } from "node:crypto";
 import { decodeAbiParameters, parseAbiParameters, bytesToHex } from "viem";
-import { buildAttestRequest, submitAttestation } from "./relayer.js";
+import { buildAttestRequest, submitAttestation } from "../src/relayer.js";
 import type { ProofPublicPayload } from "@proof/core";
 
 const SCHEMA = parseAbiParameters(
@@ -97,7 +97,7 @@ test("invariant: submitAttestation never throws and returns a typed envelope (un
 test("invariant: submitAttestation degrades (never throws) even when misconfigured with a dead RPC", () => {
   // env is read at module load, so run in a child process with a bogus but well-formed config.
   const here = dirname(fileURLToPath(import.meta.url));
-  const relayerUrl = pathToFileURL(resolve(here, "relayer.ts")).href;
+  const relayerUrl = pathToFileURL(resolve(here, "../src/relayer.ts")).href;
   const script = `
     import { submitAttestation } from ${JSON.stringify(relayerUrl)};
     const r = await submitAttestation({ proofHash: "a".repeat(64), taskId: "t", geohash: "g", capturedAt: "2026-01-01T00:00:00Z" });

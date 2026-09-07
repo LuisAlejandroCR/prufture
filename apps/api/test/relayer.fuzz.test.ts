@@ -6,7 +6,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { randomBytes } from "node:crypto";
 import { decodeAbiParameters, parseAbiParameters, bytesToHex } from "viem";
-import { encodeProofData } from "./relayer.js";
+import { encodeProofData } from "../src/relayer.js";
 import type { ProofPublicPayload } from "@proof/core";
 
 const PARAMS = parseAbiParameters(
