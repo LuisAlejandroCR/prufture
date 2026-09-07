@@ -1,5 +1,5 @@
 // Icon.tsx: the single SVG icon set for the reporter app (react-native-svg).
-// One 24x24 grid, 1.75 stroke. `filled` swaps outlined nav icons to a solid state.
+// One 24x24 grid, 2px stroke, rounded caps. `filled` swaps outlined nav icons to solid.
 // Functional meaning always pairs an icon with text or an accessibility label; this
 // component only draws. Distinct from components/* screen pieces.
 
@@ -51,7 +51,7 @@ export interface IconProps {
 }
 
 function IconBase({ name, size = 24, color = tokens.text, filled = false, accessibilityLabel }: IconProps) {
-  const s = 1.75;
+  const s = 2;
   const common = {
     stroke: color,
     strokeWidth: s,

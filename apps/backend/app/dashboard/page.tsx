@@ -18,16 +18,16 @@ export default async function DashboardOverview() {
     { n: m.thisWeek, k: "Reports this week" },
     { n: m.readyToReview, k: "Ready to review" },
     { n: m.needAnother, k: "Need another report" },
-    { n: m.confirmed, k: "Confirmed" },
     { n: m.programmes, k: "Programmes covered" },
-    { n: m.areas, k: "Areas reporting" },
   ];
 
   return (
     <section className="fade-in">
       <header>
-        <h1>Overview</h1>
-        <p className="muted">Programme coverage at a glance. Region level only, no personal data.</p>
+        <h1>Today&apos;s impact reports</h1>
+        <p className="muted">
+          See what communities have documented and where your attention is needed.
+        </p>
       </header>
 
       {degraded ? (

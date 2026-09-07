@@ -59,16 +59,6 @@ export function DashboardTable({ proofs }: { proofs: ProofSummary[] }) {
     <>
       <div className="filters" role="search">
         <label>
-          Search
-          <input
-            className="field"
-            type="search"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Activity or area"
-          />
-        </label>
-        <label>
           Programme
           <select className="field" value={programme} onChange={(e) => setProgramme(e.target.value)}>
             <option value="">All programmes</option>
@@ -94,14 +84,29 @@ export function DashboardTable({ proofs }: { proofs: ProofSummary[] }) {
             ))}
           </select>
         </label>
-        <label>
-          From
-          <input type="date" className="field" value={from} onChange={(e) => setFrom(e.target.value)} />
-        </label>
-        <label>
-          To
-          <input type="date" className="field" value={to} onChange={(e) => setTo(e.target.value)} />
-        </label>
+        <details className="more-filters">
+          <summary>More filters</summary>
+          <div className="filters" style={{ margin: "var(--sp-3) 0 0" }}>
+            <label>
+              Search
+              <input
+                className="field"
+                type="search"
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Activity or area"
+              />
+            </label>
+            <label>
+              From
+              <input type="date" className="field" value={from} onChange={(e) => setFrom(e.target.value)} />
+            </label>
+            <label>
+              To
+              <input type="date" className="field" value={to} onChange={(e) => setTo(e.target.value)} />
+            </label>
+          </div>
+        </details>
         {active ? (
           <button
             type="button"
@@ -132,8 +137,7 @@ export function DashboardTable({ proofs }: { proofs: ProofSummary[] }) {
               <th>Programme</th>
               <th>Approximate area</th>
               <th>Submitted</th>
-              <th>Report status</th>
-              <th>Confirmations</th>
+              <th>Status</th>
               <th>Action</th>
             </tr>
           </thead>
@@ -154,10 +158,9 @@ export function DashboardTable({ proofs }: { proofs: ProofSummary[] }) {
                       {REVIEW_LABEL[st]}
                     </span>
                   </td>
-                  <td>{p.attestationCount}</td>
                   <td>
-                    <Link className="rowlink" href={`/dashboard/reports/${p.proofHash}`}>
-                      Open
+                    <Link className="rowlink" href={`/dashboard/reports/${p.proofHash}`} aria-label={`Open ${activityLabel(p.taskId)}`}>
+                      Open &rarr;
                     </Link>
                   </td>
                 </tr>
@@ -165,7 +168,7 @@ export function DashboardTable({ proofs }: { proofs: ProofSummary[] }) {
             })}
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={7} className="muted">
+                <td colSpan={6} className="muted">
                   No reports match these filters.
                 </td>
               </tr>

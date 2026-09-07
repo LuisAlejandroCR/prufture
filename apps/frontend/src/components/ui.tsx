@@ -166,9 +166,28 @@ export function StatusPill({ status, count }: { status: FriendlyStatus; count?: 
   const label =
     status === "confirmed" && count && count > 1 ? `Confirmed by ${count} people` : st.label;
   return (
-    <View style={[s.pill, { backgroundColor: st.bg }]} accessibilityRole="text">
-      <View style={[s.pillDot, { backgroundColor: st.fg }]} />
-      <Text style={[s.pillText, { color: st.fg }]}>{label}</Text>
+    <View style={[s.pill, { backgroundColor: st.tint }]} accessibilityRole="text">
+      <View style={[s.pillDot, { backgroundColor: st.hue }]} />
+      <Text style={s.pillText}>{label}</Text>
+    </View>
+  );
+}
+
+/** "Step X of 4" header for the guided report flow (Instructions / Capture / Questions / Review). */
+export function ReportProgress({ step, label }: { step: 1 | 2 | 3 | 4; label: string }) {
+  return (
+    <View style={{ gap: space.xs }} accessibilityRole="header">
+      <Text style={s.stepCount}>
+        Step {step} of 4 · {label}
+      </Text>
+      <View style={s.dots}>
+        {[1, 2, 3, 4].map((i) => (
+          <View
+            key={i}
+            style={[s.dot, i <= step ? { backgroundColor: color.primary } : { backgroundColor: color.border }]}
+          />
+        ))}
+      </View>
     </View>
   );
 }
@@ -205,7 +224,7 @@ export function Notice({
   return (
     <View style={[s.notice, { backgroundColor: map.bg }]} accessibilityLiveRegion="polite" accessibilityRole={role}>
       <Icon name={icon} size={18} color={map.fg} />
-      <Text style={[s.noticeText, { color: map.fg }]}>{children}</Text>
+      <Text style={s.noticeText}>{children}</Text>
     </View>
   );
 }
@@ -239,19 +258,6 @@ export function Row({
       </View>
       <Icon name="chevron" size={18} color={color.faint} />
     </Pressable>
-  );
-}
-
-export function ProgressDots({ total, index }: { total: number; index: number }) {
-  return (
-    <View style={s.dots} accessibilityRole="progressbar" accessibilityLabel={`Step ${index + 1} of ${total}`}>
-      {Array.from({ length: total }).map((_, i) => (
-        <View
-          key={i}
-          style={[s.dot, i <= index ? { backgroundColor: color.primary } : { backgroundColor: color.border }]}
-        />
-      ))}
-    </View>
   );
 }
 
@@ -332,8 +338,9 @@ const s = StyleSheet.create({
     paddingHorizontal: space.md,
     borderRadius: radius.pill,
   },
-  pillDot: { width: 7, height: 7, borderRadius: radius.pill },
-  pillText: { ...type.meta, fontWeight: "700" },
+  pillDot: { width: 8, height: 8, borderRadius: radius.pill },
+  pillText: { fontSize: 14, lineHeight: 18, fontWeight: "700", color: color.text },
+  stepCount: { ...type.label, color: color.muted, textTransform: "uppercase" },
   reassure: {
     flexDirection: "row",
     gap: space.md,
@@ -350,7 +357,7 @@ const s = StyleSheet.create({
     borderRadius: radius.md,
     alignItems: "flex-start",
   },
-  noticeText: { ...type.meta, flex: 1, fontWeight: "600" },
+  noticeText: { ...type.meta, flex: 1, fontWeight: "600", color: color.text },
   row: {
     flexDirection: "row",
     alignItems: "center",

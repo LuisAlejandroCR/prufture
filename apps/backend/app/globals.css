@@ -8,24 +8,30 @@
 :root {
   color-scheme: light dark;
 
-  --bg: #ffffff;
-  --surface: #f6f7f9;
-  --surface-2: #eef0f4;
-  --border: #e2e5ea;
-  --text: #10161d;
-  --text-muted: #55606d;
-  --text-faint: #59636f; /* kept >=4.5:1 on bg and surface, both themes (WCAG AA) */
-  --brand: #1560d4;
+  /* One warm humanitarian palette, shared with the reporter app (apps/frontend/src/theme.ts).
+     Contrast (WCAG AA, computed 2026-09-07, on --bg #FBF6EF):
+       --text #1C1208 -> 15.0:1 (body)   --text-muted #806F5C -> 4.50:1 (body >= 4.5)
+       --link #A8402B -> 5.7:1 (body)
+     Status pills/notices render their label in --text; the hue is on the dot / left border
+     only, so no soft-tint-on-solid text pair below 4.5:1 is ever used. */
+  --bg: #fbf6ef;
+  --surface: #ffffff;
+  --surface-2: #f7f2ea;
+  --border: #ede5d8;
+  --text: #1c1208;
+  --text-muted: #806f5c;
+  --text-faint: #806f5c;
+  --brand: #c8533a;
   --brand-ink: #ffffff;
-  --ok-bg: #dff3e4;
-  --ok-text: #10603a;
-  --wait-bg: #fbeecb;
-  --wait-text: #6f5500;
-  --attn-bg: #f7e0e5;
-  --attn-text: #8a2c48;
-  --info-bg: #e3f0f5;
-  --info-text: #0f5b70;
-  --link: #1560d4;
+  --ok-bg: #ebf7f2;
+  --ok-text: #3d9970;
+  --wait-bg: #fdf5e6;
+  --wait-text: #c88720;
+  --attn-bg: #fbeaf1;
+  --attn-text: #c04b7a;
+  --info-bg: #e7f3f8;
+  --info-text: #2982a1;
+  --link: #a8402b;
 
   --sp-1: 4px;
   --sp-2: 8px;
@@ -49,24 +55,24 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0e1116;
-    --surface: #161b22;
-    --surface-2: #1c232c;
-    --border: #2a313c;
-    --text: #e8ebef;
-    --text-muted: #9aa4b0;
-    --text-faint: #949eaa;
-    --brand: #4f8ff5;
-    --brand-ink: #08101d;
-    --ok-bg: #12331f;
-    --ok-text: #7fd4a0;
-    --wait-bg: #3a2f10;
-    --wait-text: #e5c66b;
-    --attn-bg: #3a2028;
-    --attn-text: #ec9db2;
-    --info-bg: #10303a;
-    --info-text: #86ccdd;
-    --link: #6ea8ff;
+    --bg: #1c1610;
+    --surface: #262019;
+    --surface-2: #2f2820;
+    --border: #3b332a;
+    --text: #f5ede1;
+    --text-muted: #c6b6a2;
+    --text-faint: #c6b6a2;
+    --brand: #e0765c;
+    --brand-ink: #24100a;
+    --ok-bg: #13312440;
+    --ok-text: #7fd9b0;
+    --wait-bg: #3a2f1440;
+    --wait-text: #e7bd7c;
+    --attn-bg: #3a1f2b40;
+    --attn-text: #efa2c1;
+    --info-bg: #12313a40;
+    --info-text: #8fcfe2;
+    --link: #ef9d86;
   }
 }
 
@@ -118,13 +124,18 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
   font-weight: 650;
   line-height: 1.4;
 }
-.pill.ok { background: var(--ok-bg); color: var(--ok-text); }
-.pill.wait { background: var(--wait-bg); color: var(--wait-text); }
-.pill.attn { background: var(--attn-bg); color: var(--attn-text); }
-.pill.info { background: var(--info-bg); color: var(--info-text); }
-.pill.neutral { background: var(--surface-2); color: var(--text-muted); }
+.pill { color: var(--text); }
+.pill.ok { background: var(--ok-bg); }
+.pill.wait { background: var(--wait-bg); }
+.pill.attn { background: var(--attn-bg); }
+.pill.info { background: var(--info-bg); }
+.pill.neutral { background: var(--surface-2); }
 
-.dot { width: 7px; height: 7px; border-radius: var(--pill); background: currentColor; }
+.dot { width: 8px; height: 8px; border-radius: var(--pill); background: var(--text-muted); }
+.pill.ok .dot { background: var(--ok-text); }
+.pill.wait .dot { background: var(--wait-text); }
+.pill.attn .dot { background: var(--attn-text); }
+.pill.info .dot { background: var(--info-text); }
 
 /* Buttons and inputs: >=44px touch targets. */
 .btn {
@@ -179,6 +190,8 @@ table.data tbody tr:hover { background: var(--surface); }
 
 .filters { display: flex; gap: var(--sp-3); flex-wrap: wrap; align-items: flex-end; margin: var(--sp-4) 0; }
 .filters label { display: grid; gap: var(--sp-1); font-size: 0.8rem; color: var(--text-muted); }
+.more-filters > summary { cursor: pointer; font-size: 0.85rem; color: var(--link); padding: var(--sp-2) 0; }
+.more-filters[open] > summary { margin-bottom: var(--sp-1); }
 
 /* Collapsible technical section: closed by default. */
 details.tech { border: 1px solid var(--border); border-radius: var(--radius-md); padding: 0 var(--sp-4); margin: var(--sp-4) 0; background: var(--surface); }
