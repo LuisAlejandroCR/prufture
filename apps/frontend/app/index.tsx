@@ -18,7 +18,21 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { QueuedProof } from "@proof/core";
 import { listProofs } from "../src/queue";
+import { runPendingSync } from "../src/useAutoSync";
+import type { SyncSummary } from "../src/sync";
 import { color, radius, space, target, type } from "../src/theme";
+
+/** One-line result for the queue screen after a manual "Sync now". */
+function formatSummary(s: SyncSummary): string {
+  if (s.attempted === 0) return "Queue is up to date";
+  const done = s.synced + s.attested;
+  if (done === 0) return "No connection, will retry";
+  const parts: string[] = [];
+  if (s.synced) parts.push(`${s.synced} synced`);
+  if (s.attested) parts.push(`${s.attested} attested`);
+  if (s.failed) parts.push(`${s.failed} will retry`);
+  return parts.join(", ");
+}
 
 if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -26,8 +40,28 @@ if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental
 
 export default function QueueScreen() {
   const [proofs, setProofs] = useState<QueuedProof[]>([]);
+  const [syncing, setSyncing] = useState(false);
+  const [syncMsg, setSyncMsg] = useState<string | null>(null);
   const known = useRef(0);
   const insets = useSafeAreaInsets();
+
+  const refresh = useCallback(async () => {
+    const next = await listProofs().catch(() => [] as QueuedProof[]);
+    setProofs(next);
+    known.current = next.length;
+  }, []);
+
+  const onSyncNow = useCallback(() => {
+    setSyncing(true);
+    setSyncMsg(null);
+    runPendingSync()
+      .then((s) => {
+        setSyncMsg(formatSummary(s));
+        return refresh();
+      })
+      .catch(() => setSyncMsg("Sync failed, will retry"))
+      .finally(() => setSyncing(false));
+  }, [refresh]);
 
   useFocusEffect(
     useCallback(() => {
@@ -82,6 +116,23 @@ export default function QueueScreen() {
           What leaves your device: a hash, the task id, a coarse area, and the capture time. No photo,
           no name, no exact location.
         </Text>
+
+        {syncMsg ? (
+          <Text style={styles.syncMsg} accessibilityLiveRegion="polite">
+            {syncMsg}
+          </Text>
+        ) : null}
+
+        <Pressable
+          style={({ pressed }) => [styles.syncBtn, pressed && styles.ctaPressed]}
+          onPress={onSyncNow}
+          disabled={syncing}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: syncing, busy: syncing }}
+          accessibilityLabel="Sync pending proofs now"
+        >
+          <Text style={styles.syncBtnText}>{syncing ? "Syncing…" : "Sync now"}</Text>
+        </Pressable>
 
         <Link href="/capture" asChild>
           <Pressable
@@ -151,4 +202,16 @@ const styles = StyleSheet.create({
   },
   ctaPressed: { opacity: 0.85 },
   ctaText: { ...type.action, color: color.brandText },
+  syncBtn: {
+    minHeight: target.min,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: color.border,
+    backgroundColor: color.surface,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: space.lg,
+  },
+  syncBtnText: { ...type.action, color: color.text },
+  syncMsg: { ...type.meta, color: color.textMuted, textAlign: "center" },
 });

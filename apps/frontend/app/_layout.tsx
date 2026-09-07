@@ -8,8 +8,12 @@ import "react-native-get-random-values";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { color, type } from "../src/theme";
+import { useAutoSync } from "../src/useAutoSync";
 
 export default function RootLayout() {
+  // Drain the offline queue when coverage returns or the app is foregrounded.
+  useAutoSync();
+
   return (
     <>
       <StatusBar style="dark" />

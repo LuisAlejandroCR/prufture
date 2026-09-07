@@ -44,3 +44,19 @@ When dark mode is picked up later: add a dark token set in `src/theme.ts` keyed 
 - Busy and error states are always explicit: the capture button shows a spinner plus "Signing…"
   and errors render in a tinted box with a polite live region.
 - Status must be readable at a glance: color + word, never color alone.
+
+## Sync
+
+- The queue drains itself: `useAutoSync()` (mounted in `_layout.tsx`) runs `syncPending()` once
+  when connectivity returns and on app-foreground, de-duplicated so runs never overlap.
+- The queue screen footer also has a secondary "Sync now" button (44px, `color.surface` +
+  `color.border`, `radius.md`) beside the primary capture CTA, with a one-line result underneath
+  ("3 synced, 1 attested" / "No connection, will retry").
+- Only the six `SignedProof` fields leave the device (`toSignedProof()` whitelist in `src/sync.ts`).
+  `mediaUri` and the local queue columns are never sent.
+
+## Config
+
+`EXPO_PUBLIC_API_URL` — base URL of the proof api (`apps/api`). The queue POSTs pending proofs to
+`${EXPO_PUBLIC_API_URL}/sync`. Expo inlines `EXPO_PUBLIC_*` at build time. Local-dev fallback when
+unset: `http://localhost:8787`. See `.env.example`. Deploy wires the real value.
