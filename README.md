@@ -1,12 +1,13 @@
-<!-- README.md: public overview of the Proof-at-Capture project for FIRSTBLOCK-ATHON.
-     Explains the problem, proposal, demo flow, and local run path once code exists.
+<!-- README.md: public overview of the Prufture project for FIRSTBLOCK-ATHON.
+     Explains the problem, proposal, demo flow, and local run path.
      It contains no private agent instructions or credentials: those stay out of the public repo. -->
 
-# Proof-at-Capture — UNICEF FIRSTBLOCK-ATHON
+# Prufture — UNICEF FIRSTBLOCK-ATHON
 
-Proof-at-Capture is a mobile app concept for field volunteers who need to capture verifiable evidence
-without stable connectivity. A photo, approximate location, and timestamp become a signed proof on the
-device, are stored in a local queue, and sync automatically when the network returns.
+Prufture (formerly called Proof-at-Capture) is a mobile app for field volunteers who need to capture
+verifiable evidence without stable connectivity. A photo, approximate location, and timestamp become a
+signed proof on the device, are stored in a local queue, and sync automatically when the network
+returns. "Proof-at-capture" is kept as the name of the underlying pattern.
 
 The goal is to help initiatives like U-Report receive evidence from community tasks without exposing
 personal data from volunteers and without requiring connectivity at the moment of capture.
@@ -65,8 +66,12 @@ are declared as next steps.
 
 ## Status
 
-This repository is in hackathon preparation mode. The implementation has not been created yet. The
-acceptance criteria are:
+Hackathon build in progress. An npm-workspaces monorepo is scaffolded: `packages/core` (shared
+ed25519 sign/verify and sha256 hash), `apps/frontend` (Expo mobile app), `apps/api` (relayer), and
+`apps/backend` (Next.js verification page). Early work on offline capture and the relayer exists on
+feature branches; the on-chain attestation has not yet been run against a live network.
+
+Acceptance criteria for the demo:
 
 - Capture, sign, and enqueue without internet.
 - Sync automatically when connectivity returns.
@@ -77,12 +82,10 @@ acceptance criteria are:
 
 ## Local Development
 
-Pending until the code scaffold exists. The expected path is:
-
 ```bash
 npm install
-npm run dev
+npm run typecheck
+npm run test
 ```
 
-The mobile demo will use Expo Go during iteration and an internal EAS build for presentation.
-# unicef-firstblockathon
+The mobile demo uses Expo Go during iteration and an internal EAS build for presentation.
