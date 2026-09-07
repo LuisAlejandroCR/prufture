@@ -13,7 +13,10 @@
       ["expo-location", { "locationAlwaysAndWhenInUsePermission": "Prufture records a coarse capture location for verification." }]
     ],
     "ios": { "supportsTablet": true, "bundleIdentifier": "ai.proofatcapture.app" },
-    "android": { "package": "ai.proofatcapture.app" },
-    "extra": { "eas": { "projectId": "" } }
+    "android": { "package": "ai.proofatcapture.app", "versionCode": 1 },
+    "extra": {
+      "//": "eas init writes extra.eas.projectId here on first build; keep empty until then",
+      "eas": { "projectId": "" }
+    }
   }
 }
