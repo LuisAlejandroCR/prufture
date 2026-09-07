@@ -1,5 +1,5 @@
-// capture.ts: orchestrates one capture — read media + location, hash, sign, enqueue.
-// TODO(block1): supply real bytes from expo-camera and real coords from expo-location.
+// capture.ts: orchestrates one capture — hash real media bytes, sign the public payload, enqueue.
+// No network here: hash + sign + SQLite insert all run offline. Distinct from queue.ts (storage).
 
 import { hashBytes, signPayload, type ProofPublicPayload } from "@proof/core";
 import { getOrCreatePrivateKey } from "./keystore";
@@ -7,22 +7,31 @@ import { enqueueProof } from "./queue";
 
 export interface CaptureInput {
   taskId: string;
-  /** Raw media bytes from the camera. Placeholder until block 1 wiring. */
-  mediaBytes?: Uint8Array;
-  /** Coarse geohash of the capture point. Placeholder until block 1 wiring. */
-  geohash?: string;
-  mediaUri?: string;
+  /** Raw photo bytes read from the camera file via expo-file-system. */
+  mediaBytes: Uint8Array;
+  /** Coarse geohash (~5 chars) of the capture point — never exact lat/lng. */
+  geohash: string;
+  /** On-device file URI of the photo. Stays local, never uploaded by default. */
+  mediaUri: string;
+}
+
+/** Decode a base64 string (from expo-file-system / expo-camera) to raw bytes. */
+export function base64ToBytes(b64: string): Uint8Array {
+  const clean = b64.includes(",") ? b64.slice(b64.indexOf(",") + 1) : b64;
+  const bin = globalThis.atob(clean);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i += 1) out[i] = bin.charCodeAt(i);
+  return out;
 }
 
 export async function captureProof(input: CaptureInput) {
-  const bytes = input.mediaBytes ?? new Uint8Array([0]);
   const payload: ProofPublicPayload = {
-    proofHash: hashBytes(bytes),
+    proofHash: hashBytes(input.mediaBytes),
     taskId: input.taskId,
-    geohash: input.geohash ?? "u000000",
+    geohash: input.geohash,
     capturedAt: new Date().toISOString(),
   };
   const priv = await getOrCreatePrivateKey();
   const signed = signPayload(payload, priv);
-  return enqueueProof(signed, input.mediaUri ?? "");
+  return enqueueProof(signed, input.mediaUri);
 }
