@@ -11,8 +11,8 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
-    "mobile": "npm run start --workspace apps/mobile",
-    "web": "npm run dev --workspace apps/web",
+    "front": "npm run start --workspace apps/front",
+    "back": "npm run dev --workspace apps/back",
     "api": "npm run dev --workspace apps/api"
   },
   "engines": {

@@ -1,5 +1,5 @@
 {
-  "name": "@proof/mobile",
+  "name": "@proof/front",
   "version": "0.0.0",
   "private": true,
   "main": "expo-router/entry",
