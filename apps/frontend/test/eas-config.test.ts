@@ -60,11 +60,20 @@ test("production profile is present and documented as store / app-bundle, not ru
   assert.equal(p.autoIncrement, true);
 });
 
-test("app.json: android.package + versionCode set, eas.projectId placeholder empty", () => {
+test("app.json: android.package + versionCode set, eas.projectId is a real UUID", () => {
   assert.equal(app.expo.android.package, "ai.proofatcapture.app");
   assert.equal(typeof app.expo.android.versionCode, "number");
-  assert.equal(app.expo.extra.eas.projectId, "");
+  assert.match(
+    app.expo.extra.eas.projectId,
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+  );
   assert.equal(app.expo.name, "Prufture");
+});
+
+test("app.json: EAS Update wiring matches the projectId (needed for channel:preview builds)", () => {
+  assert.equal(app.expo.owner, "alejoo_oo");
+  assert.equal(app.expo.runtimeVersion.policy, "appVersion");
+  assert.equal(app.expo.updates.url, `https://u.expo.dev/${app.expo.extra.eas.projectId}`);
 });
 
 // --- invariants ---

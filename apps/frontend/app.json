@@ -14,9 +14,12 @@
     ],
     "ios": { "supportsTablet": true, "bundleIdentifier": "ai.proofatcapture.app" },
     "android": { "package": "ai.proofatcapture.app", "versionCode": 1 },
+    "owner": "alejoo_oo",
+    "runtimeVersion": { "policy": "appVersion" },
+    "updates": { "url": "https://u.expo.dev/ff9cdaeb-a7be-4a1c-a76f-7594b2b51aef" },
     "extra": {
-      "//": "eas init writes extra.eas.projectId here on first build; keep empty until then",
-      "eas": { "projectId": "" }
+      "eas": { "projectId": "ff9cdaeb-a7be-4a1c-a76f-7594b2b51aef" },
+      "router": {}
     }
   }
 }
