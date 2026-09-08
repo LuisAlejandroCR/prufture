@@ -123,7 +123,7 @@ export default async function ReportReviewPage({ params }: { params: Promise<{ h
               {proof.attestations.map((a) => (
                 <li key={a.txHash}>
                   <a
-                    href={`https://sepolia.basescan.org/tx/${a.txHash}`}
+                    href={`https://base-sepolia.easscan.org/tx/${a.txHash}`}
                     target="_blank"
                     rel="noreferrer noopener"
                   >
