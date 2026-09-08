@@ -22,11 +22,18 @@ export interface VerifiedAttributeRecord {
   checkedAt: string;
 }
 
-interface Entry {
+export interface Entry {
   payload: ProofPublicPayload;
   attestations: AttestationRecord[];
   verifiedAttribute?: VerifiedAttributeRecord;
+  // Groups 1..N signed proofs of one field report. NOT part of the signed payload and never
+  // exposed on a public route — used only to send ONE programme notification per report.
+  reportId?: string;
 }
+
+// Reserved top-level JSON key (never a 64-hex proofHash) holding the dedup keys already
+// notified to the programme team, so one report is never messaged twice across a restart.
+const NOTIFIED_KEYS_FIELD = "__notifiedKeys__";
 
 // SWAP POINT: a JSON file needs a host with a persistent writable disk (Render disk, Railway or
 // Fly volume) — NOT Vercel serverless. If apps/api is deployed somewhere ephemeral, replace only
@@ -43,10 +50,12 @@ function defaultStorePath(): string {
 
 let storePath = defaultStorePath();
 const byHash = new Map<string, Entry>();
+const notifiedKeys = new Set<string>();
 let flushTimer: NodeJS.Timeout | null = null;
 
 function load(): void {
   byHash.clear();
+  notifiedKeys.clear();
   let raw: string;
   try {
     raw = readFileSync(storePath, "utf8");
@@ -54,20 +63,27 @@ function load(): void {
     return; // absent file -> start empty
   }
   try {
-    const obj = JSON.parse(raw) as Record<string, Entry>;
+    const obj = JSON.parse(raw) as Record<string, unknown>;
     if (obj && typeof obj === "object") {
-      for (const [hash, v] of Object.entries(obj)) {
+      for (const [hash, value] of Object.entries(obj)) {
+        if (hash === NOTIFIED_KEYS_FIELD) {
+          if (Array.isArray(value)) for (const k of value) if (typeof k === "string") notifiedKeys.add(k);
+          continue;
+        }
+        const v = value as Entry;
         if (v && typeof v === "object" && v.payload && typeof v.payload === "object") {
           byHash.set(hash, {
             payload: v.payload,
             attestations: Array.isArray(v.attestations) ? v.attestations : [],
             verifiedAttribute: v.verifiedAttribute,
+            reportId: typeof v.reportId === "string" ? v.reportId : undefined,
           });
         }
       }
     }
   } catch {
     byHash.clear(); // corrupt / partial file -> start empty, never throw
+    notifiedKeys.clear();
   }
 }
 
@@ -80,7 +96,9 @@ function flushNow(): void {
     const dir = dirname(storePath);
     if (dir && dir !== "." && !existsSync(dir)) mkdirSync(dir, { recursive: true });
     const tmp = `${storePath}.tmp`;
-    writeFileSync(tmp, JSON.stringify(Object.fromEntries(byHash)));
+    const out: Record<string, unknown> = Object.fromEntries(byHash);
+    if (notifiedKeys.size > 0) out[NOTIFIED_KEYS_FIELD] = [...notifiedKeys];
+    writeFileSync(tmp, JSON.stringify(out));
     renameSync(tmp, storePath);
   } catch {
     // Best-effort: a failed disk write must never break the request path.
@@ -101,9 +119,27 @@ process.once("SIGTERM", () => {
 
 load();
 
-export function upsertProof(payload: ProofPublicPayload): void {
+export function upsertProof(payload: ProofPublicPayload, reportId?: string): void {
   if (!byHash.has(payload.proofHash)) {
-    byHash.set(payload.proofHash, { payload, attestations: [] });
+    byHash.set(payload.proofHash, { payload, attestations: [], reportId });
+    scheduleFlush();
+  }
+}
+
+/** The dedup key for a proof's report: its reportId when grouped, else its own proofHash. */
+export function reportKeyFor(entry: Entry): string {
+  return entry.reportId ?? entry.payload.proofHash;
+}
+
+/** True once the programme team has been notified for this report/proof dedup key. */
+export function wasNotified(key: string): boolean {
+  return notifiedKeys.has(key);
+}
+
+/** Mark a report/proof dedup key as notified so it is never messaged again. */
+export function markNotified(key: string): void {
+  if (!notifiedKeys.has(key)) {
+    notifiedKeys.add(key);
     scheduleFlush();
   }
 }
