@@ -8,7 +8,7 @@
     "start": "tsx --env-file-if-exists=.env src/index.ts",
     "typecheck": "tsc --noEmit",
     "register-schema": "tsx --env-file=.env scripts/register-schema.ts",
-    "test": "node --import tsx --test \"test/**/*.test.ts\""
+    "test": "node --import tsx --test --test-concurrency=1 \"test/**/*.test.ts\""
   },
   "dependencies": {
     "@proof/core": "*",
