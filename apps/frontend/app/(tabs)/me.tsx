@@ -17,7 +17,6 @@ import {
 } from "../../src/feedback";
 import { listProofs } from "../../src/queue";
 import { color, radius, space, target, type } from "../../src/theme";
-import { API_URL } from "../../src/useAutoSync";
 
 export default function MeScreen() {
   const router = useRouter();
@@ -124,12 +123,6 @@ export default function MeScreen() {
         Prufture keeps your reports on this phone until you have signal. Your identity and exact
         location are never part of a report.
       </Text>
-
-      {__DEV__ ? (
-        <Text style={styles.devLine} accessibilityLabel={`Development build. Server ${API_URL}`}>
-          dev · server {API_URL}
-        </Text>
-      ) : null}
     </Screen>
   );
 }
@@ -206,5 +199,4 @@ const styles = StyleSheet.create({
   },
   storageText: { ...type.body, color: color.text, fontWeight: "600" },
   about: { ...type.meta, color: color.muted },
-  devLine: { ...type.label, color: color.faint, marginTop: space.md, fontFamily: "monospace" },
 });
