@@ -26,6 +26,8 @@ interface Entry {
   payload: ProofPublicPayload;
   attestations: AttestationRecord[];
   verifiedAttribute?: VerifiedAttributeRecord;
+  /** Selfie liveness verdict. Boolean only, set by /liveness-result. Separate from verifiedAttribute. */
+  verifiedPerson?: boolean;
 }
 
 // SWAP POINT: a JSON file needs a host with a persistent writable disk (Render disk, Railway or
@@ -62,6 +64,7 @@ function load(): void {
             payload: v.payload,
             attestations: Array.isArray(v.attestations) ? v.attestations : [],
             verifiedAttribute: v.verifiedAttribute,
+            verifiedPerson: typeof v.verifiedPerson === "boolean" ? v.verifiedPerson : undefined,
           });
         }
       }
@@ -121,6 +124,15 @@ export function setVerifiedAttribute(proofHash: string, rec: VerifiedAttributeRe
   const entry = byHash.get(proofHash);
   if (!entry) return false;
   entry.verifiedAttribute = { attribute: rec.attribute, value: rec.value, checkedAt: rec.checkedAt };
+  scheduleFlush();
+  return true;
+}
+
+/** Record the selfie liveness verdict against a proof. Idempotent. False if the proof is unknown. */
+export function setVerifiedPerson(proofHash: string, value: boolean): boolean {
+  const entry = byHash.get(proofHash);
+  if (!entry) return false;
+  entry.verifiedPerson = value;
   scheduleFlush();
   return true;
 }

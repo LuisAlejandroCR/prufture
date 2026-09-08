@@ -68,3 +68,62 @@ export async function getVerifiedAttribute(
     }
   });
 }
+
+export interface LivenessInput {
+  /** Small base64 frames from the selfie challenge. Sent once, never logged or stored. */
+  frames: string[];
+  /** 16-byte hex nonce that tied the frames to one attempt. */
+  nonceHex: string;
+  /** The gesture sequence the reporter was asked to perform. */
+  challenges: string[];
+}
+
+/**
+ * Ask Neuro whether the selfie frames show a live person.
+ * - Missing NEURO_AGENT_API_URL / NEURO_AGENT_API_TOKEN => typed unavailable, no throw.
+ * - Configured => POST behind guard() + 5s timeout. EXACTLY one boolean field is read
+ *   (`live` | `verified` | `passed`) and coerced. No score, session id, frame, or any
+ *   other field is read, returned, or logged. The request body is never logged.
+ * The returned ExternalOk.data is exactly { verifiedPerson }.
+ */
+export async function checkLiveness(
+  input: LivenessInput,
+): Promise<ExternalResult<{ verifiedPerson: boolean }>> {
+  if (!env.neuroUrl || !env.neuroToken) {
+    return unavailable("neuro", "neuro not configured (NEURO_AGENT_API_URL / NEURO_AGENT_API_TOKEN missing)");
+  }
+
+  return guard("neuro", async () => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    try {
+      const url = `${env.neuroUrl.replace(/\/$/, "")}${env.neuroLivenessPath}`;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          authorization: `Bearer ${env.neuroToken}`,
+        },
+        body: JSON.stringify({
+          frames: input.frames,
+          nonce: input.nonceHex,
+          challenges: input.challenges,
+        }),
+        signal: controller.signal,
+      });
+
+      // Read one boolean, coerce, ignore everything else. Do not echo the body.
+      const body = (await res.json().catch(() => ({}))) as {
+        live?: unknown;
+        verified?: unknown;
+        passed?: unknown;
+      };
+      if (!res.ok) throw new Error(`neuro ${res.status}`);
+
+      const raw = body.live ?? body.verified ?? body.passed;
+      return { verifiedPerson: raw === true || raw === "true" };
+    } finally {
+      clearTimeout(timer);
+    }
+  });
+}

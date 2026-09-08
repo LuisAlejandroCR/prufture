@@ -22,6 +22,8 @@ export interface ProofView {
   capturedAt: string;
   attestationCount: number;
   attestations: AttestationView[];
+  /** Selfie liveness verdict. null until a result is attached. Boolean only, no identity data. */
+  verifiedPerson: boolean | null;
 }
 
 export interface ProofSummary {
@@ -46,6 +48,7 @@ interface RawProof {
   capturedAt: string;
   attestationCount: number;
   attestations: AttestationView[];
+  verifiedPerson?: unknown;
 }
 
 export function toRegion(geohash: string | undefined): string {
@@ -72,6 +75,7 @@ export async function fetchProof(hash: string): Promise<ProofResult> {
         capturedAt: raw.capturedAt,
         attestationCount: raw.attestationCount ?? raw.attestations?.length ?? 0,
         attestations: raw.attestations ?? [],
+        verifiedPerson: typeof raw.verifiedPerson === "boolean" ? raw.verifiedPerson : null,
       },
     };
   } catch {

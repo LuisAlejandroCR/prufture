@@ -9,8 +9,11 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
-      ["expo-camera", { "cameraPermission": "Prufture uses the camera to photograph field-task evidence." }],
-      ["expo-location", { "locationAlwaysAndWhenInUsePermission": "Prufture records a coarse capture location for verification." }]
+      ["expo-camera", { "cameraPermission": "Prufture uses the camera to photograph field-task evidence and to run a short selfie liveness check." }],
+      ["expo-location", {
+        "locationWhenInUsePermission": "Prufture records only a coarse capture area, never your exact location.",
+        "locationAlwaysAndWhenInUsePermission": "Prufture records a coarse capture location for verification."
+      }]
     ],
     "ios": { "supportsTablet": true, "bundleIdentifier": "ai.proofatcapture.app" },
     "android": { "package": "ai.proofatcapture.app", "versionCode": 1 },

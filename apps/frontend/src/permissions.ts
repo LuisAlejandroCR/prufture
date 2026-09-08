@@ -1,0 +1,58 @@
+// permissions.ts: the single place the guided report flow asks the OS for access.
+// No screen calls expo-camera / expo-location permission APIs directly — they call
+// here, so rationale copy and the required/optional policy live in one file.
+// Distinct from src/capture.ts (produces the proof) and src/geohash.ts (coarsening).
+
+import { Camera } from "expo-camera";
+import * as Location from "expo-location";
+
+export type PermissionStatus = "granted" | "denied" | "undetermined";
+
+export interface PermissionState {
+  /** Camera is REQUIRED-HARD: no camera means no capture and no report. */
+  camera: PermissionStatus;
+  /** Location is REQUIRED-SOFT: the flow may continue; the proof then carries geohash "". */
+  location: PermissionStatus;
+}
+
+/** Rationale strings shown on the permissions screen. Kept here so copy is reviewed in one place. */
+export const RATIONALE = {
+  camera: "Take photos of the activity. Photos stay on this phone until you finish the report.",
+  location:
+    "Record only an approximate area, never your exact location. You can continue without this.",
+} as const;
+
+function normalize(status: string, canAskAgain: boolean): PermissionStatus {
+  if (status === "granted") return "granted";
+  if (status === "undetermined" && canAskAgain) return "undetermined";
+  return "denied";
+}
+
+export async function requestCamera(): Promise<PermissionStatus> {
+  try {
+    const res = await Camera.requestCameraPermissionsAsync();
+    return normalize(res.status, res.canAskAgain ?? true);
+  } catch {
+    return "denied";
+  }
+}
+
+export async function requestLocation(): Promise<PermissionStatus> {
+  try {
+    const res = await Location.requestForegroundPermissionsAsync();
+    return normalize(res.status, res.canAskAgain ?? true);
+  } catch {
+    return "denied";
+  }
+}
+
+export async function getPermissionState(): Promise<PermissionState> {
+  const [cam, loc] = await Promise.all([
+    Camera.getCameraPermissionsAsync().catch(() => null),
+    Location.getForegroundPermissionsAsync().catch(() => null),
+  ]);
+  return {
+    camera: cam ? normalize(cam.status, cam.canAskAgain ?? true) : "undetermined",
+    location: loc ? normalize(loc.status, loc.canAskAgain ?? true) : "undetermined",
+  };
+}
