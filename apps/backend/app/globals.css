@@ -306,3 +306,40 @@ ul.plain li { padding-left: var(--sp-1); }
   .fade-in { animation: fade-in 0.22s ease-out both; }
 }
 @keyframes fade-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+/* Pitch deck route (/pitch): 9 slides as a vertical scroll-snap column, one per viewport.
+   Arrow keys / on-screen arrows / click page between them; swipe and wheel scroll natively.
+   Additive only — reuses the token palette, no gradients. The :has() rule scopes the
+   snap + no-page-scrollbar behaviour to this route only. */
+body:has(.pitch-deck) { background: var(--bg); }
+.pitch-deck { position: relative; height: 100vh; height: 100dvh; overflow: hidden; background: var(--bg); }
+.pitch-slide { position: absolute; inset: 0; display: none; overflow-y: auto; padding: clamp(24px, 6vw, 80px) clamp(24px, 6vw, 80px) clamp(72px, 12vh, 120px); }
+.pitch-slide[data-active="true"] { display: grid; place-items: center; }
+@media (prefers-reduced-motion: no-preference) {
+  .pitch-slide[data-active="true"] { animation: pitch-in 0.32s ease both; }
+}
+@keyframes pitch-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.pitch-slide-inner { width: 100%; max-width: 860px; display: flex; flex-direction: column; gap: var(--sp-4); }
+.pitch-kicker { font-family: var(--mono); font-size: 0.8rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--brand); margin: 0; }
+.pitch-slide h1 { font-size: clamp(2.1rem, 7vw, 4rem); line-height: 1.04; letter-spacing: -0.03em; color: var(--brand); margin: 0; }
+.pitch-slide h2 { font-size: clamp(1.5rem, 4.5vw, 2.5rem); line-height: 1.1; letter-spacing: -0.02em; color: var(--brand); margin: 0; }
+.pitch-slide h3 { font-size: 0.95rem; margin: 0 0 var(--sp-2); color: var(--text-muted); }
+.pitch-slide h3.accent { color: var(--brand); }
+.pitch-lead { font-size: clamp(1.05rem, 2.2vw, 1.4rem); color: var(--text-muted); max-width: 42ch; margin: 0; }
+.pitch-slide ul { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-3); }
+.pitch-slide li { position: relative; padding-left: 1.4rem; color: var(--text); font-size: clamp(0.98rem, 1.7vw, 1.15rem); line-height: 1.45; }
+.pitch-slide li::before { content: "\2192"; position: absolute; left: 0; color: var(--brand); }
+.pitch-slide li .m { color: var(--text-muted); }
+.pitch-payload { font-family: var(--mono); font-size: 0.85rem; line-height: 1.7; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-md); padding: var(--sp-4); color: var(--text); overflow-x: auto; white-space: pre; margin: 0; }
+.pitch-payload b { color: var(--brand); }
+.pitch-pipe { display: flex; flex-wrap: wrap; gap: var(--sp-2); align-items: center; }
+.pitch-pipe span { font-family: var(--mono); font-size: 0.78rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 6px 10px; }
+.pitch-pipe i { color: var(--brand); font-style: normal; }
+.pitch-cols { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-5); }
+@media (max-width: 640px) { .pitch-cols { grid-template-columns: 1fr; gap: var(--sp-4); } }
+.pitch-tbd { display: inline-block; font-family: var(--mono); font-size: 0.8rem; background: var(--wait-bg); color: var(--wait-text); border: 1px dashed var(--wait-text); border-radius: var(--radius-sm); padding: 2px 8px; }
+.pitch-links { display: grid; gap: var(--sp-2); font-family: var(--mono); font-size: 0.88rem; word-break: break-all; margin: 0; }
+.pitch-nav { position: fixed; bottom: var(--sp-4); left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: var(--sp-3); background: var(--surface); border: 1px solid var(--border); border-radius: var(--pill); padding: 6px 10px; }
+.pitch-arrow { min-width: 36px; min-height: 36px; border-radius: var(--pill); border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 1.1rem; line-height: 1; cursor: pointer; }
+.pitch-arrow:hover { border-color: var(--brand); color: var(--brand); }
+.pitch-count { font-family: var(--mono); font-size: 0.85rem; color: var(--text-muted); min-width: 4ch; text-align: center; }

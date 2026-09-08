@@ -113,7 +113,8 @@ export default function Home() {
       </p>
       <p className="faint" style={{ fontSize: "0.9rem" }}>
         Check any shared report at <code>/verify/&lt;reference&gt;</code>. Programme staff use the{" "}
-        <Link href="/dashboard">dashboard</Link>.
+        <Link href="/dashboard">dashboard</Link>.{" "}
+        <Link href="/pitch">Pitch deck</Link>.
       </p>
     </main>
   );
