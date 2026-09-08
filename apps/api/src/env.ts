@@ -10,8 +10,30 @@ export const env = {
   neuroUrl: process.env.NEURO_AGENT_API_URL ?? "",
   neuroToken: process.env.NEURO_AGENT_API_TOKEN ?? "",
   neuroLivenessPath: process.env.NEURO_LIVENESS_PATH ?? "/liveness",
+
+  // Auto-notify: on sync/attest, best-effort send the public verifyUrl to the PROGRAMME team
+  // (never the reporter). Off unless explicitly enabled. Recipients are fixed and env-configured;
+  // the app never sends a phone/email and none is stored against a reporter. Read live (getters)
+  // so a deploy — or a test — can flip them without re-importing this module.
+  get notifyEnabled(): boolean {
+    return process.env.NOTIFY_ENABLED === "true";
+  },
+  get notifyOn(): "sync" | "attest" | "both" {
+    return (process.env.NOTIFY_ON ?? "sync") as "sync" | "attest" | "both";
+  },
+  get programmeWhatsapp(): string {
+    return process.env.PROGRAMME_WHATSAPP ?? "";
+  },
+  get programmeEmail(): string {
+    return process.env.PROGRAMME_EMAIL ?? "";
+  },
 };
 
 export function relayerConfigured(): boolean {
   return Boolean(env.dwellirRpcUrl && env.relayerPrivateKey && env.easSchemaUid);
+}
+
+/** True when the given trigger should fire a notification per NOTIFY_ON. */
+export function notifyOnTrigger(trigger: "sync" | "attest"): boolean {
+  return env.notifyOn === "both" || env.notifyOn === trigger;
 }

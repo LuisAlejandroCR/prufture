@@ -25,6 +25,7 @@ import { pushRegistrationCount, registerPushToken } from "./push-store.js";
 import { submitAttestation } from "./relayer.js";
 import { checkLiveness, getVerifiedAttribute } from "./neuro.js";
 import { sendVerifyUrl, type Channel } from "./channels.js";
+import { maybeNotify } from "./notify.js";
 
 const VERIFY_BASE = process.env.VERIFY_BASE_URL ?? "http://localhost:3000";
 const CHANNELS: Channel[] = ["whatsapp", "email", "telegram"];
@@ -34,16 +35,19 @@ const app = new Hono();
 app.get("/health", (c) => c.json({ ok: true, chainId: env.chainId }));
 
 app.post("/sync", async (c) => {
-  let body: SignedProof;
+  // `reportId` is an OPTIONAL top-level field (NOT inside SignedProof, NOT signed) that groups
+  // the 1..N photos of one field report so the programme team gets ONE notification per report.
+  let body: SignedProof & { reportId?: string };
   try {
-    body = (await c.req.json()) as SignedProof;
+    body = (await c.req.json()) as SignedProof & { reportId?: string };
   } catch {
     return c.json({ error: "invalid json" }, 400);
   }
   if (!verifyProof(body)) return c.json({ error: "invalid signature" }, 400);
 
   const payload = { proofHash: body.proofHash, taskId: body.taskId, geohash: body.geohash, capturedAt: body.capturedAt };
-  upsertProof(payload);
+  const reportId = typeof body.reportId === "string" && body.reportId ? body.reportId : undefined;
+  upsertProof(payload, reportId);
 
   // On-chain attestation is best-effort. A degraded relayer must not fail the sync:
   // the proof is safely queued server-side and returns 200 with status "synced".
@@ -55,6 +59,12 @@ app.post("/sync", async (c) => {
       attestedAt: new Date().toISOString(),
     });
   }
+
+  // Best-effort programme ping (one per report, deduped, url-only). Awaited so a test can observe
+  // it, but wrapped so it can never throw or change this 200 response.
+  const entry = getProof(payload.proofHash);
+  if (entry) await maybeNotify(entry, "sync").catch(() => undefined);
+
   return c.json({ status: attestation.available ? "attested" : "synced", attestation }, 200);
 });
 
@@ -76,6 +86,11 @@ app.post("/attest", async (c) => {
     txHash: attestation.data.txHash,
     attestedAt: new Date().toISOString(),
   });
+
+  // Notify on a genuinely new attestation only (NOTIFY_ON must include "attest"). Deduped and
+  // best-effort — a down channel or a repeat attester never affects this response.
+  if (!already) await maybeNotify(entry, "attest").catch(() => undefined);
+
   return c.json({
     status: "attested",
     duplicate: already,
