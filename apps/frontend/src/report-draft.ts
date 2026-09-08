@@ -2,11 +2,13 @@
 // This is session UI state only. Nothing here is persisted and nothing new is signed:
 // on "Finish", the draft is turned into proofs through the existing src/capture.ts path,
 // one signed proof per photo, all carrying the same raw taskId. Distinct from src/queue.ts
-// (the durable offline queue) and src/report-draft is cleared once the report is saved.
+// (the durable offline queue); src/report-draft is cleared once the report is saved.
 
-// `./capture` pulls in the native keystore + sqlite; import it lazily so this
-// module (in-memory draft state) stays unit-testable off-device.
-import type { captureProof as CaptureProof } from "./capture";
+// `./capture` pulls in the native keystore + sqlite. It is NOT imported here (that would
+// break the off-device unit tests AND, as a dynamic import(), reject with
+// LoadBundleFromServerRequest in Expo Go offline). The real captureProof is injected once
+// at app start from app/report/review.tsx via setCaptureProof(). Type-only import is erased.
+import type { captureProof as CaptureProofFn } from "./capture";
 import { attachLiveness } from "./liveness";
 import { attachPreciseLocation } from "./sync";
 
@@ -24,8 +26,8 @@ export function newReportId(): string {
 export interface DraftPhoto {
   /** Local file URI from expo-camera. Stays on the device. */
   uri: string;
-  /** Raw photo bytes, kept only until the draft is saved. */
-  bytes: Uint8Array;
+  /** Raw photo bytes, kept until the draft is saved. */
+  bytes?: Uint8Array;
   /** Which capture step this satisfies. */
   stepIndex: number;
 }
@@ -54,6 +56,23 @@ export interface ReportDraft {
 }
 
 let current: ReportDraft | null = null;
+
+// --- capture-proof injection seam --------------------------------------------------
+
+type CaptureProof = typeof CaptureProofFn;
+let captureProofImpl: CaptureProof | null = null;
+
+/** Wire the real src/capture.captureProof. Called once at module load from review.tsx. */
+export function setCaptureProof(fn: CaptureProof): void {
+  captureProofImpl = fn;
+}
+
+/** Test seam: inject a fake captureProof. Pass null to clear. */
+export function __setCaptureProofForTest(fn: CaptureProof | null): void {
+  captureProofImpl = fn;
+}
+
+// --- draft lifecycle --------------------------------------------------------------
 
 export function startDraft(taskId: string): ReportDraft {
   current = {
@@ -124,7 +143,8 @@ export interface SaveResult {
 /**
  * Turn the open draft into signed, queued proofs using the existing capture path.
  * One proof per photo. No new protocol: captureProof -> enqueueProof, status pending_sync.
- * The auto-sync loop drains them when signal returns, exactly as before.
+ * The auto-sync loop drains them when signal returns, exactly as before. Never rejects:
+ * a missing capture impl or an unreadable photo just counts as a failure.
  */
 export async function saveDraft(): Promise<SaveResult> {
   const draft = current;
@@ -134,10 +154,15 @@ export async function saveDraft(): Promise<SaveResult> {
   let failed = 0;
   let firstProofHash: string | null = null;
 
-  const captureProof: typeof CaptureProof = (await import("./capture")).captureProof;
+  const captureProof = captureProofImpl;
+  if (!captureProof) return { saved: 0, failed: draft.photos.length, firstProofHash: null };
 
   for (const photo of draft.photos) {
     try {
+      if (!photo.bytes) {
+        failed += 1;
+        continue;
+      }
       const proof = await captureProof({
         taskId: draft.taskId,
         mediaBytes: photo.bytes,

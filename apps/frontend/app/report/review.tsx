@@ -15,10 +15,16 @@ import {
   SecondaryButton,
   SectionLabel,
 } from "../../src/components/ui";
+import { captureProof } from "../../src/capture";
 import { bump } from "../../src/feedback";
-import { getDraft, saveDraft } from "../../src/report-draft";
+import { getDraft, saveDraft, setCaptureProof } from "../../src/report-draft";
 import { getTask } from "../../src/tasks";
 import { color, radius, space, type } from "../../src/theme";
+
+// Wire the real (native keystore + sqlite) capture path into the draft module here,
+// where the native graph is already loaded. report-draft.ts stays free of it so the
+// off-device unit tests can import it. Static import -> bundled, no offline chunk fetch.
+setCaptureProof(captureProof);
 
 export default function ReportReviewScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
