@@ -18,6 +18,10 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
+      {/* Expo SDK 54 enforces edge-to-edge and expo-status-bar no longer exposes the
+          Android backgroundColor/translucent props, so drawing under the bar is
+          prevented by the safe-area top pad in <Screen> (see src/components/ui.tsx),
+          not here. Adding expo-system-ui would be a native config-plugin dependency. */}
       <StatusBar style="dark" />
       <Stack
         screenOptions={{

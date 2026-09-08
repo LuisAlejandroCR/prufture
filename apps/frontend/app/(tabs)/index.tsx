@@ -15,18 +15,33 @@ import {
   SectionLabel,
 } from "../../src/components/ui";
 import { listProofs } from "../../src/queue";
+import { runPendingSync } from "../../src/useAutoSync";
 import { categoryAccent, recommendedTask } from "../../src/tasks";
 import { color, radius, space, type } from "../../src/theme";
 
 export default function HomeScreen() {
   const router = useRouter();
   const [pending, setPending] = useState(0);
+  const [reachError, setReachError] = useState(false);
   const task = recommendedTask();
 
   useFocusEffect(
     useCallback(() => {
       listProofs()
-        .then((rows: QueuedProof[]) => setPending(rows.filter((r) => r.status === "pending_sync").length))
+        .then((rows: QueuedProof[]) => {
+          const waiting = rows.filter((r) => r.status === "pending_sync").length;
+          setPending(waiting);
+          if (waiting > 0) {
+            runPendingSync()
+              .then((s) => {
+                setReachError(s.failed > 0 && s.synced === 0);
+                listProofs()
+                  .then((r2) => setPending(r2.filter((r) => r.status === "pending_sync").length))
+                  .catch(() => undefined);
+              })
+              .catch(() => undefined);
+          }
+        })
         .catch(() => setPending(0));
     }, []),
   );
@@ -56,6 +71,13 @@ export default function HomeScreen() {
           <Icon name="profile" size={22} color={color.muted} />
         </Pressable>
       </View>
+
+      {reachError ? (
+        <View style={styles.reachError}>
+          <Icon name="offline" size={16} color={color.warning} />
+          <Text style={styles.reachErrorText}>Could not reach the server — will retry.</Text>
+        </View>
+      ) : null}
 
       {pending > 0 ? (
         <Pressable
@@ -128,6 +150,8 @@ const styles = StyleSheet.create({
     backgroundColor: color.warningSoft,
   },
   queueText: { ...type.meta, flex: 1, color: color.warning, fontWeight: "600" },
+  reachError: { flexDirection: "row", alignItems: "center", gap: space.sm },
+  reachErrorText: { ...type.meta, color: color.warning, fontWeight: "600", flex: 1 },
   tag: { flexDirection: "row", alignItems: "center", gap: space.xs },
   dot: { width: 8, height: 8, borderRadius: radius.pill },
   tagText: { ...type.meta, color: color.muted, fontWeight: "700" },

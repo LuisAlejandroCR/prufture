@@ -8,6 +8,7 @@ import { StyleSheet, Text, View } from "react-native";
 import type { QueuedProof } from "@proof/core";
 import { Row, Screen, ScreenTitle, SectionLabel } from "../../src/components/ui";
 import { listProofs } from "../../src/queue";
+import { API_URL } from "../../src/useAutoSync";
 import { color, radius, space, type } from "../../src/theme";
 
 export default function MeScreen() {
@@ -90,6 +91,12 @@ export default function MeScreen() {
         Prufture keeps your reports on this phone until you have signal. Your identity and exact
         location are never part of a report.
       </Text>
+
+      {__DEV__ ? (
+        <Text style={styles.devLine} accessibilityLabel={`Development build. Server ${API_URL}`}>
+          dev · server {API_URL}
+        </Text>
+      ) : null}
     </Screen>
   );
 }
@@ -111,4 +118,5 @@ const styles = StyleSheet.create({
   },
   storageText: { ...type.body, color: color.text, fontWeight: "600" },
   about: { ...type.meta, color: color.muted },
+  devLine: { ...type.label, color: color.faint, marginTop: space.md, fontFamily: "monospace" },
 });

@@ -1,17 +1,18 @@
-// (tabs)/updates.tsx: what happened after each report was sent. Simple chronological
-// list, friendly status, relative time, one next action on a problem. No hashes,
-// no error traces. Presentation over src/queue + src/sync (manual "check now").
+// (tabs)/updates.tsx: what happened after each report was sent. One card per
+// report (its per-photo proofs are grouped by the local reportId), friendly
+// status, relative time. No hashes, no error traces. Presentation over
+// src/queue + src/sync (manual "check now").
 
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
-import type { QueuedProof } from "@proof/core";
 import { Icon } from "../../src/components/icons/Icon";
-import { Screen, ScreenTitle, StatusPill } from "../../src/components/ui";
+import { Notice, Screen, ScreenTitle, StatusPill } from "../../src/components/ui";
 import { listProofs } from "../../src/queue";
+import type { LocalProof } from "../../src/queue-row";
 import { getTask } from "../../src/tasks";
 import { runPendingSync } from "../../src/useAutoSync";
-import { color, friendlyStatus, radius, space, type } from "../../src/theme";
+import { color, radius, space, type, type FriendlyStatus } from "../../src/theme";
 
 function relativeTime(iso: string): string {
   const then = new Date(iso).getTime();
@@ -24,10 +25,40 @@ function relativeTime(iso: string): string {
   return `${Math.round(hrs / 24)} d ago`;
 }
 
+interface ReportGroup {
+  /** reportId when present, otherwise the single row id (pre-hotfix rows). */
+  key: string;
+  rows: LocalProof[];
+}
+
+/** Group per-photo rows into reports. Rows arrive newest-first and stay that way. */
+export function groupReports(rows: LocalProof[]): ReportGroup[] {
+  const order: string[] = [];
+  const byKey = new Map<string, LocalProof[]>();
+  for (const r of rows) {
+    const key = r.reportId || `row:${r.id}`;
+    const bucket = byKey.get(key);
+    if (bucket) bucket.push(r);
+    else {
+      byKey.set(key, [r]);
+      order.push(key);
+    }
+  }
+  return order.map((key) => ({ key, rows: byKey.get(key) as LocalProof[] }));
+}
+
+/** Combined status of a report: the least-advanced of its rows. */
+export function combinedStatus(rows: LocalProof[]): FriendlyStatus {
+  if (rows.some((r) => r.status === "pending_sync")) return "ready";
+  if (rows.some((r) => r.status === "synced" && r.attestationCount === 0)) return "waiting";
+  return "confirmed";
+}
+
 export default function UpdatesScreen() {
   const router = useRouter();
-  const [rows, setRows] = useState<QueuedProof[]>([]);
+  const [rows, setRows] = useState<LocalProof[]>([]);
   const [checking, setChecking] = useState(false);
+  const [reachError, setReachError] = useState(false);
 
   const refresh = useCallback(() => {
     listProofs()
@@ -40,16 +71,27 @@ export default function UpdatesScreen() {
   const checkNow = () => {
     setChecking(true);
     runPendingSync()
-      .then(() => refresh())
+      .then((s) => {
+        setReachError(s.failed > 0 && s.synced === 0);
+        refresh();
+      })
       .catch(() => undefined)
       .finally(() => setChecking(false));
   };
+
+  const groups = groupReports(rows);
 
   return (
     <Screen scroll={false}>
       <ScreenTitle hint="Every report you have made, newest first.">Updates</ScreenTitle>
 
-      {rows.length === 0 ? (
+      {reachError ? (
+        <Notice tone="warning" icon="offline">
+          Could not reach the server — will retry.
+        </Notice>
+      ) : null}
+
+      {groups.length === 0 ? (
         <View style={styles.empty}>
           <Icon name="updates" size={32} color={color.faint} />
           <Text style={styles.emptyTitle}>No reports yet</Text>
@@ -63,16 +105,19 @@ export default function UpdatesScreen() {
           contentContainerStyle={{ gap: space.sm, paddingBottom: space.xl }}
           refreshControl={<RefreshControl refreshing={checking} onRefresh={checkNow} tintColor={color.primary} />}
         >
-          {rows.map((r) => {
-            const task = getTask(r.taskId);
-            const status = friendlyStatus(r.status, r.attestationCount);
-            const needsAction = false; // recoverable errors are surfaced on the status screen
+          {groups.map((g) => {
+            const newest = g.rows[0];
+            if (!newest) return null;
+            const task = getTask(newest.taskId);
+            const status = combinedStatus(g.rows);
+            const photos = g.rows.length;
+            const target = newest.reportId || newest.id;
             return (
               <Pressable
-                key={r.id}
-                onPress={() => router.push({ pathname: "/status/[id]", params: { id: r.id } })}
+                key={g.key}
+                onPress={() => router.push({ pathname: "/status/[id]", params: { id: target } })}
                 accessibilityRole="button"
-                accessibilityLabel={`${task.title}. ${task.area}. Status ${status}. ${relativeTime(r.createdAt)}.`}
+                accessibilityLabel={`${task.title}. ${task.area}. Status ${status}. ${photos} ${photos === 1 ? "photo" : "photos"}. ${relativeTime(newest.createdAt)}.`}
                 style={({ pressed }) => [styles.row, pressed && styles.pressed]}
               >
                 <View style={styles.flex}>
@@ -80,14 +125,14 @@ export default function UpdatesScreen() {
                     {task.title}
                   </Text>
                   <Text style={styles.rowMeta}>
-                    {task.area} · {relativeTime(r.createdAt)}
+                    {task.area} · {relativeTime(newest.createdAt)}
                   </Text>
                   <View style={styles.pillRow}>
-                    <StatusPill status={status} count={r.attestationCount} />
+                    <StatusPill status={status} />
                   </View>
-                  {needsAction ? (
-                    <Text style={styles.action}>Try again</Text>
-                  ) : null}
+                  <Text style={styles.count}>
+                    {photos} {photos === 1 ? "photo" : "photos"}
+                  </Text>
                 </View>
                 <Icon name="chevron" size={18} color={color.faint} />
               </Pressable>
@@ -118,5 +163,5 @@ const styles = StyleSheet.create({
   rowTitle: { ...type.subtitle, color: color.text },
   rowMeta: { ...type.meta, color: color.muted, marginTop: 2 },
   pillRow: { marginTop: space.sm },
-  action: { ...type.meta, color: color.attention, fontWeight: "700", marginTop: space.xs },
+  count: { ...type.meta, color: color.faint, marginTop: space.xs },
 });
