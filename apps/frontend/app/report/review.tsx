@@ -15,6 +15,7 @@ import {
   SecondaryButton,
   SectionLabel,
 } from "../../src/components/ui";
+import { bump } from "../../src/feedback";
 import { getDraft, saveDraft } from "../../src/report-draft";
 import { getTask } from "../../src/tasks";
 import { color, radius, space, type } from "../../src/theme";
@@ -32,6 +33,7 @@ export default function ReportReviewScreen() {
   const answerCount = Object.keys(answers).length;
 
   const finish = async () => {
+    void bump();
     setBusy(true);
     setError(null);
     const result = await saveDraft();
