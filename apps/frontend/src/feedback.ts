@@ -3,6 +3,11 @@
 // break), exposes tap/bump/thud/success/warn, a persisted hapticsEnabled flag, a
 // reduce-motion-aware celebrationsAllowed(), and the moment timing constants.
 // Distinct from src/theme.ts (visual tokens) and the report screens (composition).
+//
+// reduceMotionOn() lazy-loads the AccessibilityInfo SUBMODULE, never `import("react-native")`:
+// the barrel form makes Metro asyncRequire + metroImportAll enumerate every react-native
+// export, which fires the deprecated PushNotificationIOS getter and crashes Expo Go with an
+// Invariant Violation. Importing the one submodule keeps this file Node-loadable for tests.
 
 /** How long each guided "moment" holds before the actions settle in. */
 export const MOMENT_SAVED_MS = 2000;
@@ -93,8 +98,13 @@ let reduceMotionOverride: (() => boolean | Promise<boolean>) | null = null;
 async function reduceMotionOn(): Promise<boolean> {
   if (reduceMotionOverride) return reduceMotionOverride();
   try {
-    const { AccessibilityInfo } = await import("react-native");
-    return await AccessibilityInfo.isReduceMotionEnabled();
+    // Submodule path only — NOT `import("react-native")` (see the file header).
+    type ReduceMotion = { isReduceMotionEnabled(): Promise<boolean> };
+    const mod = (await import(
+      "react-native/Libraries/Components/AccessibilityInfo/AccessibilityInfo"
+    )) as unknown as { AccessibilityInfo?: ReduceMotion; default?: ReduceMotion } & Partial<ReduceMotion>;
+    const ai: Partial<ReduceMotion> = mod.AccessibilityInfo ?? mod.default ?? mod;
+    return typeof ai.isReduceMotionEnabled === "function" ? await ai.isReduceMotionEnabled() : false;
   } catch {
     return false;
   }

@@ -18,8 +18,11 @@ import { isExpoPushToken, randomDeviceId, toRegisterBody } from "./push";
 const DEVICE_ID_KEY = "prufture.push.deviceId";
 const ANDROID_CHANNEL = "default";
 
-// Expo Go identifies as "storeClient"; a dev/preview/standalone build is "standalone" or "bare".
-const IN_EXPO_GO = Constants.executionEnvironment === "storeClient";
+// Expo Go identifies as "storeClient" (executionEnvironment) or "expo" (appOwnership).
+// Check both: the values have shifted across SDKs and a single miss means
+// `await import("expo-notifications")` runs in Expo Go and crashes on PushNotificationIOS.
+const IN_EXPO_GO =
+  Constants.executionEnvironment === "storeClient" || Constants.appOwnership === "expo";
 
 type NotificationsModule = typeof import("expo-notifications");
 let notificationsModule: NotificationsModule | null = null;
