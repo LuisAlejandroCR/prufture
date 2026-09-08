@@ -28,6 +28,12 @@ interface Entry {
   verifiedAttribute?: VerifiedAttributeRecord;
   /** Selfie liveness verdict. Boolean only, set by /liveness-result. Separate from verifiedAttribute. */
   verifiedPerson?: boolean;
+  /**
+   * Encrypted precise-location point, sealed on the device to the programme team's key.
+   * Opaque hex — this process never decrypts or parses it, and it is NEVER returned by
+   * any public route (see docs/location_privacy.md).
+   */
+  preciseLocationCipher?: string;
 }
 
 // SWAP POINT: a JSON file needs a host with a persistent writable disk (Render disk, Railway or
@@ -65,6 +71,8 @@ function load(): void {
             attestations: Array.isArray(v.attestations) ? v.attestations : [],
             verifiedAttribute: v.verifiedAttribute,
             verifiedPerson: typeof v.verifiedPerson === "boolean" ? v.verifiedPerson : undefined,
+            preciseLocationCipher:
+              typeof v.preciseLocationCipher === "string" ? v.preciseLocationCipher : undefined,
           });
         }
       }
@@ -133,6 +141,18 @@ export function setVerifiedPerson(proofHash: string, value: boolean): boolean {
   const entry = byHash.get(proofHash);
   if (!entry) return false;
   entry.verifiedPerson = value;
+  scheduleFlush();
+  return true;
+}
+
+/**
+ * Store the opaque encrypted precise-location blob against a proof. The value is never
+ * parsed or decrypted here and never leaves via a public route. False if the proof is unknown.
+ */
+export function setPreciseLocationCipher(proofHash: string, cipher: string): boolean {
+  const entry = byHash.get(proofHash);
+  if (!entry) return false;
+  entry.preciseLocationCipher = cipher;
   scheduleFlush();
   return true;
 }

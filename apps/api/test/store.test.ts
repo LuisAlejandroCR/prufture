@@ -95,6 +95,20 @@ test("absent file -> starts empty, does not throw", () => {
   assert.equal(store.allProofs().length, 0);
 });
 
+test("preciseLocationCipher: unknown proof -> false; opaque value survives a reload", () => {
+  const p = freshPath();
+  store.__setStorePathForTests(p);
+  assert.equal(store.setPreciseLocationCipher(H("g"), "ab".repeat(64)), false);
+
+  store.upsertProof(payload(H("g")));
+  assert.equal(store.getProof(H("g"))!.preciseLocationCipher, undefined);
+  assert.equal(store.setPreciseLocationCipher(H("g"), "ab".repeat(64)), true);
+  store.__flushForTests();
+
+  store.__setStorePathForTests(p);
+  assert.equal(store.getProof(H("g"))!.preciseLocationCipher, "ab".repeat(64));
+});
+
 test("verifiedPerson: unknown proof -> false; set survives a reload; not present until set", () => {
   const p = freshPath();
   store.__setStorePathForTests(p);

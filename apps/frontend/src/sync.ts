@@ -120,5 +120,74 @@ export async function syncPending(deps: SyncDeps): Promise<SyncSummary> {
     // ignore — a missed attach just leaves verifiedPerson null on /verify
   }
 
+  // Same for any encrypted precise-location blob that could not be posted yet.
+  try {
+    await flushPendingPreciseLocation(base, deps.fetchImpl);
+  } catch {
+    // ignore — a missed blob just means the programme team has no precise point for this proof
+  }
+
   return summary;
+}
+
+// --- encrypted precise location: attach to a proof, with an offline retry buffer ---
+
+interface PendingPrecise {
+  proofHash: string;
+  cipher: string;
+}
+
+/** In-memory only. A missed post just leaves the api without a precise point — acceptable. */
+const pendingPrecise: PendingPrecise[] = [];
+
+async function tryPostPrecise(
+  apiUrl: string,
+  item: PendingPrecise,
+  fetchImpl: typeof fetch,
+): Promise<boolean> {
+  try {
+    const res = await fetchImpl(`${apiUrl.replace(/\/+$/, "")}/precise-location`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(item),
+    });
+    // 404 = proof not on the api yet; keep it buffered for the next pass.
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Send the encrypted precise-location blob for `proofHash`. Fire-and-forget: on any
+ * failure the item is buffered and retried by flushPendingPreciseLocation() next pass.
+ */
+export async function attachPreciseLocation(
+  apiUrl: string,
+  proofHash: string,
+  cipher: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<void> {
+  const item = { proofHash, cipher };
+  const done = await tryPostPrecise(apiUrl, item, fetchImpl);
+  if (!done && !pendingPrecise.some((p) => p.proofHash === proofHash)) pendingPrecise.push(item);
+}
+
+/** Retry every buffered blob. Called from the sync pass. Never throws. */
+export async function flushPendingPreciseLocation(
+  apiUrl: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<void> {
+  for (let i = pendingPrecise.length - 1; i >= 0; i -= 1) {
+    const ok = await tryPostPrecise(apiUrl, pendingPrecise[i]!, fetchImpl).catch(() => false);
+    if (ok) pendingPrecise.splice(i, 1);
+  }
+}
+
+/** Test-only: inspect / reset the retry buffer. */
+export function __pendingPreciseLocation(): PendingPrecise[] {
+  return [...pendingPrecise];
+}
+export function __resetPendingPreciseLocation(): void {
+  pendingPrecise.length = 0;
 }

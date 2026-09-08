@@ -1,7 +1,7 @@
 // report/permissions.tsx: an explicit, honest access screen before any capture.
-// Camera is required (no camera, no report). Location is optional (the proof then
-// carries an empty area). One card per permission; Continue unlocks when camera is
-// granted and location is either granted or explicitly skipped once.
+// Camera and location are both required — no camera, no report; no location, no
+// report (proof of where is the point). One card per permission; Continue unlocks
+// only when both are granted. Denied -> an open-settings CTA, no way past.
 // Presentation over src/permissions.ts — no raw permission calls live in this file.
 
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -28,7 +28,6 @@ export default function ReportPermissionsScreen() {
   ensureDraft(task.id);
 
   const [state, setState] = useState<PermissionState>({ camera: "undetermined", location: "undetermined" });
-  const [skippedLocation, setSkippedLocation] = useState(false);
 
   const refresh = useCallback(async () => {
     setState(await getPermissionState());
@@ -47,8 +46,7 @@ export default function ReportPermissionsScreen() {
     setState((s) => ({ ...s, location }));
   };
 
-  const canContinue =
-    state.camera === "granted" && (state.location === "granted" || skippedLocation);
+  const canContinue = state.camera === "granted" && state.location === "granted";
 
   const next = () =>
     router.replace({ pathname: "/report/identity", params: { id: task.id } });
@@ -60,7 +58,7 @@ export default function ReportPermissionsScreen() {
           label="Continue"
           onPress={next}
           disabled={!canContinue}
-          accessibilityHint={!canContinue ? "Allow the camera to continue" : undefined}
+          accessibilityHint={!canContinue ? "Allow the camera and location to continue" : undefined}
         />
       }
     >
@@ -75,18 +73,14 @@ export default function ReportPermissionsScreen() {
         name="Camera"
         purpose={RATIONALE.camera}
         status={state.camera}
-        required
         onAllow={askCamera}
       />
       <PermissionCard
         icon="location"
-        name="Approximate location"
+        name="Location"
         purpose={RATIONALE.location}
         status={state.location}
-        required={false}
         onAllow={askLocation}
-        onSkip={() => setSkippedLocation(true)}
-        skipped={skippedLocation}
       />
     </Screen>
   );
@@ -97,19 +91,13 @@ function PermissionCard({
   name,
   purpose,
   status,
-  required,
   onAllow,
-  onSkip,
-  skipped,
 }: {
   icon: "camera" | "location";
   name: string;
   purpose: string;
   status: PermissionStatus | "pending";
-  required: boolean;
   onAllow: () => void;
-  onSkip?: () => void;
-  skipped?: boolean;
 }) {
   const granted = status === "granted";
   const blocked = status === "denied";
@@ -121,7 +109,7 @@ function PermissionCard({
         </View>
         <View style={styles.flex}>
           <Text style={styles.cardName}>
-            {name} <Text style={styles.tag}>{required ? "required" : "optional"}</Text>
+            {name} <Text style={styles.tag}>required</Text>
           </Text>
           <Text style={styles.cardPurpose}>{purpose}</Text>
         </View>
@@ -132,9 +120,7 @@ function PermissionCard({
       ) : blocked ? (
         <View style={{ gap: space.xs }}>
           <Text style={styles.blocked}>
-            {required
-              ? "Blocked. Open Settings to allow the camera, then come back."
-              : "Blocked. You can continue without it."}
+            Blocked. Open Settings to allow {name.toLowerCase()}, then come back.
           </Text>
           <Pressable
             onPress={() => Linking.openSettings()}
@@ -144,11 +130,6 @@ function PermissionCard({
           >
             <Text style={styles.linkText}>Open settings</Text>
           </Pressable>
-          {!required && onSkip && !skipped ? (
-            <Pressable onPress={onSkip} accessibilityRole="button" style={styles.link}>
-              <Text style={styles.linkText}>Continue without location</Text>
-            </Pressable>
-          ) : null}
         </View>
       ) : (
         <View style={styles.actions}>
@@ -160,14 +141,8 @@ function PermissionCard({
           >
             <Text style={styles.allowText}>Allow</Text>
           </Pressable>
-          {!required && onSkip && !skipped ? (
-            <Pressable onPress={onSkip} accessibilityRole="button" style={styles.link}>
-              <Text style={styles.linkText}>Continue without location</Text>
-            </Pressable>
-          ) : null}
         </View>
       )}
-      {skipped && !granted ? <Text style={styles.ok}>Skipped — the report will not include an area</Text> : null}
     </View>
   );
 }
