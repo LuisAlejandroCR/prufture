@@ -120,7 +120,7 @@ export default function Home() {
                 viewBox={`0 0 ${size} ${size}`}
                 role="img"
                 aria-label="QR code to install the Android app"
-                style={{ width: 176, height: 176, display: "block" }}
+                style={{ width: 260, height: 260, maxWidth: "72vw", display: "block" }}
               >
                 <rect width={size} height={size} fill="#fbf6ef" />
                 <path d={path} fill="#1c1208" />
