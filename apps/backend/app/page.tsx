@@ -62,6 +62,31 @@ export default function Home() {
         </aside>
       </div>
 
+      <h2 id="demo">See it in action</h2>
+      <p className="muted" style={{ marginTop: "calc(-1 * var(--sp-2))" }}>
+        A 1 minute 41 second walkthrough: offline capture, on-device signing, and a real on-chain
+        record with no personal data.
+      </p>
+      <div
+        style={{
+          position: "relative",
+          width: "100%",
+          aspectRatio: "16 / 9",
+          borderRadius: "var(--radius-md, 12px)",
+          overflow: "hidden",
+          border: "1px solid var(--border)",
+        }}
+      >
+        <iframe
+          src="https://www.youtube-nocookie.com/embed/C101NjqKhuQ"
+          title="Prufture demo"
+          loading="lazy"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0 }}
+        />
+      </div>
+
       <h2 id="how-it-works">How it works</h2>
       <div className="steps">
         <div className="step">
