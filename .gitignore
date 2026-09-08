@@ -9,6 +9,11 @@ docs/
 .env.*
 !.env.example
 
+# Store submission credentials (EAS submit) — never in the repo
+*-service-account.json
+apps/frontend/play-service-account.json
+apps/frontend/credentials.json
+
 # Local durable store for apps/api (file-backed persistence)
 .data/
 apps/api/.data/

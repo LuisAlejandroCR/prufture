@@ -2,27 +2,66 @@
   "expo": {
     "name": "Prufture",
     "slug": "prufture",
-    "version": "0.1.0",
+    "scheme": "prufture",
+    "version": "1.0.0",
     "orientation": "portrait",
-    "scheme": "proofatcapture",
     "userInterfaceStyle": "light",
+    "icon": "./assets/icon.png",
+    "backgroundColor": "#FBF6EF",
+    "primaryColor": "#C8533A",
+    "assetBundlePatterns": ["**/*"],
     "plugins": [
       "expo-router",
       "expo-secure-store",
-      ["expo-camera", { "cameraPermission": "Prufture uses the camera to photograph field-task evidence and to run a short selfie liveness check." }],
-      ["expo-location", {
-        "locationWhenInUsePermission": "Prufture records only a coarse capture area, never your exact location.",
-        "locationAlwaysAndWhenInUsePermission": "Prufture records a coarse capture location for verification."
-      }]
+      "expo-sqlite",
+      ["expo-splash-screen", { "image": "./assets/splash-icon.png", "resizeMode": "contain", "backgroundColor": "#FBF6EF" }],
+      ["expo-camera", { "cameraPermission": "Prufture uses the camera to photograph the field activity you are reporting on and to run a short selfie liveness check.", "recordAudioAndroid": false }],
+      ["expo-location", { "locationWhenInUsePermission": "Prufture records an approximate area for the report, not your exact location, plus an encrypted precise point that only the programme team can open for audit." }],
+      ["expo-notifications", { "icon": "./assets/notification-icon.png", "color": "#C8533A" }]
     ],
-    "ios": { "supportsTablet": true, "bundleIdentifier": "ai.proofatcapture.app" },
-    "android": { "package": "ai.proofatcapture.app", "versionCode": 1 },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "ai.proofatcapture.app",
+      "buildNumber": "1",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSCameraUsageDescription": "Prufture uses the camera to photograph the field activity you are reporting on and to run a short selfie liveness check.",
+        "NSLocationWhenInUseUsageDescription": "Prufture records an approximate area for the report, not your exact location, plus an encrypted precise point that only the programme team can open for audit.",
+        "NSPhotoLibraryUsageDescription": "Prufture never opens your photo library; a report photo is taken in the app and stays on the device."
+      }
+    },
+    "android": {
+      "package": "ai.proofatcapture.app",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#FBF6EF"
+      },
+      "permissions": [
+        "CAMERA",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "POST_NOTIFICATIONS"
+      ],
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_MEDIA_VIDEO",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
     "owner": "alejoo_oo",
     "runtimeVersion": { "policy": "appVersion" },
     "updates": { "url": "https://u.expo.dev/ff9cdaeb-a7be-4a1c-a76f-7594b2b51aef" },
     "extra": {
       "eas": { "projectId": "ff9cdaeb-a7be-4a1c-a76f-7594b2b51aef" },
-      "router": {}
+      "router": {},
+      "privacyPolicyUrl": "[[PRIVACY_POLICY_URL]]",
+      "supportUrl": "[[SUPPORT_URL]]"
     }
   }
 }
