@@ -344,6 +344,22 @@ body:has(.pitch-deck) { background: var(--bg); }
 .pitch-arrow:hover { border-color: var(--brand); color: var(--brand); }
 .pitch-count { font-family: var(--mono); font-size: 0.85rem; color: var(--text-muted); min-width: 4ch; text-align: center; }
 
+/* Coverage map (/dashboard/map): a Leaflet choropleth of the coarse 5-char geohash grid.
+   Additive — reuses the token palette. The map is contained and never widens the page. */
+.cov-wrap { display: grid; gap: var(--sp-2); margin: var(--sp-4) 0; }
+.cov-map {
+  width: 100%; height: 480px; max-width: 100%;
+  border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden;
+  background: var(--surface-2);
+}
+.cov-map-loading { display: grid; place-items: center; color: var(--text-muted); font-size: 0.9rem; }
+.cov-map .leaflet-container { background: var(--surface-2); font: inherit; }
+.cov-legend { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; font-size: 0.8rem; color: var(--text-muted); }
+.cov-legend-swatch { width: 22px; height: 12px; border-radius: 2px; display: inline-block; border: 1px solid var(--border); }
+.cov-legend-label { white-space: nowrap; }
+.cov-note { font-size: 0.85rem; margin: 0; }
+@media (max-width: 640px) { .cov-map { height: 360px; } }
+
 /* QR codes on the demo slides. Always on a light card so they scan in either theme. */
 .pitch-qr-row { display: flex; flex-wrap: wrap; gap: var(--sp-5); align-items: flex-start; }
 .pitch-qr-row ul { flex: 1 1 16rem; }

@@ -11,6 +11,7 @@ const LINKS: { href: string; label: string }[] = [
   { href: "/dashboard/reports", label: "Reports" },
   { href: "/dashboard/programmes", label: "Programmes" },
   { href: "/dashboard/communities", label: "Communities" },
+  { href: "/dashboard/map", label: "Coverage" },
   { href: "/dashboard/alerts", label: "Alerts" },
   { href: "/dashboard/exports", label: "Exports" },
   { href: "/dashboard/settings", label: "Settings" },
