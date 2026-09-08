@@ -4,29 +4,53 @@
 // or a proof reference. No permission -> the app behaves exactly as before, just without push.
 // notifyReportConfirmed() is the local fallback fired by useAutoSync when a report is confirmed.
 // Pure helpers (payload whitelist, token check) live in src/push.ts so they stay unit-testable.
+//
+// expo-notifications is NEVER imported at module load: in Expo Go (SDK 53+) its iOS path reaches
+// the removed PushNotificationIOS native module and throws an Invariant Violation at import time,
+// which would crash the whole app on boot. It is lazy-imported, and skipped entirely in Expo Go.
 
 import Constants from "expo-constants";
 import * as Crypto from "expo-crypto";
 import * as Device from "expo-device";
-import * as Notifications from "expo-notifications";
 import * as SecureStore from "expo-secure-store";
 import { isExpoPushToken, randomDeviceId, toRegisterBody } from "./push";
 
 const DEVICE_ID_KEY = "prufture.push.deviceId";
 const ANDROID_CHANNEL = "default";
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: false,
-    shouldSetBadge: false,
-  }),
-});
+// Expo Go identifies as "storeClient"; a dev/preview/standalone build is "standalone" or "bare".
+const IN_EXPO_GO = Constants.executionEnvironment === "storeClient";
+
+type NotificationsModule = typeof import("expo-notifications");
+let notificationsModule: NotificationsModule | null = null;
+let handlerSet = false;
+
+/** Lazy-load expo-notifications. Returns null in Expo Go or if the module fails to load. */
+async function loadNotifications(): Promise<NotificationsModule | null> {
+  if (IN_EXPO_GO) return null;
+  if (notificationsModule) return notificationsModule;
+  try {
+    notificationsModule = await import("expo-notifications");
+    if (!handlerSet) {
+      notificationsModule.setNotificationHandler({
+        handleNotification: async () => ({
+          shouldShowBanner: true,
+          shouldShowList: true,
+          shouldPlaySound: false,
+          shouldSetBadge: false,
+        }),
+      });
+      handlerSet = true;
+    }
+    return notificationsModule;
+  } catch {
+    return null;
+  }
+}
 
 export interface RegisterResult {
   registered: boolean;
-  reason?: "not-a-device" | "permission-denied" | "no-project-id" | "error";
+  reason?: "not-a-device" | "permission-denied" | "no-project-id" | "error" | "unsupported";
 }
 
 async function getOrCreateDeviceId(): Promise<string> {
@@ -37,7 +61,7 @@ async function getOrCreateDeviceId(): Promise<string> {
   return fresh;
 }
 
-async function ensureAndroidChannel(): Promise<void> {
+async function ensureAndroidChannel(Notifications: NotificationsModule): Promise<void> {
   try {
     await Notifications.setNotificationChannelAsync(ANDROID_CHANNEL, {
       name: "Report updates",
@@ -55,9 +79,11 @@ async function ensureAndroidChannel(): Promise<void> {
  */
 export async function registerForPush(apiUrl: string): Promise<RegisterResult> {
   try {
+    const Notifications = await loadNotifications();
+    if (!Notifications) return { registered: false, reason: "unsupported" };
     if (!Device.isDevice) return { registered: false, reason: "not-a-device" };
 
-    await ensureAndroidChannel();
+    await ensureAndroidChannel(Notifications);
 
     const current = await Notifications.getPermissionsAsync();
     let granted = current.granted;
@@ -87,6 +113,8 @@ export async function registerForPush(apiUrl: string): Promise<RegisterResult> {
 /** Local "your report was confirmed" notification. Used when no server push arrives. */
 export async function notifyReportConfirmed(count = 1): Promise<void> {
   try {
+    const Notifications = await loadNotifications();
+    if (!Notifications) return; // Expo Go / unsupported: silently skip.
     await Notifications.scheduleNotificationAsync({
       content: {
         title: "Your report was confirmed",
