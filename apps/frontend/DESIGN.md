@@ -76,7 +76,25 @@ The Me screen shows a **private contribution summary** ("Your contribution — N
 · M programme activities supported"), visible only to the reporter and never linked to a public
 report. Full model in `docs/pilot_engagement.md`.
 
-## Theme
+## Feedback and celebration
+
+`src/feedback.ts` is the only module that touches `expo-haptics`. It exposes `tap` / `bump` /
+`thud` (impact) and `success` / `warn` (notification); every call checks the persisted
+`hapticsEnabled` flag and swallows any throw so a device with no haptic engine never breaks the
+flow. Micro-haptics are one call per action, never in a loop: photo accepted (`tap`), Finish
+report (`bump`).
+
+Two guided moments, both on mount, both gated by `celebrationsAllowed()` (false when the reporter
+turned celebrations off OR the OS reduce-motion setting is on):
+
+- `report/saved` — 2.0s (`MOMENT_SAVED_MS`). `success()` haptic, the card eases up, a small lock
+  icon settles over the check, then the actions fade in. Calm, not a party.
+- `report/sent` — 2.5s (`MOMENT_SENT_MS`). `success()` then `thud()` at 150ms, a top-center
+  confetti burst (`react-native-confetti-cannon`, Animated-based, Expo Go safe), and a
+  congratulations block that names what the reporter helped document. When celebrations are not
+  allowed: no confetti, no motion, both haptics still fire, static success state.
+
+The "Celebrations and motion" and "Haptics" toggles live on the Me screen under Accessibility.
 
 Reporters capture outdoors in daylight; the app commits to a single high-contrast light theme.
 `app.json` sets `userInterfaceStyle: "light"`, `_layout.tsx` sets `<StatusBar style="dark" />`,

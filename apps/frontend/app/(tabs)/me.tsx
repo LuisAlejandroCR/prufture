@@ -4,20 +4,34 @@
 
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Switch, Text, View } from "react-native";
 import type { QueuedProof } from "@proof/core";
+import { Icon, type IconName } from "../../src/components/icons/Icon";
 import { Row, Screen, ScreenTitle, SectionLabel } from "../../src/components/ui";
+import {
+  hydrateFeedbackSettings,
+  isCelebrationsEnabled,
+  isHapticsEnabled,
+  setCelebrationsEnabled,
+  setHapticsEnabled,
+} from "../../src/feedback";
 import { listProofs } from "../../src/queue";
-import { color, radius, space, type } from "../../src/theme";
+import { color, radius, space, target, type } from "../../src/theme";
 
 export default function MeScreen() {
   const router = useRouter();
   const [pending, setPending] = useState(0);
   const [confirmed, setConfirmed] = useState(0);
   const [activities, setActivities] = useState(0);
+  const [haptics, setHaptics] = useState(true);
+  const [celebrations, setCelebrations] = useState(true);
 
   useFocusEffect(
     useCallback(() => {
+      void hydrateFeedbackSettings().then(() => {
+        setHaptics(isHapticsEnabled());
+        setCelebrations(isCelebrationsEnabled());
+      });
       listProofs()
         .then((rows: QueuedProof[]) => {
           setPending(rows.filter((r) => r.status === "pending_sync").length);
@@ -61,12 +75,6 @@ export default function MeScreen() {
         <SectionLabel>Settings</SectionLabel>
         <Row icon="language" title="Language" subtitle="English" onPress={() => undefined} />
         <Row
-          icon="accessibility"
-          title="Accessibility"
-          subtitle="Text size follows your phone settings"
-          onPress={() => undefined}
-        />
-        <Row
           icon="privacy"
           title="Data and privacy"
           subtitle="What we ask for and why"
@@ -77,6 +85,31 @@ export default function MeScreen() {
           title="Offline storage"
           subtitle={pending === 0 ? "Nothing waiting" : `${pending} waiting to send`}
           onPress={() => router.push("/updates")}
+        />
+      </View>
+
+      <View style={{ gap: space.sm }}>
+        <SectionLabel>Accessibility</SectionLabel>
+        <Text style={styles.groupNote}>Text size follows your phone settings.</Text>
+        <ToggleRow
+          icon="accessibility"
+          title="Haptics"
+          subtitle="A short vibration on key actions"
+          value={haptics}
+          onValueChange={(v) => {
+            setHaptics(v);
+            void setHapticsEnabled(v);
+          }}
+        />
+        <ToggleRow
+          icon="review"
+          title="Celebrations and motion"
+          subtitle="Confetti and animations. Off also follows your phone reduce motion setting."
+          value={celebrations}
+          onValueChange={(v) => {
+            setCelebrations(v);
+            void setCelebrationsEnabled(v);
+          }}
         />
       </View>
 
@@ -94,7 +127,62 @@ export default function MeScreen() {
   );
 }
 
+function ToggleRow({
+  icon,
+  title,
+  subtitle,
+  value,
+  onValueChange,
+}: {
+  icon: IconName;
+  title: string;
+  subtitle: string;
+  value: boolean;
+  onValueChange: (v: boolean) => void;
+}) {
+  return (
+    <View style={styles.toggleRow}>
+      <View style={styles.toggleIcon}>
+        <Icon name={icon} size={20} color={color.text} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.toggleTitle}>{title}</Text>
+        <Text style={styles.toggleSub}>{subtitle}</Text>
+      </View>
+      <Switch
+        value={value}
+        onValueChange={onValueChange}
+        accessibilityLabel={title}
+        trackColor={{ false: color.border, true: color.primary }}
+        thumbColor={color.surface}
+      />
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
+  groupNote: { ...type.meta, color: color.muted },
+  toggleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.md,
+    padding: space.md,
+    borderRadius: radius.md,
+    backgroundColor: color.surface,
+    borderWidth: 1,
+    borderColor: color.border,
+    minHeight: target.min + 12,
+  },
+  toggleIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.sm,
+    backgroundColor: color.surfaceSoft,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  toggleTitle: { ...type.subtitle, color: color.text },
+  toggleSub: { ...type.meta, color: color.muted },
   contribution: {
     padding: space.lg,
     borderRadius: radius.md,

@@ -11,6 +11,7 @@ import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { base64ToBytes } from "../../src/capture";
 import { Icon } from "../../src/components/icons/Icon";
 import { BackLink, Notice, PrimaryButton, ReportProgress, Screen, SecondaryButton } from "../../src/components/ui";
+import { tap } from "../../src/feedback";
 import { addPhoto, ensureDraft } from "../../src/report-draft";
 import { getTask } from "../../src/tasks";
 import { color, radius, space, target, type } from "../../src/theme";
@@ -63,6 +64,7 @@ export default function ReportCaptureScreen() {
 
   const usePhoto = () => {
     if (!shot) return;
+    void tap();
     addPhoto({ uri: shot.uri, bytes: shot.bytes, stepIndex });
     setShot(null);
     next();
