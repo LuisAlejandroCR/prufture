@@ -5,6 +5,7 @@
     "scheme": "prufture",
     "version": "1.0.0",
     "orientation": "portrait",
+    "platforms": ["ios", "android"],
     "userInterfaceStyle": "light",
     "icon": "./assets/icon.png",
     "backgroundColor": "#FBF6EF",
