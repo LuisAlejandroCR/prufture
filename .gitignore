@@ -27,6 +27,9 @@ build/
 web-build/
 *.tsbuildinfo
 
+# Local agent scratch + throwaway worktrees (never tracked)
+.claude/
+
 # OS / editor
 .DS_Store
 Thumbs.db
