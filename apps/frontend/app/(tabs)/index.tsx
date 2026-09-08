@@ -14,19 +14,33 @@ import {
   Screen,
   SectionLabel,
 } from "../../src/components/ui";
+import {
+  clearDraft,
+  clearPersistedDraft,
+  hasPersistedDraft,
+  isResumable,
+  restoreDraft,
+  resumeTarget,
+} from "../../src/report-draft";
 import { listProofs } from "../../src/queue";
 import { runPendingSync } from "../../src/useAutoSync";
-import { categoryAccent, recommendedTask } from "../../src/tasks";
+import { categoryAccent, getTask, recommendedTask } from "../../src/tasks";
 import { color, radius, space, type } from "../../src/theme";
 
 export default function HomeScreen() {
   const router = useRouter();
   const [pending, setPending] = useState(0);
   const [reachError, setReachError] = useState(false);
+  const [unfinished, setUnfinished] = useState<{ taskId: string; photos: number; answers: number } | null>(null);
   const task = recommendedTask();
 
   useFocusEffect(
     useCallback(() => {
+      hasPersistedDraft()
+        .then((meta) =>
+          setUnfinished(meta && isResumable(meta) ? { taskId: meta.taskId, photos: meta.photos, answers: meta.answers } : null),
+        )
+        .catch(() => setUnfinished(null));
       listProofs()
         .then((rows: QueuedProof[]) => {
           const waiting = rows.filter((r) => r.status === "pending_sync").length;
@@ -47,6 +61,24 @@ export default function HomeScreen() {
   );
 
   const start = () => router.push({ pathname: "/report/intro", params: { id: task.id } });
+
+  const continueUnfinished = async () => {
+    if (!unfinished) return;
+    const draft = await restoreDraft();
+    const t = getTask(unfinished.taskId);
+    if (!draft) {
+      router.push({ pathname: "/report/intro", params: { id: unfinished.taskId } });
+      return;
+    }
+    const target = resumeTarget(draft, t);
+    router.push({ pathname: target.pathname, params: target.params });
+  };
+
+  const discardUnfinished = async () => {
+    clearDraft();
+    await clearPersistedDraft();
+    setUnfinished(null);
+  };
 
   return (
     <Screen
@@ -93,6 +125,34 @@ export default function HomeScreen() {
           </Text>
           <Icon name="chevron" size={16} color={color.warning} />
         </Pressable>
+      ) : null}
+
+      {unfinished ? (
+        <View style={styles.resume}>
+          <Text style={styles.resumeTitle}>Unfinished report</Text>
+          <Text style={styles.resumeBody}>
+            You have a report for “{getTask(unfinished.taskId).title}” saved on this phone. Pick up
+            where you left off, or start over.
+          </Text>
+          <View style={styles.resumeActions}>
+            <Pressable
+              onPress={continueUnfinished}
+              accessibilityRole="button"
+              accessibilityLabel="Continue the unfinished report"
+              style={({ pressed }) => [styles.resumeBtn, styles.resumeBtnPrimary, pressed && styles.pressed]}
+            >
+              <Text style={styles.resumeBtnPrimaryText}>Continue</Text>
+            </Pressable>
+            <Pressable
+              onPress={discardUnfinished}
+              accessibilityRole="button"
+              accessibilityLabel="Start over and delete the unfinished report from this phone"
+              style={({ pressed }) => [styles.resumeBtn, pressed && styles.pressed]}
+            >
+              <Text style={styles.resumeBtnText}>Start over</Text>
+            </Pressable>
+          </View>
+        </View>
       ) : null}
 
       <View style={{ gap: space.sm }}>
@@ -168,4 +228,27 @@ const styles = StyleSheet.create({
   },
   progressText: { ...type.meta, color: color.muted, fontWeight: "600" },
   footNote: { ...type.meta, color: color.faint, textAlign: "center" },
+  pressed: { opacity: 0.7 },
+  resume: {
+    gap: space.sm,
+    padding: space.md,
+    borderRadius: radius.md,
+    backgroundColor: color.primarySoft,
+  },
+  resumeTitle: { ...type.meta, color: color.primary, fontWeight: "700" },
+  resumeBody: { ...type.body, color: color.text },
+  resumeActions: { flexDirection: "row", gap: space.sm },
+  resumeBtn: {
+    minHeight: 40,
+    paddingHorizontal: space.md,
+    borderRadius: radius.sm,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: color.border,
+    backgroundColor: color.surface,
+  },
+  resumeBtnPrimary: { backgroundColor: color.primary, borderColor: color.primary },
+  resumeBtnPrimaryText: { ...type.meta, color: color.onPrimary, fontWeight: "700" },
+  resumeBtnText: { ...type.meta, color: color.text, fontWeight: "600" },
 });
