@@ -19,15 +19,20 @@ const TX_HASH = "0xee879341dbb965363bf37e1c3c8b56af8fdc732902ff3f736e6389d6b0994
 const ATTESTATION_UID = "0x4798879a555b6442a876a9b9a9dacfd7c3a73c3bd7fb3978f492b0fd72522905";
 const EASSCAN_TX = `https://base-sepolia.easscan.org/attestation/view/${ATTESTATION_UID}`;
 
-// Fill these in once they exist; until then each renders as a labelled QR placeholder.
-const APP_URL: string | null = null; // Expo Go project link (exp://) — the demo runs in Expo Go
-const DASHBOARD_URL: string | null = null; // <deploy>/dashboard
-const VERIFY_URL: string | null = null; // <deploy>/verify/<sample hash>
-const REPO_URL: string | null = null; // source repository
+// Deploy-time wiring. DASHBOARD_URL / VERIFY_URL resolve from NEXT_PUBLIC_VERIFY_BASE_URL
+// (the same env var the /verify route reads) when Vercel sets it; until then each renders
+// as a labelled QR placeholder. REPO_URL is a constant. APP_URL stays null — the demo runs
+// in Expo Go and the exp:// link is pasted by the human at demo time.
+const DEPLOY_BASE: string | null =
+  process.env.NEXT_PUBLIC_VERIFY_BASE_URL?.replace(/\/+$/, "") || null;
+// Sample proof for /verify — hashBytes("seed: solar panel installation|solar-panel-install"),
+// the first row apps/api/scripts/seed.ts writes to a fresh deploy.
+const SAMPLE_HASH = "992f8d6232210e99a6ed60a9c23dc22b3a304cd0c0d13bbdecf16f3c573d5d75";
 
-function Tbd({ children }: { children: React.ReactNode }) {
-  return <span className="pitch-tbd">TBD: {children}</span>;
-}
+const APP_URL: string | null = null; // Expo Go project link (exp://) — the demo runs in Expo Go
+const DASHBOARD_URL: string | null = DEPLOY_BASE ? `${DEPLOY_BASE}/dashboard` : null;
+const VERIFY_URL: string | null = DEPLOY_BASE ? `${DEPLOY_BASE}/verify/${SAMPLE_HASH}` : null;
+const REPO_URL: string | null = "https://github.com/LuisAlejandroCR/unicef-firstblockathon";
 
 const slideBodies: React.ReactNode[] = [
   // 1 — title + context
@@ -43,9 +48,7 @@ const slideBodies: React.ReactNode[] = [
         U-Report runs where coverage doesn&rsquo;t &mdash;{" "}
         <span className="m">volunteers verify field tasks with no signal at the moment it matters</span>.
       </li>
-      <li>
-        <Tbd>team names</Tbd>
-      </li>
+      <li className="m">Luis Alejandro C&aacute;rdenas &mdash; solo founder / builder</li>
     </ul>
   </>,
 
@@ -170,8 +173,12 @@ const slideBodies: React.ReactNode[] = [
         <li>
           No zero-knowledge, no TEE, no hardware attestation, no &ldquo;deepfake-proof&rdquo; claim.
         </li>
+        {/* HUMAN: confirm Go/Pivot/Stop */}
         <li>
-          <b>Go / Pivot / Stop</b> &mdash; <Tbd>the team&rsquo;s call + one line of why</Tbd>
+          <b>Go</b> &mdash; the offline capture &rarr; on-device sign &rarr; queue &rarr; sync
+          &rarr; real EAS attestation path runs end to end today on Base Sepolia, 157 tests
+          green, zero PII in the on-chain decode; what remains is integration and pilot
+          pre-conditions, not unproven core mechanics.
         </li>
       </ul>
     </div>
