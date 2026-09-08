@@ -4,10 +4,17 @@
 // Every claim stays true to what the code does: no ZK, TEE, or deployment claim.
 
 import Link from "next/link";
+import { qrPath } from "./pitch/qr";
 
 const SAMPLE_HASH =
   process.env.NEXT_PUBLIC_SAMPLE_HASH ??
   "992f8d6232210e99a6ed60a9c23dc22b3a304cd0c0d13bbdecf16f3c573d5d75";
+
+// EAS build page for the Android preview APK. iOS has no equivalent standalone install
+// (no Apple Developer account) — iOS reviewers use the demo video or the web.
+const ANDROID_BUILD_URL =
+  process.env.NEXT_PUBLIC_ANDROID_BUILD_URL ??
+  "https://expo.dev/accounts/alejoo_oo/projects/prufture/builds/4bb39156-6542-44af-b2f8-1976cc90e47d";
 
 export default function Home() {
   return (
@@ -85,6 +92,60 @@ export default function Home() {
           allowFullScreen
           style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0 }}
         />
+      </div>
+
+      <h2 id="try">Try the app</h2>
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: "var(--sp-5, 24px)",
+          alignItems: "flex-start",
+        }}
+      >
+        <figure
+          style={{
+            margin: 0,
+            padding: "var(--sp-3, 12px)",
+            background: "#fbf6ef",
+            border: "1px solid var(--border)",
+            borderRadius: "var(--radius-md, 12px)",
+            textAlign: "center",
+          }}
+        >
+          {(() => {
+            const { size, path } = qrPath(ANDROID_BUILD_URL);
+            return (
+              <svg
+                viewBox={`0 0 ${size} ${size}`}
+                role="img"
+                aria-label="QR code to install the Android app"
+                style={{ width: 176, height: 176, display: "block" }}
+              >
+                <rect width={size} height={size} fill="#fbf6ef" />
+                <path d={path} fill="#1c1208" />
+              </svg>
+            );
+          })()}
+          <figcaption style={{ fontSize: "0.85rem", marginTop: "8px", color: "#806f5c" }}>
+            Scan with an Android phone
+          </figcaption>
+        </figure>
+        <div style={{ flex: "1 1 260px" }}>
+          <p style={{ marginTop: 0 }}>
+            <a className="btn" href={ANDROID_BUILD_URL} rel="noreferrer noopener" target="_blank">
+              Install the Android app
+            </a>
+          </p>
+          <p className="muted">
+            A preview build (APK). Open the link on an Android phone and tap Install — no store, no
+            account. It talks to the live backend, so nothing else needs to be running.
+          </p>
+          <p className="faint" style={{ fontSize: "0.9rem" }}>
+            On iPhone, watch the demo above or use this site — a standalone iOS build needs an Apple
+            Developer account, which this prototype does not have.
+          </p>
+        </div>
       </div>
 
       <h2 id="how-it-works">How it works</h2>
