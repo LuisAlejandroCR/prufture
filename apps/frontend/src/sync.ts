@@ -1,7 +1,8 @@
 // sync.ts: push pending proofs to the api when connectivity returns.
 // PURE and injectable (fetch + queue fns are passed in) so it unit-tests off-device.
-// Sends ONLY the 6 SignedProof fields via toSignedProof() — mediaUri and local
-// columns can never leak. Mirrors @proof/core result.ts semantics: never throws.
+// The /sync body is the 6 SignedProof fields from toSignedProof() plus, when the row
+// has one, the local-only reportId alongside (never signed) — mediaUri and every other
+// local column can never leak. Mirrors @proof/core result.ts semantics: never throws.
 
 import type { QueuedProof, SignedProof } from "@proof/core";
 import { flushPendingLiveness } from "./liveness";
@@ -82,10 +83,18 @@ export async function syncPending(deps: SyncDeps): Promise<SyncSummary> {
   for (const row of rows.filter((r) => r.status === PENDING_STATUS)) {
     summary.attempted += 1;
     try {
+      // The signed payload is exactly the 6 toSignedProof() fields. The local-only
+      // reportId rides ALONGSIDE it (not inside, never signed) so the api can send
+      // one delivery per field report instead of one per photo. Omitted when absent.
+      const reportId = (row as { reportId?: unknown }).reportId;
+      const body =
+        typeof reportId === "string" && reportId
+          ? { ...toSignedProof(row), reportId }
+          : toSignedProof(row);
       const res = await deps.fetchImpl(`${base}/sync`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(toSignedProof(row)),
+        body: JSON.stringify(body),
       });
 
       if (!res.ok) {
