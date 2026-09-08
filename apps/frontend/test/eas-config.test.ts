@@ -1,10 +1,11 @@
-// eas-config.test.ts: unit + fuzz + invariant checks for the Block 3 demo-rig config
-// (apps/frontend/eas.json and apps/frontend/app.json). Guards the preview APK profile
-// against silent drift; it does not exercise any runtime code.
+// eas-config.test.ts: unit + fuzz + invariant checks for the EAS / app-store config
+// (apps/frontend/eas.json and apps/frontend/app.json) plus the store-readiness additions
+// (assets, permissions, notifications wiring). Guards the config against silent drift;
+// it does not exercise any runtime code.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 const easPath = fileURLToPath(new URL("../eas.json", import.meta.url));
@@ -105,6 +106,120 @@ test("invariant: no secrets or absolute paths in the config files", () => {
   for (const raw of [easRaw, appRaw]) {
     for (const re of forbidden) assert.equal(re.test(raw), false, `matched ${re}`);
   }
+});
+
+// --- store readiness: app.json is complete for a store submission ---
+test("app.json: identity fields are store-complete", () => {
+  const e = app.expo;
+  assert.equal(e.name, "Prufture");
+  assert.equal(e.slug, "prufture");
+  assert.equal(e.scheme, "prufture");
+  assert.match(e.version, /^\d+\.\d+\.\d+$/);
+  assert.equal(e.orientation, "portrait");
+  assert.equal(e.icon, "./assets/icon.png");
+  assert.equal(e.ios.bundleIdentifier, "ai.proofatcapture.app");
+  assert.equal(e.ios.buildNumber, "1");
+  assert.equal(e.android.package, "ai.proofatcapture.app");
+});
+
+test("app.json: iOS privacy strings + export-compliance flag are set", () => {
+  const p = app.expo.ios.infoPlist;
+  assert.equal(p.ITSAppUsesNonExemptEncryption, false);
+  assert.ok(p.NSCameraUsageDescription.length > 10);
+  assert.ok(/approximate/i.test(p.NSLocationWhenInUseUsageDescription));
+});
+
+test("app.json: Android permissions are exactly the four we use", () => {
+  assert.deepEqual([...app.expo.android.permissions].sort(), [
+    "ACCESS_COARSE_LOCATION",
+    "ACCESS_FINE_LOCATION",
+    "CAMERA",
+    "POST_NOTIFICATIONS",
+  ]);
+  const blocked = app.expo.android.blockedPermissions as string[];
+  assert.ok(blocked.includes("android.permission.RECORD_AUDIO"));
+  assert.ok(blocked.some((b) => b.includes("READ_MEDIA_IMAGES")));
+});
+
+test("app.json: adaptive icon, splash and notification assets are wired via plugins", () => {
+  assert.equal(app.expo.android.adaptiveIcon.foregroundImage, "./assets/adaptive-icon.png");
+  assert.equal(app.expo.android.adaptiveIcon.backgroundColor, "#FBF6EF");
+  const plugins = app.expo.plugins as Array<string | [string, Record<string, unknown>]>;
+  const cfg = (name: string) =>
+    (plugins.find((p) => Array.isArray(p) && p[0] === name) as [string, Record<string, unknown>])[1];
+  assert.equal(cfg("expo-splash-screen").image, "./assets/splash-icon.png");
+  assert.equal(cfg("expo-notifications").icon, "./assets/notification-icon.png");
+  assert.equal(cfg("expo-notifications").color, "#C8533A");
+});
+
+test("app.json: plugins include the native modules we ship and nothing we do not", () => {
+  const names = (app.expo.plugins as Array<string | [string, unknown]>).map((p) =>
+    Array.isArray(p) ? p[0] : p,
+  );
+  for (const need of [
+    "expo-router",
+    "expo-secure-store",
+    "expo-sqlite",
+    "expo-camera",
+    "expo-location",
+    "expo-notifications",
+    "expo-splash-screen",
+  ]) {
+    assert.ok(names.includes(need), `missing plugin ${need}`);
+  }
+});
+
+test("app.json: EAS projectId is untouched (eas init owns it)", () => {
+  assert.equal(app.expo.extra.eas.projectId, "ff9cdaeb-a7be-4a1c-a76f-7594b2b51aef");
+  assert.equal(app.expo.updates.url, `https://u.expo.dev/${app.expo.extra.eas.projectId}`);
+});
+
+test("store assets exist on disk", () => {
+  for (const f of [
+    "icon.png",
+    "adaptive-icon.png",
+    "splash-icon.png",
+    "notification-icon.png",
+    "favicon.png",
+  ]) {
+    const p = fileURLToPath(new URL(`../assets/${f}`, import.meta.url));
+    assert.ok(existsSync(p), `missing asset ${f}`);
+  }
+});
+
+test("eas.json: production profile targets the store on its own channel", () => {
+  const p = resolved("production");
+  assert.equal(p.distribution, "store");
+  assert.equal(p.channel, "production");
+  assert.equal(p.autoIncrement, true);
+  assert.equal((p.android as { buildType: string }).buildType, "app-bundle");
+});
+
+test("eas.json: submit.production has ios + android placeholders, key path is gitignored json", () => {
+  const s = eas.submit.production;
+  assert.ok("ascAppId" in s.ios && "appleTeamId" in s.ios);
+  assert.match(s.android.serviceAccountKeyPath, /\.json$/);
+  assert.equal(s.android.track, "internal");
+});
+
+test("notifications.ts registers anonymously — device id + token only, no identity fields", () => {
+  const src = readFileSync(
+    fileURLToPath(new URL("../src/notifications.ts", import.meta.url)),
+    "utf8",
+  );
+  assert.match(src, /\/register-push/);
+  assert.match(src, /toRegisterBody\(/);
+  for (const banned of [/\bemail\b/i, /\bfullName\b/, /\bphone\b/i, /proofHash/]) {
+    assert.equal(banned.test(src), false, `notifications.ts references ${banned}`);
+  }
+});
+
+test("_layout.tsx calls registerForPush on mount", () => {
+  const src = readFileSync(
+    fileURLToPath(new URL("../app/_layout.tsx", import.meta.url)),
+    "utf8",
+  );
+  assert.match(src, /registerForPush\(/);
 });
 
 // --- fuzz: the preview profile stays an installable-APK profile under key reordering ---

@@ -6,15 +6,26 @@ import "react-native-get-random-values";
 // The bottom tab bar lives in app/(tabs)/_layout.tsx; the guided report flow and
 // the detail screens are plain stack screens with in-screen back controls.
 
+import { useEffect } from "react";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { color } from "../src/theme";
-import { useAutoSync } from "../src/useAutoSync";
+import { API_URL, useAutoSync } from "../src/useAutoSync";
+import { notifyReportConfirmed, registerForPush } from "../src/notifications";
 
 export default function RootLayout() {
+  // Anonymous push registration: no permission -> the app is unchanged, just no push.
+  useEffect(() => {
+    void registerForPush(API_URL);
+  }, []);
+
   // Drain the offline queue when coverage returns or the app is foregrounded.
-  useAutoSync();
+  // When a sync confirms a report, fire the local "confirmed" notification as a
+  // fallback for when no server push is delivered.
+  useAutoSync((summary) => {
+    if (summary.attested > 0) void notifyReportConfirmed(summary.attested);
+  });
 
   return (
     <SafeAreaProvider>

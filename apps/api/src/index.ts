@@ -3,6 +3,7 @@
 // POST /attest - a second attester confirms the same proofHash ("more eyes").
 // POST /notify - send the public verifyUrl over a delivery channel (url only, no payload).
 // POST /verify-identity - attach a verified attribute (boolean) to a proof via Neuro, or degrade.
+// POST /register-push - store an anonymous Expo push token (random device id, no identity).
 // GET  /proof/:hash - public verification data, zero PII.
 // GET  /proofs      - aggregate list for the stakeholder dashboard.
 
@@ -11,6 +12,7 @@ import { Hono } from "hono";
 import { verifyProof, type SignedProof } from "@proof/core";
 import { env } from "./env.js";
 import { addAttestation, allProofs, getProof, setVerifiedAttribute, upsertProof } from "./store.js";
+import { pushRegistrationCount, registerPushToken } from "./push-store.js";
 import { submitAttestation } from "./relayer.js";
 import { getVerifiedAttribute } from "./neuro.js";
 import { sendVerifyUrl, type Channel } from "./channels.js";
@@ -117,6 +119,20 @@ app.post("/verify-identity", async (c) => {
     verifiedAttribute: { attribute: result.data.attribute, value: result.data.value },
     result,
   });
+});
+
+app.post("/register-push", async (c) => {
+  let body: { deviceId?: unknown; token?: unknown; proofOwnerRef?: unknown };
+  try {
+    body = (await c.req.json()) as typeof body;
+  } catch {
+    return c.json({ error: "invalid json" }, 400);
+  }
+  // proofOwnerRef is intentionally ignored: tokens are never linked to a proof or an identity.
+  if (!registerPushToken(body.deviceId, body.token)) {
+    return c.json({ error: "invalid deviceId or token" }, 400);
+  }
+  return c.json({ registered: true, count: pushRegistrationCount() }, 200);
 });
 
 // REGION_PREFIX_LEN: how many geohash chars leave the api. 5 ≈ ~5 km cell, never exact GPS.
