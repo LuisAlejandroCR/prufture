@@ -1,15 +1,17 @@
 // status/[id].tsx: the lifecycle of one report in plain language. A four-stage
-// timeline where only completed stages are marked done. Technical details sit in a
-// collapsed section for demo or expert users and still carry no PII, no exact
-// location, no secrets. Presentation over src/queue + src/tasks.
+// timeline where only completed stages are marked done. One report may hold
+// several per-photo proofs (grouped by the local reportId); the timeline shows
+// the combined progress and each proof reference is listed under Technical
+// details. No PII, no exact location, no secrets. Presentation over
+// src/queue + src/tasks.
 
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import { Linking, LayoutAnimation, Pressable, StyleSheet, Text, View } from "react-native";
-import type { QueuedProof } from "@proof/core";
 import { Icon } from "../../src/components/icons/Icon";
 import { BackLink, Notice, Screen, SecondaryButton, StatusPill } from "../../src/components/ui";
 import { listProofs } from "../../src/queue";
+import type { LocalProof } from "../../src/queue-row";
 import { getTask } from "../../src/tasks";
 import { runPendingSync } from "../../src/useAutoSync";
 import { color, friendlyStatus, radius, space, type } from "../../src/theme";
@@ -18,9 +20,20 @@ const VERIFY_BASE = process.env.EXPO_PUBLIC_VERIFY_URL ?? "https://prufture.exam
 
 type Stage = { label: string; done: boolean; current: boolean };
 
-function stages(row: QueuedProof): Stage[] {
-  const synced = row.status === "synced" || row.status === "attested";
-  const confirmed = row.status === "attested" || row.attestationCount > 0;
+/** Resolve the id param to a report: all rows sharing a reportId, or one row by id. */
+export function resolveReport(rows: LocalProof[], id: string): LocalProof[] {
+  const byReport = rows.filter((r) => r.reportId && r.reportId === id);
+  if (byReport.length > 0) return byReport;
+  const one = rows.find((r) => r.id === id);
+  if (!one) return [];
+  // A row id was passed (e.g. from the sending flow): expand to its whole report.
+  return one.reportId ? rows.filter((r) => r.reportId === one.reportId) : [one];
+}
+
+/** Combined stages: a stage is done only once every proof in the report reached it. */
+export function groupStages(group: LocalProof[]): Stage[] {
+  const synced = group.every((r) => r.status === "synced" || r.status === "attested");
+  const confirmed = group.every((r) => r.status === "attested" || r.attestationCount > 0);
   return [
     { label: "Saved on this phone", done: true, current: false },
     { label: "Sent to the programme", done: synced, current: !synced },
@@ -32,14 +45,14 @@ function stages(row: QueuedProof): Stage[] {
 export default function ReportStatusScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const [row, setRow] = useState<QueuedProof | null>(null);
+  const [group, setGroup] = useState<LocalProof[]>([]);
   const [showTech, setShowTech] = useState(false);
   const [checking, setChecking] = useState(false);
 
   const load = useCallback(() => {
     listProofs()
-      .then((rows) => setRow(rows.find((r) => r.id === id) ?? null))
-      .catch(() => setRow(null));
+      .then((rows) => setGroup(resolveReport(rows, id ?? "")))
+      .catch(() => setGroup([]));
   }, [id]);
 
   useFocusEffect(useCallback(() => load(), [load]));
@@ -52,7 +65,7 @@ export default function ReportStatusScreen() {
       .finally(() => setChecking(false));
   };
 
-  if (!row) {
+  if (group.length === 0) {
     return (
       <Screen>
         <BackLink label="Updates" onPress={() => router.back()} />
@@ -61,9 +74,19 @@ export default function ReportStatusScreen() {
     );
   }
 
-  const task = getTask(row.taskId);
-  const status = friendlyStatus(row.status, row.attestationCount);
-  const verifyUrl = `${VERIFY_BASE}/${row.proofHash}`;
+  const newest = group[0];
+  if (!newest) return null;
+  const task = getTask(newest.taskId);
+  const anyPending = group.some((r) => r.status === "pending_sync");
+  const minCount = Math.min(...group.map((r) => r.attestationCount));
+  const status = anyPending
+    ? friendlyStatus("pending_sync")
+    : friendlyStatus(
+        group.every((r) => r.status === "attested") ? "attested" : "synced",
+        minCount,
+      );
+  const stages = groupStages(group);
+  const photos = group.length;
 
   return (
     <Screen>
@@ -75,25 +98,19 @@ export default function ReportStatusScreen() {
         <Icon name="location" size={15} color={color.faint} />
         <Text style={styles.meta}>{task.area}</Text>
       </View>
-      <StatusPill status={status} count={row.attestationCount} />
+      <StatusPill status={status} count={minCount} />
 
-      {row.status === "pending_sync" ? (
+      {anyPending ? (
         <Notice tone="info" icon="offline">
           This report is ready to send. It will go out automatically when you have signal.
         </Notice>
       ) : null}
 
       <View style={styles.timeline}>
-        {stages(row).map((s, i, arr) => (
+        {stages.map((s, i, arr) => (
           <View key={s.label} style={styles.stageRow}>
             <View style={styles.stageMarker}>
-              <View
-                style={[
-                  styles.node,
-                  s.done && styles.nodeDone,
-                  s.current && styles.nodeCurrent,
-                ]}
-              >
+              <View style={[styles.node, s.done && styles.nodeDone, s.current && styles.nodeCurrent]}>
                 {s.done ? <Icon name="check" size={12} color={color.onPrimary} /> : null}
               </View>
               {i < arr.length - 1 ? (
@@ -107,7 +124,7 @@ export default function ReportStatusScreen() {
         ))}
       </View>
 
-      {row.status !== "pending_sync" ? (
+      {!anyPending ? (
         <SecondaryButton label="Check for updates" icon="retry" onPress={checkNow} disabled={checking} />
       ) : null}
 
@@ -128,19 +145,28 @@ export default function ReportStatusScreen() {
 
       {showTech ? (
         <View style={styles.tech}>
-          <TechRow label="Public reference" value={`${row.proofHash.slice(0, 16)}...`} mono />
-          <TechRow label="Captured on" value={new Date(row.capturedAt).toLocaleString()} />
-          <TechRow label="Approximate area" value={row.geohash ? row.geohash.slice(0, 5) : "not added"} mono />
-          <TechRow label="Confirmations" value={String(row.attestationCount)} />
-          <Pressable
-            onPress={() => Linking.openURL(verifyUrl).catch(() => undefined)}
-            accessibilityRole="link"
-            accessibilityLabel="Open the public report status page"
-            style={styles.link}
-          >
-            <Icon name="review" size={15} color={color.information} />
-            <Text style={styles.linkText}>Open public report status</Text>
-          </Pressable>
+          <TechRow label="Photos in this report" value={String(photos)} />
+          <TechRow label="Captured on" value={new Date(newest.capturedAt).toLocaleString()} />
+          <TechRow
+            label="Approximate area"
+            value={newest.geohash ? newest.geohash.slice(0, 5) : "not added"}
+            mono
+          />
+          <TechRow label="Confirmations" value={String(minCount)} />
+
+          <Text style={styles.refLabel}>References</Text>
+          {group.map((r) => (
+            <Pressable
+              key={r.id}
+              onPress={() => Linking.openURL(`${VERIFY_BASE}/${r.proofHash}`).catch(() => undefined)}
+              accessibilityRole="link"
+              accessibilityLabel={`Open the public status page for photo reference ${r.proofHash.slice(0, 8)}`}
+              style={styles.refRow}
+            >
+              <Icon name="review" size={14} color={color.information} />
+              <Text style={[styles.refValue, styles.mono]}>{r.proofHash.slice(0, 16)}...</Text>
+            </Pressable>
+          ))}
         </View>
       ) : null}
     </Screen>
@@ -181,23 +207,14 @@ const styles = StyleSheet.create({
   connectorDone: { backgroundColor: color.success },
   stageLabel: { ...type.subtitle, color: color.text, paddingBottom: space.lg, flex: 1 },
   stageUpcoming: { color: color.faint },
-  techToggle: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: space.sm,
-    minHeight: 44,
-  },
+  techToggle: { flexDirection: "row", alignItems: "center", gap: space.sm, minHeight: 44 },
   techToggleText: { ...type.subtitle, color: color.muted, flex: 1 },
-  tech: {
-    gap: space.sm,
-    padding: space.md,
-    borderRadius: radius.md,
-    backgroundColor: color.surfaceSoft,
-  },
+  tech: { gap: space.sm, padding: space.md, borderRadius: radius.md, backgroundColor: color.surfaceSoft },
   techRow: { flexDirection: "row", justifyContent: "space-between", gap: space.md },
   techLabel: { ...type.meta, color: color.muted },
   techValue: { ...type.meta, color: color.text, flexShrink: 1, textAlign: "right" },
   mono: { fontFamily: "monospace" },
-  link: { flexDirection: "row", alignItems: "center", gap: space.sm, minHeight: 44 },
-  linkText: { ...type.meta, color: color.information, fontWeight: "700" },
+  refLabel: { ...type.meta, color: color.muted, fontWeight: "700", marginTop: space.xs },
+  refRow: { flexDirection: "row", alignItems: "center", gap: space.sm, minHeight: 36 },
+  refValue: { ...type.meta, color: color.information, fontWeight: "700" },
 });

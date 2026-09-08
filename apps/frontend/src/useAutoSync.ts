@@ -12,6 +12,19 @@ import { syncPending, type SyncSummary } from "./sync";
 // Expo inlines EXPO_PUBLIC_* at build time. Local-dev fallback only.
 export const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8787";
 
+/**
+ * Treat the device as online unless connectivity is explicitly false.
+ * `isInternetReachable` is `null` on the first NetInfo emit on some platforms;
+ * the old `Boolean(isConnected && isInternetReachable)` read that null as offline
+ * and never recovered, so auto-sync never fired even on Wi-Fi.
+ */
+export function isOnline(state: {
+  isConnected: boolean | null;
+  isInternetReachable: boolean | null;
+}): boolean {
+  return state.isConnected === true && state.isInternetReachable !== false;
+}
+
 let inFlight: Promise<SyncSummary> | null = null;
 
 /** Bound, de-duplicated sync. Concurrent callers share the one in-flight run. */
@@ -46,7 +59,7 @@ export function useAutoSync(onDone?: (s: SyncSummary) => void): void {
 
     let wasOnline = false;
     const unsubNet = NetInfo.addEventListener((state) => {
-      const online = Boolean(state.isConnected && state.isInternetReachable);
+      const online = isOnline(state);
       if (online && !wasOnline) trigger();
       wasOnline = online;
     });
@@ -55,8 +68,13 @@ export function useAutoSync(onDone?: (s: SyncSummary) => void): void {
       if (next === "active") trigger();
     });
 
+    // The queue may already hold rows and the app may open already-online mid-session,
+    // with no rising edge and no foreground event to react to. Attempt once on mount.
+    const initial = setTimeout(trigger, 800);
+
     return () => {
       cancelled = true;
+      clearTimeout(initial);
       unsubNet();
       appSub.remove();
     };

@@ -26,6 +26,16 @@ import {
 } from "../theme";
 import { Icon, type IconName } from "./icons/Icon";
 
+/**
+ * Top padding for the screen frame: apply the real safe-area inset when there is
+ * one (notch / status bar), with a small floor when there is none. The previous
+ * rule inverted the ternary and dropped the pad exactly when a device had an
+ * inset, so every header rendered under the OS clock.
+ */
+export function screenPaddingTop(insetTop: number): number {
+  return insetTop || space.md;
+}
+
 /** Full-screen frame: ivory ground, safe-area aware, optional scroll. */
 export function Screen({
   children,
@@ -53,7 +63,7 @@ export function Screen({
   );
 
   return (
-    <View style={[s.screen, { paddingTop: insets.top ? 0 : space.sm }]}>
+    <View style={[s.screen, { paddingTop: screenPaddingTop(insets.top) }]}>
       {body}
       {footer ? (
         <View style={[s.footer, { paddingBottom: insets.bottom + space.md }]}>{footer}</View>

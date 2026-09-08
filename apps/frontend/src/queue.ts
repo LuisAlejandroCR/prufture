@@ -3,8 +3,15 @@
 // Row<->proof mapping lives in queue-row.ts so it stays unit-testable off-device.
 
 import * as SQLite from "expo-sqlite";
-import type { QueuedProof, SignedProof } from "@proof/core";
-import { buildQueueRow, COLUMNS, fromRow, insertParams, type ProofRow } from "./queue-row";
+import type { SignedProof } from "@proof/core";
+import {
+  buildQueueRow,
+  COLUMNS,
+  fromRow,
+  insertParams,
+  type LocalProof,
+  type ProofRow,
+} from "./queue-row";
 
 const DB_NAME = "proofs.db";
 
@@ -27,18 +34,29 @@ async function getDb(): Promise<SQLite.SQLiteDatabase> {
           status TEXT NOT NULL,
           mediaUri TEXT NOT NULL,
           attestationCount INTEGER NOT NULL DEFAULT 0,
-          createdAt TEXT NOT NULL
+          createdAt TEXT NOT NULL,
+          reportId TEXT NOT NULL DEFAULT ''
         );
       `);
+      // Migration for databases created before the reportId column existed.
+      // Pre-hotfix rows keep reportId '' and stay one-card-per-row in Updates.
+      const cols = await db.getAllAsync<{ name: string }>(`PRAGMA table_info(proofs)`);
+      if (!cols.some((c) => c.name === "reportId")) {
+        await db.execAsync(`ALTER TABLE proofs ADD COLUMN reportId TEXT NOT NULL DEFAULT ''`);
+      }
       return db;
     })();
   }
   return dbPromise;
 }
 
-export async function enqueueProof(signed: SignedProof, mediaUri: string): Promise<QueuedProof> {
+export async function enqueueProof(
+  signed: SignedProof,
+  mediaUri: string,
+  reportId = "",
+): Promise<LocalProof> {
   const db = await getDb();
-  const row = buildQueueRow(signed, mediaUri);
+  const row = buildQueueRow(signed, mediaUri, Date.now(), reportId);
   await db.runAsync(
     `INSERT INTO proofs (${COLUMNS.join(", ")}) VALUES (${COLUMNS.map(() => "?").join(", ")})`,
     insertParams(row) as SQLite.SQLiteBindValue[],
@@ -46,7 +64,7 @@ export async function enqueueProof(signed: SignedProof, mediaUri: string): Promi
   return row;
 }
 
-export async function listProofs(): Promise<QueuedProof[]> {
+export async function listProofs(): Promise<LocalProof[]> {
   const db = await getDb();
   const rows = await db.getAllAsync<ProofRow>(`SELECT * FROM proofs ORDER BY createdAt DESC`);
   return rows.map(fromRow);

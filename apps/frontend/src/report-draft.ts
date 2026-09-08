@@ -4,8 +4,21 @@
 // one signed proof per photo, all carrying the same raw taskId. Distinct from src/queue.ts
 // (the durable offline queue) and src/report-draft is cleared once the report is saved.
 
-import { captureProof } from "./capture";
+// `./capture` pulls in the native keystore + sqlite; import it lazily so this
+// module (in-memory draft state) stays unit-testable off-device.
+import type { captureProof as CaptureProof } from "./capture";
 import { attachLiveness } from "./liveness";
+
+/**
+ * 16 random bytes as hex, from the same global crypto shim that ed25519 uses
+ * (react-native-get-random-values, bound in app/_layout.tsx). Local-only id:
+ * it groups the per-photo proofs of one report and is never signed or sent.
+ */
+export function newReportId(): string {
+  const b = new Uint8Array(16);
+  globalThis.crypto.getRandomValues(b);
+  return Array.from(b, (n) => n.toString(16).padStart(2, "0")).join("");
+}
 
 export interface DraftPhoto {
   /** Local file URI from expo-camera. Stays on the device. */
@@ -18,6 +31,8 @@ export interface DraftPhoto {
 
 export interface ReportDraft {
   taskId: string;
+  /** Local-only id shared by every proof this draft produces. Never signed or sent. */
+  reportId: string;
   photos: DraftPhoto[];
   answers: Record<string, string>;
   /** Coarse geohash (<=5 chars) or "" when location was skipped or denied. */
@@ -36,6 +51,7 @@ let current: ReportDraft | null = null;
 export function startDraft(taskId: string): ReportDraft {
   current = {
     taskId,
+    reportId: newReportId(),
     photos: [],
     answers: {},
     geohash: "",
@@ -104,6 +120,8 @@ export async function saveDraft(): Promise<SaveResult> {
   let failed = 0;
   let firstProofHash: string | null = null;
 
+  const captureProof: typeof CaptureProof = (await import("./capture")).captureProof;
+
   for (const photo of draft.photos) {
     try {
       const proof = await captureProof({
@@ -111,6 +129,7 @@ export async function saveDraft(): Promise<SaveResult> {
         mediaBytes: photo.bytes,
         geohash: draft.geohash,
         mediaUri: photo.uri,
+        reportId: draft.reportId,
       });
       firstProofHash = firstProofHash ?? proof.proofHash;
       saved += 1;

@@ -63,7 +63,9 @@ test("invariant: insertParams order matches the COLUMNS list", () => {
 test("invariant: the row carries only the fixed zero-PII key set", () => {
   const row = buildQueueRow(randomSignedProof(), "file:///secret/path/photo.jpg");
   for (const k of Object.keys(row)) assert.ok(ALLOWED_KEYS.has(k as (typeof COLUMNS)[number]), `unexpected key ${k}`);
-  const wireKeys = COLUMNS.filter((c) => c !== "mediaUri" && c !== "id" && c !== "createdAt");
+  const wireKeys = COLUMNS.filter(
+    (c) => c !== "mediaUri" && c !== "id" && c !== "createdAt" && c !== "reportId",
+  );
   assert.deepEqual(wireKeys, [
     "proofHash",
     "taskId",
@@ -74,4 +76,18 @@ test("invariant: the row carries only the fixed zero-PII key set", () => {
     "status",
     "attestationCount",
   ]);
+});
+
+test("reportId: round-trips through toRow/fromRow and defaults to '' for old rows", () => {
+  const signed = randomSignedProof();
+  const withId = buildQueueRow(signed, "file:///a.jpg", 1_700_000_000_000, "r".repeat(32));
+  assert.equal(withId.reportId, "r".repeat(32));
+  assert.equal(fromRow(toRow(withId)).reportId, "r".repeat(32));
+
+  // A row read back from a pre-migration DB has reportId === null.
+  const legacy = { ...toRow(buildQueueRow(signed, "file:///b.jpg")), reportId: null };
+  assert.equal(fromRow(legacy).reportId, "");
+
+  // Default when no id is passed.
+  assert.equal(buildQueueRow(signed, "file:///c.jpg").reportId, "");
 });

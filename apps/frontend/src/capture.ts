@@ -16,6 +16,11 @@ export interface CaptureInput {
   geohash: string;
   /** On-device file URI of the photo. Stays local, never uploaded by default. */
   mediaUri: string;
+  /**
+   * Local-only id grouping the per-photo proofs of one field report. Never signed,
+   * never sent. "" when a single capture is not part of a multi-photo draft.
+   */
+  reportId?: string;
 }
 
 export async function captureProof(input: CaptureInput) {
@@ -27,5 +32,5 @@ export async function captureProof(input: CaptureInput) {
   };
   const priv = await getOrCreatePrivateKey();
   const signed = signPayload(payload, priv);
-  return enqueueProof(signed, input.mediaUri);
+  return enqueueProof(signed, input.mediaUri, input.reportId ?? "");
 }
