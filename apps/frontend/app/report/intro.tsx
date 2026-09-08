@@ -6,7 +6,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { Icon } from "../../src/components/icons/Icon";
-import { BackLink, PrimaryButton, Reassurance, ReportProgress, Screen } from "../../src/components/ui";
+import { BackLink, PrimaryButton, Reassurance, Screen, SectionLabel } from "../../src/components/ui";
 import { startDraft } from "../../src/report-draft";
 import { getTask } from "../../src/tasks";
 import { color, radius, space, type } from "../../src/theme";
@@ -21,12 +21,12 @@ export default function ReportIntroScreen() {
   }, [task.id]);
 
   const begin = () =>
-    router.replace({ pathname: "/report/capture", params: { id: task.id, step: "0" } });
+    router.replace({ pathname: "/report/permissions", params: { id: task.id } });
 
   return (
     <Screen footer={<PrimaryButton label="Begin" onPress={begin} />}>
       <BackLink label="Back" onPress={() => router.back()} />
-      <ReportProgress step={1} label="Instructions" />
+      <SectionLabel>Before you start</SectionLabel>
       <Text style={styles.title} accessibilityRole="header">
         {task.title}
       </Text>

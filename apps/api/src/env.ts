@@ -9,6 +9,7 @@ export const env = {
   chainId: Number(process.env.BASE_SEPOLIA_CHAIN_ID ?? 84532),
   neuroUrl: process.env.NEURO_AGENT_API_URL ?? "",
   neuroToken: process.env.NEURO_AGENT_API_TOKEN ?? "",
+  neuroLivenessPath: process.env.NEURO_LIVENESS_PATH ?? "/liveness",
 };
 
 export function relayerConfigured(): boolean {

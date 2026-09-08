@@ -29,6 +29,8 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="task/[id]" />
         <Stack.Screen name="report/intro" />
+        <Stack.Screen name="report/permissions" />
+        <Stack.Screen name="report/identity" />
         <Stack.Screen name="report/capture" />
         <Stack.Screen name="report/questions" />
         <Stack.Screen name="report/location" />

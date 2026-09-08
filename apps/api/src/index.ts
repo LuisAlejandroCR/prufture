@@ -10,9 +10,16 @@ import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { verifyProof, type SignedProof } from "@proof/core";
 import { env } from "./env.js";
-import { addAttestation, allProofs, getProof, setVerifiedAttribute, upsertProof } from "./store.js";
+import {
+  addAttestation,
+  allProofs,
+  getProof,
+  setVerifiedAttribute,
+  setVerifiedPerson,
+  upsertProof,
+} from "./store.js";
 import { submitAttestation } from "./relayer.js";
-import { getVerifiedAttribute } from "./neuro.js";
+import { checkLiveness, getVerifiedAttribute } from "./neuro.js";
 import { sendVerifyUrl, type Channel } from "./channels.js";
 
 const VERIFY_BASE = process.env.VERIFY_BASE_URL ?? "http://localhost:3000";
@@ -89,12 +96,35 @@ app.post("/notify", async (c) => {
 });
 
 app.post("/verify-identity", async (c) => {
-  let body: { proofHash?: string; attribute?: string; subjectRef?: string };
+  let body: {
+    proofHash?: string;
+    attribute?: string;
+    subjectRef?: string;
+    frames?: unknown;
+    nonceHex?: string;
+    challenges?: unknown;
+  };
   try {
     body = (await c.req.json()) as typeof body;
   } catch {
     return c.json({ error: "invalid json" }, 400);
   }
+
+  // Liveness mode: selfie frames, no proofHash yet. The verdict is attached later via
+  // /liveness-result. Only a boolean is returned; frames are never stored or logged.
+  if (Array.isArray(body.frames)) {
+    const result = await checkLiveness({
+      frames: body.frames as string[],
+      nonceHex: String(body.nonceHex ?? ""),
+      challenges: Array.isArray(body.challenges) ? (body.challenges as string[]).map(String) : [],
+    });
+    if (!result.available) {
+      return c.json({ verifiedPerson: false, degraded: true }, 200);
+    }
+    return c.json({ verifiedPerson: result.data.verifiedPerson, degraded: false }, 200);
+  }
+
+  // Default mode: verified age attribute against an existing proof (unchanged).
   if (!body.proofHash || !getProof(body.proofHash)) {
     return c.json({ error: "unknown proofHash" }, 404);
   }
@@ -119,6 +149,19 @@ app.post("/verify-identity", async (c) => {
   });
 });
 
+app.post("/liveness-result", async (c) => {
+  let body: { proofHash?: string; verifiedPerson?: unknown };
+  try {
+    body = (await c.req.json()) as typeof body;
+  } catch {
+    return c.json({ error: "invalid json" }, 400);
+  }
+  if (!body.proofHash) return c.json({ error: "missing proofHash" }, 400);
+  const ok = setVerifiedPerson(body.proofHash, body.verifiedPerson === true);
+  if (!ok) return c.json({ error: "unknown proofHash" }, 404);
+  return c.json({ status: "recorded", verifiedPerson: body.verifiedPerson === true }, 200);
+});
+
 // REGION_PREFIX_LEN: how many geohash chars leave the api. 5 ≈ ~5 km cell, never exact GPS.
 // The full geohash never leaves this process — not on /proof/:hash, not on /proofs.
 const REGION_PREFIX_LEN = 5;
@@ -137,6 +180,8 @@ app.get("/proof/:hash", (c) => {
     verifiedAttribute: entry.verifiedAttribute
       ? { attribute: entry.verifiedAttribute.attribute, value: entry.verifiedAttribute.value }
       : null,
+    // Selfie liveness verdict. null until a result is attached. Boolean only, never an identity field.
+    verifiedPerson: typeof entry.verifiedPerson === "boolean" ? entry.verifiedPerson : null,
   });
 });
 

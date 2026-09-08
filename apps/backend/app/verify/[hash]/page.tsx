@@ -112,6 +112,8 @@ export default async function VerifyPage({ params }: { params: Promise<{ hash: s
         <dd>{capturedText}</dd>
         <dt>Confirmations</dt>
         <dd>{proof.attestationCount}</dd>
+        <dt>Captured by a verified person</dt>
+        <dd>{proof.verifiedPerson === true ? "Yes" : "Not verified"}</dd>
         <dt>Public reference</dt>
         <dd>
           <code>{proof.proofHash.slice(0, 12)}...</code>

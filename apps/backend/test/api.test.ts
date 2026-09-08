@@ -93,3 +93,26 @@ test("fetchProofs: non-ok and throw both degrade to empty + degraded flag", asyn
     restore();
   }
 });
+
+test("fetchProof: verifiedPerson passes through as boolean, defaults to null when absent/invalid", async () => {
+  try {
+    const base = { proofHash: "h", taskId: "t", geohash: "9q8yy", capturedAt: "2026-09-07", attestationCount: 0, attestations: [] };
+    stub(() => ({ status: 200, json: { ...base, verifiedPerson: true } }));
+    let r = await fetchProof("h");
+    assert.ok(r.state === "ok" && r.proof.verifiedPerson === true);
+
+    stub(() => ({ status: 200, json: { ...base, verifiedPerson: false } }));
+    r = await fetchProof("h");
+    assert.ok(r.state === "ok" && r.proof.verifiedPerson === false);
+
+    stub(() => ({ status: 200, json: base }));
+    r = await fetchProof("h");
+    assert.ok(r.state === "ok" && r.proof.verifiedPerson === null);
+
+    stub(() => ({ status: 200, json: { ...base, verifiedPerson: "yes" } }));
+    r = await fetchProof("h");
+    assert.ok(r.state === "ok" && r.proof.verifiedPerson === null);
+  } finally {
+    restore();
+  }
+});

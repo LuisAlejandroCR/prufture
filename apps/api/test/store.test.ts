@@ -94,3 +94,17 @@ test("absent file -> starts empty, does not throw", () => {
   assert.doesNotThrow(() => store.__setStorePathForTests(missing));
   assert.equal(store.allProofs().length, 0);
 });
+
+test("verifiedPerson: unknown proof -> false; set survives a reload; not present until set", () => {
+  const p = freshPath();
+  store.__setStorePathForTests(p);
+  assert.equal(store.setVerifiedPerson(H("e"), true), false);
+
+  store.upsertProof(payload(H("e")));
+  assert.equal(store.getProof(H("e"))!.verifiedPerson, undefined);
+  assert.equal(store.setVerifiedPerson(H("e"), true), true);
+  store.__flushForTests();
+
+  store.__setStorePathForTests(p);
+  assert.equal(store.getProof(H("e"))!.verifiedPerson, true);
+});

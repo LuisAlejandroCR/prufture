@@ -4,6 +4,7 @@
 // columns can never leak. Mirrors @proof/core result.ts semantics: never throws.
 
 import type { QueuedProof, SignedProof } from "@proof/core";
+import { flushPendingLiveness } from "./liveness";
 
 /** New captures wait in this state until a sync succeeds. */
 export const PENDING_STATUS = "pending_sync";
@@ -109,6 +110,14 @@ export async function syncPending(deps: SyncDeps): Promise<SyncSummary> {
       summary.failed += 1;
       summary.errors.push(`${row.id}: ${errMsg(e)}`);
     }
+  }
+
+  // Retry any liveness verdicts that could not be attached while offline. Best-effort:
+  // this never affects the proof sync result and never throws.
+  try {
+    await flushPendingLiveness(base, deps.fetchImpl);
+  } catch {
+    // ignore — a missed attach just leaves verifiedPerson null on /verify
   }
 
   return summary;

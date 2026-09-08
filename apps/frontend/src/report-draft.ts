@@ -5,6 +5,7 @@
 // (the durable offline queue) and src/report-draft is cleared once the report is saved.
 
 import { captureProof } from "./capture";
+import { attachLiveness } from "./liveness";
 
 export interface DraftPhoto {
   /** Local file URI from expo-camera. Stays on the device. */
@@ -23,13 +24,26 @@ export interface ReportDraft {
   geohash: string;
   /** Area label shown back to the reporter. */
   areaLabel: string;
+  /** True once the selfie liveness challenge produced a verdict (pass or fail). */
+  livenessChecked: boolean;
+  /** True only when a provider confirmed a live person. Booleans only — no ref, frame or nonce. */
+  livenessVerified: boolean;
   startedAt: number;
 }
 
 let current: ReportDraft | null = null;
 
 export function startDraft(taskId: string): ReportDraft {
-  current = { taskId, photos: [], answers: {}, geohash: "", areaLabel: "", startedAt: Date.now() };
+  current = {
+    taskId,
+    photos: [],
+    answers: {},
+    geohash: "",
+    areaLabel: "",
+    livenessChecked: false,
+    livenessVerified: false,
+    startedAt: Date.now(),
+  };
   return current;
 }
 
@@ -59,6 +73,12 @@ export function setArea(geohash: string, areaLabel: string): void {
   if (!current) return;
   current.geohash = geohash;
   current.areaLabel = areaLabel;
+}
+
+export function setLiveness(checked: boolean, verified: boolean): void {
+  if (!current) return;
+  current.livenessChecked = checked;
+  current.livenessVerified = checked ? verified : false;
 }
 
 export function clearDraft(): void {
@@ -97,6 +117,14 @@ export async function saveDraft(): Promise<SaveResult> {
     } catch {
       failed += 1;
     }
+  }
+
+  // The payload is unchanged. Separately — and only if a liveness check ran — tell the
+  // api to store the verified-person boolean against the first proofHash. Fire-and-forget:
+  // it never blocks the "saved" screen and retries on the next sync pass if offline.
+  if (draft.livenessChecked && firstProofHash) {
+    const apiUrl = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8787";
+    void attachLiveness(apiUrl, firstProofHash, draft.livenessVerified);
   }
 
   if (failed === 0) clearDraft();
