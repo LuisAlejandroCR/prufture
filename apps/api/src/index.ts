@@ -3,7 +3,8 @@
 // POST /attest - a second attester confirms the same proofHash ("more eyes").
 // POST /notify - send the public verifyUrl over a delivery channel (url only, no payload).
 // POST /verify-identity - attach a verified attribute (boolean) to a proof via Neuro, or degrade.
-// GET  /proof/:hash - public verification data, zero PII.
+// POST /precise-location - store an opaque encrypted precise-location blob against a proof.
+// GET  /proof/:hash - public verification data, zero PII (never the precise-location blob).
 // GET  /proofs      - aggregate list for the stakeholder dashboard.
 
 import { serve } from "@hono/node-server";
@@ -14,6 +15,7 @@ import {
   addAttestation,
   allProofs,
   getProof,
+  setPreciseLocationCipher,
   setVerifiedAttribute,
   setVerifiedPerson,
   upsertProof,
@@ -160,6 +162,27 @@ app.post("/liveness-result", async (c) => {
   const ok = setVerifiedPerson(body.proofHash, body.verifiedPerson === true);
   if (!ok) return c.json({ error: "unknown proofHash" }, 404);
   return c.json({ status: "recorded", verifiedPerson: body.verifiedPerson === true }, 200);
+});
+
+// MAX_CIPHER_LEN: hex cap for the opaque precise-location blob. ephPub(32) + nonce(24) +
+// a small JSON plaintext + tag is well under 512 bytes -> 1024 hex chars is generous.
+const MAX_CIPHER_LEN = 4096;
+
+app.post("/precise-location", async (c) => {
+  let body: { proofHash?: unknown; cipher?: unknown };
+  try {
+    body = (await c.req.json()) as typeof body;
+  } catch {
+    return c.json({ error: "invalid json" }, 400);
+  }
+  const proofHash = typeof body.proofHash === "string" ? body.proofHash : "";
+  const cipher = typeof body.cipher === "string" ? body.cipher : "";
+  if (!proofHash || !cipher) return c.json({ error: "missing proofHash or cipher" }, 400);
+  if (cipher.length > MAX_CIPHER_LEN) return c.json({ error: "cipher too large" }, 413);
+  // Stored opaque: never decoded, never parsed, never returned by a public route.
+  const ok = setPreciseLocationCipher(proofHash, cipher);
+  if (!ok) return c.json({ error: "unknown proofHash" }, 404);
+  return c.json({ status: "stored" }, 200);
 });
 
 // REGION_PREFIX_LEN: how many geohash chars leave the api. 5 ≈ ~5 km cell, never exact GPS.

@@ -6,6 +6,7 @@
 
 import { captureProof } from "./capture";
 import { attachLiveness } from "./liveness";
+import { attachPreciseLocation } from "./sync";
 
 export interface DraftPhoto {
   /** Local file URI from expo-camera. Stays on the device. */
@@ -20,10 +21,16 @@ export interface ReportDraft {
   taskId: string;
   photos: DraftPhoto[];
   answers: Record<string, string>;
-  /** Coarse geohash (<=5 chars) or "" when location was skipped or denied. */
+  /** Coarse geohash (<=5 chars). Location is mandatory, so this is set before review. */
   geohash: string;
   /** Area label shown back to the reporter. */
   areaLabel: string;
+  /**
+   * The precise location point, encrypted on-device to the programme team's key
+   * (see src/location-seal.ts). Opaque hex. "" until the location step runs.
+   * Never signed, never on-chain — synced to the api as a separate opaque blob.
+   */
+  preciseLocationCipher: string;
   /** True once the selfie liveness challenge produced a verdict (pass or fail). */
   livenessChecked: boolean;
   /** True only when a provider confirmed a live person. Booleans only — no ref, frame or nonce. */
@@ -40,6 +47,7 @@ export function startDraft(taskId: string): ReportDraft {
     answers: {},
     geohash: "",
     areaLabel: "",
+    preciseLocationCipher: "",
     livenessChecked: false,
     livenessVerified: false,
     startedAt: Date.now(),
@@ -73,6 +81,12 @@ export function setArea(geohash: string, areaLabel: string): void {
   if (!current) return;
   current.geohash = geohash;
   current.areaLabel = areaLabel;
+}
+
+/** Store the encrypted precise-location blob for this report. Opaque hex from sealPrecise(). */
+export function setPreciseLocation(cipherHex: string): void {
+  if (!current) return;
+  current.preciseLocationCipher = cipherHex;
 }
 
 export function setLiveness(checked: boolean, verified: boolean): void {
@@ -122,9 +136,17 @@ export async function saveDraft(): Promise<SaveResult> {
   // The payload is unchanged. Separately — and only if a liveness check ran — tell the
   // api to store the verified-person boolean against the first proofHash. Fire-and-forget:
   // it never blocks the "saved" screen and retries on the next sync pass if offline.
-  if (draft.livenessChecked && firstProofHash) {
+  if (firstProofHash) {
     const apiUrl = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8787";
-    void attachLiveness(apiUrl, firstProofHash, draft.livenessVerified);
+    if (draft.livenessChecked) {
+      void attachLiveness(apiUrl, firstProofHash, draft.livenessVerified);
+    }
+    // The signed payload stays coarse-only. The encrypted precise point is sent
+    // separately as an opaque blob, keyed to this proofHash. Fire-and-forget: it
+    // buffers and retries on the next sync pass if offline.
+    if (draft.preciseLocationCipher) {
+      void attachPreciseLocation(apiUrl, firstProofHash, draft.preciseLocationCipher);
+    }
   }
 
   if (failed === 0) clearDraft();

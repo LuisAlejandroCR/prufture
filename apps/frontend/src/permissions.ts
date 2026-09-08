@@ -11,7 +11,8 @@ export type PermissionStatus = "granted" | "denied" | "undetermined";
 export interface PermissionState {
   /** Camera is REQUIRED-HARD: no camera means no capture and no report. */
   camera: PermissionStatus;
-  /** Location is REQUIRED-SOFT: the flow may continue; the proof then carries geohash "". */
+  /** Location is REQUIRED-HARD: proof of where the activity happened is the point of the
+   *  product. Denied -> the report cannot be submitted (see docs/location_privacy.md). */
   location: PermissionStatus;
 }
 
@@ -19,7 +20,7 @@ export interface PermissionState {
 export const RATIONALE = {
   camera: "Take photos of the activity. Photos stay on this phone until you finish the report.",
   location:
-    "Record only an approximate area, never your exact location. You can continue without this.",
+    "Confirm where the activity happened. The public record shows only an approximate area; the precise point is encrypted on this phone for the programme team.",
 } as const;
 
 function normalize(status: string, canAskAgain: boolean): PermissionStatus {
