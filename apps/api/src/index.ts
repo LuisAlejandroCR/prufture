@@ -169,14 +169,14 @@ app.post("/verify-identity", async (c) => {
 });
 
 app.post("/liveness-result", async (c) => {
-  let body: { proofHash?: string; verifiedPerson?: unknown };
+  let body: { proofHash?: string; verifiedPerson?: unknown; degraded?: unknown };
   try {
     body = (await c.req.json()) as typeof body;
   } catch {
     return c.json({ error: "invalid json" }, 400);
   }
   if (!body.proofHash) return c.json({ error: "missing proofHash" }, 400);
-  const ok = setVerifiedPerson(body.proofHash, body.verifiedPerson === true);
+  const ok = setVerifiedPerson(body.proofHash, body.verifiedPerson === true, body.degraded === true);
   if (!ok) return c.json({ error: "unknown proofHash" }, 404);
   return c.json({ status: "recorded", verifiedPerson: body.verifiedPerson === true }, 200);
 });
@@ -236,6 +236,10 @@ app.get("/proof/:hash", (c) => {
       : null,
     // Selfie liveness verdict. null until a result is attached. Boolean only, never an identity field.
     verifiedPerson: typeof entry.verifiedPerson === "boolean" ? entry.verifiedPerson : null,
+    // True when the verdict above reflects a degraded provider, not an actual failed check.
+    // Additive, nullable: absent/null when no verdict was ever attached.
+    verifiedPersonDegraded:
+      typeof entry.verifiedPerson === "boolean" ? entry.verifiedPersonDegraded === true : null,
   });
 });
 

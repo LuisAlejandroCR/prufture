@@ -110,6 +110,7 @@ export async function submitLiveness(
 interface PendingAttach {
   proofHash: string;
   verifiedPerson: boolean;
+  degraded: boolean;
 }
 
 /** In-memory only. A missed attach just leaves verifiedPerson null on /verify — acceptable. */
@@ -133,9 +134,10 @@ export async function attachLiveness(
   apiUrl: string,
   proofHash: string,
   verifiedPerson: boolean,
+  degraded = false,
   fetchImpl: typeof fetch = fetch,
 ): Promise<void> {
-  const item = { proofHash, verifiedPerson };
+  const item = { proofHash, verifiedPerson, degraded };
   const done = await tryAttach(apiUrl, item, fetchImpl);
   if (!done && !pending.some((p) => p.proofHash === proofHash)) pending.push(item);
 }

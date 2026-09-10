@@ -23,6 +23,7 @@ interface PersistedDraft {
   preciseLocationCipher: string;
   livenessChecked: boolean;
   livenessVerified: boolean;
+  livenessDegraded: boolean;
   startedAt: number;
   photos: PersistedPhoto[];
 }
@@ -114,6 +115,7 @@ function toPersisted(d: ReportDraft, photos: PersistedPhoto[]): PersistedDraft {
     preciseLocationCipher: d.preciseLocationCipher,
     livenessChecked: d.livenessChecked,
     livenessVerified: d.livenessVerified,
+    livenessDegraded: d.livenessDegraded,
     startedAt: d.startedAt,
     photos,
   };
@@ -169,6 +171,7 @@ export async function loadPersistedDraft(): Promise<ReportDraft | null> {
       preciseLocationCipher: p.preciseLocationCipher ?? "",
       livenessChecked: Boolean(p.livenessChecked),
       livenessVerified: Boolean(p.livenessVerified),
+      livenessDegraded: Boolean(p.livenessDegraded),
       startedAt: typeof p.startedAt === "number" ? p.startedAt : Date.now(),
       photos: p.photos
         .filter((ph): ph is PersistedPhoto => !!ph && typeof ph.uri === "string")

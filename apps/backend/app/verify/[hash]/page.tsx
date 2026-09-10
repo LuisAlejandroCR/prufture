@@ -7,6 +7,7 @@
 // exact location, no private media.
 
 import Link from "next/link";
+import { assuranceFromProof, assuranceLabel, isNeutralAssurance } from "../../../lib/assurance";
 import { fetchProof } from "../../../lib/api";
 import { activityLabel } from "../../../lib/dashboard";
 import { ShareLink } from "./ShareLink";
@@ -84,6 +85,7 @@ export default async function VerifyPage({ params }: { params: Promise<{ hash: s
   const { proof } = result;
   const stage = stageFor(proof.attestationCount);
   const copy = STAGE_COPY[stage];
+  const assurance = assuranceFromProof(proof);
   const captured = new Date(proof.capturedAt);
   const capturedText = Number.isNaN(captured.getTime())
     ? proof.capturedAt
@@ -112,8 +114,10 @@ export default async function VerifyPage({ params }: { params: Promise<{ hash: s
         <dd>{capturedText}</dd>
         <dt>Confirmations</dt>
         <dd>{proof.attestationCount}</dd>
-        <dt>Captured by a verified person</dt>
-        <dd>{proof.verifiedPerson === true ? "Yes" : "Not verified"}</dd>
+        <dt>Anonymous pass</dt>
+        <dd className={isNeutralAssurance(assurance) ? "faint" : undefined}>
+          {assuranceLabel(assurance)}
+        </dd>
         <dt>Public reference</dt>
         <dd>
           <code>{proof.proofHash.slice(0, 12)}...</code>

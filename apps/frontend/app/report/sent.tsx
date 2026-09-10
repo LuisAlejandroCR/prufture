@@ -8,8 +8,10 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Animated, Dimensions, Easing, StyleSheet, Text, View } from "react-native";
 import ConfettiCannon from "react-native-confetti-cannon";
+import { assuranceFromProof, assuranceLabel, countsAsParticipantConfirmed, type Assurance } from "../../src/assurance";
 import { Icon } from "../../src/components/icons/Icon";
 import { PrimaryButton, Screen, SecondaryButton } from "../../src/components/ui";
+import { identityStepEnabled } from "../../src/flags";
 import { MOMENT_SENT_MS, celebrationsAllowed, success, thud } from "../../src/feedback";
 import { listProofs } from "../../src/queue";
 import { getTask } from "../../src/tasks";
@@ -26,7 +28,7 @@ export default function ReportSentScreen() {
   const [rowId, setRowId] = useState<string | null>(null);
   const [count, setCount] = useState(0);
   const [savedTotal, setSavedTotal] = useState<number | null>(null);
-  const [verifiedPerson, setVerifiedPerson] = useState(false);
+  const [assurance, setAssurance] = useState<Assurance>(identityStepEnabled() ? "unavailable" : "not_enrolled");
   const [celebrate, setCelebrate] = useState<boolean | null>(null);
 
   const block = useRef(new Animated.Value(0)).current;
@@ -49,8 +51,18 @@ export default function ReportSentScreen() {
     let cancelled = false;
     fetch(`${API_URL.replace(/\/+$/, "")}/proof/${encodeURIComponent(hash)}`)
       .then((res) => (res.ok ? res.json() : null))
-      .then((data: { verified?: unknown } | null) => {
-        if (!cancelled && data && data.verified) setVerifiedPerson(true);
+      .then((data: { verifiedPerson?: unknown; verifiedPersonDegraded?: unknown } | null) => {
+        if (cancelled || !data) return;
+        setAssurance(
+          assuranceFromProof(
+            {
+              verifiedPerson: typeof data.verifiedPerson === "boolean" ? data.verifiedPerson : null,
+              verifiedPersonDegraded:
+                typeof data.verifiedPersonDegraded === "boolean" ? data.verifiedPersonDegraded : null,
+            },
+            identityStepEnabled(),
+          ),
+        );
       })
       .catch(() => undefined);
     return () => {
@@ -130,19 +142,19 @@ export default function ReportSentScreen() {
           <Text style={styles.outcomeText}>You helped document: {task.title}</Text>
         </View>
 
-        {verifiedPerson ? (
-          <View style={styles.outcome}>
-            <Icon name="privacy" size={16} color={color.success} />
-            <Text style={[styles.outcomeText, { color: color.success }]}>
-              Submitted as a verified person.
-            </Text>
-          </View>
-        ) : null}
+        <View style={styles.outcome}>
+          <Icon name="privacy" size={16} color={assurance === "verified" ? color.success : color.muted} />
+          <Text
+            style={[styles.outcomeText, assurance === "verified" && { color: color.success }]}
+          >
+            {assuranceLabel(assurance)}
+          </Text>
+        </View>
 
         <View style={styles.communityLine}>
           <Icon name="community" size={16} color={color.muted} />
           <Text style={styles.community}>
-            {count > 0
+            {countsAsParticipantConfirmed(assurance) && count > 0
               ? `Confirmed by ${count} community ${count === 1 ? "member" : "members"}`
               : "Waiting for another community report"}
           </Text>

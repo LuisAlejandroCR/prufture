@@ -12,6 +12,7 @@ import { base64ToBytes } from "../../src/capture";
 import { Icon } from "../../src/components/icons/Icon";
 import { BackLink, Notice, PrimaryButton, ReportProgress, Screen, SecondaryButton } from "../../src/components/ui";
 import { tap } from "../../src/feedback";
+import { identityStepEnabled } from "../../src/flags";
 import { addPhoto, ensureDraft } from "../../src/report-draft";
 import { getTask } from "../../src/tasks";
 import { color, radius, space, target, type } from "../../src/theme";
@@ -25,6 +26,8 @@ export default function ReportCaptureScreen() {
   const stepIndex = Math.max(0, Math.min(task.photos.length - 1, Number(step ?? "0") || 0));
   const total = task.photos.length;
   const spec = task.photos[stepIndex];
+  const totalSteps = identityStepEnabled() ? 4 : 3;
+  const progressStep = identityStepEnabled() ? 2 : 1;
 
   const cameraRef = useRef<CameraView>(null);
   const [permission, requestPermission] = useCameraPermissions();
@@ -108,7 +111,7 @@ export default function ReportCaptureScreen() {
           </>
         }
       >
-        <ReportProgress step={2} label="Capture" />
+        <ReportProgress step={progressStep} total={totalSteps} label="Capture" />
         <Text style={styles.stepLabel}>
           Photo {stepIndex + 1} of {total}
         </Text>

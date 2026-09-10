@@ -28,6 +28,8 @@ export interface Entry {
   verifiedAttribute?: VerifiedAttributeRecord;
   /** Selfie liveness verdict. Boolean only, set by /liveness-result. Separate from verifiedAttribute. */
   verifiedPerson?: boolean;
+  /** True when the liveness verdict above was recorded while the provider was degraded (not a real fail). */
+  verifiedPersonDegraded?: boolean;
   /**
    * Encrypted precise-location point, sealed on the device to the programme team's key.
    * Opaque hex — this process never decrypts or parses it, and it is NEVER returned by
@@ -85,6 +87,8 @@ function load(): void {
             attestations: Array.isArray(v.attestations) ? v.attestations : [],
             verifiedAttribute: v.verifiedAttribute,
             verifiedPerson: typeof v.verifiedPerson === "boolean" ? v.verifiedPerson : undefined,
+            verifiedPersonDegraded:
+              typeof v.verifiedPersonDegraded === "boolean" ? v.verifiedPersonDegraded : undefined,
             preciseLocationCipher:
               typeof v.preciseLocationCipher === "string" ? v.preciseLocationCipher : undefined,
             reportId: typeof v.reportId === "string" ? v.reportId : undefined,
@@ -172,11 +176,16 @@ export function setVerifiedAttribute(proofHash: string, rec: VerifiedAttributeRe
   return true;
 }
 
-/** Record the selfie liveness verdict against a proof. Idempotent. False if the proof is unknown. */
-export function setVerifiedPerson(proofHash: string, value: boolean): boolean {
+/**
+ * Record the selfie liveness verdict against a proof. Idempotent. False if the proof is unknown.
+ * `degraded` marks that the verdict came back false because the provider was unavailable, not
+ * because a live person check actually failed — so callers can tell "unavailable" from "invalid".
+ */
+export function setVerifiedPerson(proofHash: string, value: boolean, degraded = false): boolean {
   const entry = byHash.get(proofHash);
   if (!entry) return false;
   entry.verifiedPerson = value;
+  entry.verifiedPersonDegraded = degraded;
   scheduleFlush();
   return true;
 }

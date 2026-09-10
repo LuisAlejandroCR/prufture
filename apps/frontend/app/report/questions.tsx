@@ -7,6 +7,7 @@ import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Icon } from "../../src/components/icons/Icon";
 import { BackLink, PrimaryButton, ReportProgress, Screen } from "../../src/components/ui";
+import { identityStepEnabled } from "../../src/flags";
 import { ensureDraft, getDraft, setAnswer } from "../../src/report-draft";
 import { getTask } from "../../src/tasks";
 import { color, radius, space, target, type } from "../../src/theme";
@@ -58,7 +59,11 @@ export default function ReportQuestionsScreen() {
       }
     >
       <BackLink label="Back" onPress={back} />
-      <ReportProgress step={3} label="Questions" />
+      <ReportProgress
+        step={identityStepEnabled() ? 3 : 2}
+        total={identityStepEnabled() ? 4 : 3}
+        label="Questions"
+      />
       <Text style={styles.count}>
         Question {index + 1} of {questions.length}
         {q.required ? "" : "  ·  optional"}

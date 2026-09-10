@@ -183,15 +183,18 @@ export function StatusPill({ status, count }: { status: FriendlyStatus; count?: 
   );
 }
 
-/** "Step X of 4" header for the guided report flow (Instructions / Capture / Questions / Review). */
-export function ReportProgress({ step, label }: { step: 1 | 2 | 3 | 4; label: string }) {
+/**
+ * "Step X of N" header for the guided report flow (Identity / Capture / Questions / Review).
+ * `total` defaults to 4 but drops to 3 when the identity step is flagged out.
+ */
+export function ReportProgress({ step, total = 4, label }: { step: number; total?: number; label: string }) {
   return (
     <View style={{ gap: space.xs }} accessibilityRole="header">
       <Text style={s.stepCount}>
-        Step {step} of 4 · {label}
+        Step {step} of {total} · {label}
       </Text>
       <View style={s.dots}>
-        {[1, 2, 3, 4].map((i) => (
+        {Array.from({ length: total }, (_, i) => i + 1).map((i) => (
           <View
             key={i}
             style={[s.dot, i <= step ? { backgroundColor: color.primary } : { backgroundColor: color.border }]}

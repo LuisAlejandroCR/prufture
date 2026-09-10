@@ -71,7 +71,7 @@ export default function ReportIdentityScreen() {
     });
     setPhase("checking");
     const verdict = await submitLiveness(API_URL, result);
-    setLiveness(true, verdict.verifiedPerson);
+    setLiveness(true, verdict.verifiedPerson, verdict.degraded);
     setPhase(verdict.verifiedPerson ? "verified" : "degraded");
   }
 

@@ -171,6 +171,7 @@ test("resumeTarget: routes to the first incomplete step, review when complete", 
     preciseLocationCipher: "",
     livenessChecked: false,
     livenessVerified: false,
+    livenessDegraded: false,
     startedAt: Date.now(),
   };
   assert.equal(resumeTarget(base, task).pathname, "/report/capture");
