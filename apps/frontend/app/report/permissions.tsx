@@ -17,6 +17,7 @@ import {
   type PermissionState,
   type PermissionStatus,
 } from "../../src/permissions";
+import { nextAfterPermissions } from "../../src/flags";
 import { ensureDraft } from "../../src/report-draft";
 import { getTask } from "../../src/tasks";
 import { color, radius, space, target, type } from "../../src/theme";
@@ -48,8 +49,7 @@ export default function ReportPermissionsScreen() {
 
   const canContinue = state.camera === "granted" && state.location === "granted";
 
-  const next = () =>
-    router.replace({ pathname: "/report/identity", params: { id: task.id } });
+  const next = () => router.replace(nextAfterPermissions(task.id));
 
   return (
     <Screen

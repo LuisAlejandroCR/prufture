@@ -24,6 +24,8 @@ export interface ProofView {
   attestations: AttestationView[];
   /** Selfie liveness verdict. null until a result is attached. Boolean only, no identity data. */
   verifiedPerson: boolean | null;
+  /** True when the verdict above reflects a degraded provider, not an actual failed check. */
+  verifiedPersonDegraded: boolean | null;
 }
 
 export interface ProofSummary {
@@ -49,6 +51,7 @@ interface RawProof {
   attestationCount: number;
   attestations: AttestationView[];
   verifiedPerson?: unknown;
+  verifiedPersonDegraded?: unknown;
 }
 
 export function toRegion(geohash: string | undefined): string {
@@ -76,6 +79,8 @@ export async function fetchProof(hash: string): Promise<ProofResult> {
         attestationCount: raw.attestationCount ?? raw.attestations?.length ?? 0,
         attestations: raw.attestations ?? [],
         verifiedPerson: typeof raw.verifiedPerson === "boolean" ? raw.verifiedPerson : null,
+        verifiedPersonDegraded:
+          typeof raw.verifiedPersonDegraded === "boolean" ? raw.verifiedPersonDegraded : null,
       },
     };
   } catch {

@@ -17,6 +17,7 @@ import {
 } from "../../src/components/ui";
 import { captureProof } from "../../src/capture";
 import { bump } from "../../src/feedback";
+import { identityStepEnabled } from "../../src/flags";
 import { getDraft, saveDraft, setCaptureProof } from "../../src/report-draft";
 import { getTask } from "../../src/tasks";
 import { color, radius, space, type } from "../../src/theme";
@@ -68,7 +69,11 @@ export default function ReportReviewScreen() {
       }
     >
       <BackLink label="Back" onPress={() => router.back()} />
-      <ReportProgress step={4} label="Review" />
+      <ReportProgress
+        step={identityStepEnabled() ? 4 : 3}
+        total={identityStepEnabled() ? 4 : 3}
+        label="Review"
+      />
       <Text style={styles.title} accessibilityRole="header">
         Review your report
       </Text>

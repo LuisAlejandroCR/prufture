@@ -10,6 +10,7 @@ import { useCallback, useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { Icon } from "../../src/components/icons/Icon";
 import { BackLink, Notice, PrimaryButton, ReportProgress, Screen, SecondaryButton } from "../../src/components/ui";
+import { identityStepEnabled } from "../../src/flags";
 import { encodeGeohash } from "../../src/geohash";
 import { sealPrecise } from "../../src/location-seal";
 import { ensureDraft, setArea, setPreciseLocation } from "../../src/report-draft";
@@ -91,7 +92,11 @@ export default function ReportLocationScreen() {
       }
     >
       <BackLink label="Back" onPress={() => router.back()} />
-      <ReportProgress step={4} label="Review" />
+      <ReportProgress
+        step={identityStepEnabled() ? 4 : 3}
+        total={identityStepEnabled() ? 4 : 3}
+        label="Review"
+      />
 
       {state === "checking" ? (
         <View style={styles.center}>

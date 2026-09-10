@@ -53,7 +53,7 @@ test("submitLiveness: passes verdict through; degrades on non-200 without throwi
 
 test("attachLiveness buffers on failure; flushPendingLiveness clears it once the proof exists", async () => {
   __resetPendingLiveness();
-  await attachLiveness("http://api.test", "hash1", true, async () => new Response("", { status: 404 }));
+  await attachLiveness("http://api.test", "hash1", true, false, async () => new Response("", { status: 404 }));
   assert.equal(__pendingLiveness().length, 1);
 
   await flushPendingLiveness("http://api.test", async () => new Response("", { status: 404 }));
@@ -64,13 +64,23 @@ test("attachLiveness buffers on failure; flushPendingLiveness clears it once the
   __resetPendingLiveness();
 });
 
-test("attachLiveness sends only proofHash + verifiedPerson", async () => {
+test("attachLiveness sends proofHash + verifiedPerson + degraded", async () => {
   __resetPendingLiveness();
   let sent: unknown;
-  await attachLiveness("http://api.test", "hash2", false, async (_u, init) => {
+  await attachLiveness("http://api.test", "hash2", false, false, async (_u, init) => {
     sent = JSON.parse(String(init?.body));
     return okJson({ status: "recorded" });
   });
-  assert.deepEqual(sent, { proofHash: "hash2", verifiedPerson: false });
+  assert.deepEqual(sent, { proofHash: "hash2", verifiedPerson: false, degraded: false });
   assert.equal(__pendingLiveness().length, 0);
+});
+
+test("attachLiveness: a degraded verdict is sent with degraded:true, distinct from an actual fail", async () => {
+  __resetPendingLiveness();
+  let sent: unknown;
+  await attachLiveness("http://api.test", "hash3", false, true, async (_u, init) => {
+    sent = JSON.parse(String(init?.body));
+    return okJson({ status: "recorded" });
+  });
+  assert.deepEqual(sent, { proofHash: "hash3", verifiedPerson: false, degraded: true });
 });

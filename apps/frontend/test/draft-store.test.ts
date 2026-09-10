@@ -57,6 +57,7 @@ function draft(over: Partial<ReportDraft> = {}): ReportDraft {
     preciseLocationCipher: "",
     livenessChecked: true,
     livenessVerified: false,
+    livenessDegraded: false,
     startedAt: 1_700_000_000_000,
     ...over,
   };
