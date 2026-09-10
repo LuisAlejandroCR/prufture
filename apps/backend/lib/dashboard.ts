@@ -186,3 +186,48 @@ export function alerts(proofs: ProofSummary[], apiDegraded: boolean): Alert[] {
 
   return out;
 }
+
+// --- Coverage map (additive; keep at end of file — another branch also appends here) ---
+
+import { decodeGeohashBounds, type GeohashBounds } from "./geohash";
+
+/** One coarse geohash cell on the coverage map: aggregate counts only, no precise point. */
+export interface CoverageCell {
+  region: string;
+  lat: number;
+  lng: number;
+  bounds: GeohashBounds;
+  count: number;
+  confirmed: number;
+}
+
+/**
+ * Group the coarse proof list by `geohashRegion` (5-char cell), decode each cell to its
+ * box, and count reports and confirmed reports per cell. Cells whose region is empty or
+ * fails to decode are dropped. Sorted by report count descending.
+ */
+export function coverage(proofs: ProofSummary[]): CoverageCell[] {
+  const byRegion = new Map<string, ProofSummary[]>();
+  for (const p of proofs) {
+    const region = p.geohashRegion || "";
+    if (!region) continue;
+    const list = byRegion.get(region) ?? [];
+    list.push(p);
+    byRegion.set(region, list);
+  }
+
+  const cells: CoverageCell[] = [];
+  for (const [region, list] of byRegion) {
+    const bounds = decodeGeohashBounds(region);
+    if (!bounds) continue;
+    cells.push({
+      region,
+      lat: (bounds.minLat + bounds.maxLat) / 2,
+      lng: (bounds.minLng + bounds.maxLng) / 2,
+      bounds,
+      count: list.length,
+      confirmed: list.filter((p) => reviewStatus(p) === "confirmed").length,
+    });
+  }
+  return cells.sort((a, b) => b.count - a.count);
+}
