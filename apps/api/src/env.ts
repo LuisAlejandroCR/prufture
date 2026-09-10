@@ -27,6 +27,15 @@ export const env = {
   get programmeEmail(): string {
     return process.env.PROGRAMME_EMAIL ?? "";
   },
+
+  // RevenueCat server-side entitlement check (apps/api/src/entitlement.ts). The secret key
+  // never reaches the client — degrades (available:false) if unset.
+  get revenuecatSecretKey(): string {
+    return process.env.REVENUECAT_SECRET_KEY ?? "";
+  },
+  get revenuecatApiBase(): string {
+    return process.env.REVENUECAT_API_BASE ?? "https://api.revenuecat.com/v2";
+  },
 };
 
 export function relayerConfigured(): boolean {
