@@ -2,7 +2,7 @@
      Explains the problem, proposal, demo flow, current status, and local run path.
      It contains no private agent instructions or credentials: those stay out of the public repo. -->
 
-# Prufture — UNICEF FIRSTBLOCK-ATHON
+# Prufture 
 
 Prufture (formerly Proof-at-Capture) is a mobile app for field volunteers who need to capture
 verifiable evidence without stable connectivity. A photo, an approximate location, and a timestamp
