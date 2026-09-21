@@ -281,3 +281,53 @@ test("the production eas profile must not ship a Test Store key", () => {
     "a Test Store key in the production profile would ship fake purchases to real users",
   );
 });
+
+test("configurePurchases never throws when the native module is missing (Expo Go)", async () => {
+  // _layout.tsx calls this at launch as a floating promise. If it rejects, Expo Go raises an
+  // unhandled rejection on every single launch.
+  __resetConfiguredForTest();
+  __setPurchasesModuleForTest(null);
+  const realWarn = console.warn;
+  console.warn = () => {};
+  try {
+    await assert.doesNotReject(() => configurePurchases({ apiKey: "test_storekey123" }));
+  } finally {
+    console.warn = realWarn;
+  }
+});
+
+test("configurePurchases never throws when the SDK's configure() itself throws", async () => {
+  __resetConfiguredForTest();
+  install({
+    configure: (() => {
+      throw new Error("native configure exploded");
+    }) as never,
+  });
+  const realWarn = console.warn;
+  console.warn = () => {};
+  try {
+    await assert.doesNotReject(() => configurePurchases({ apiKey: "test_storekey123" }));
+  } finally {
+    console.warn = realWarn;
+  }
+});
+
+test("after a failed configure, a later successful configure still works", async () => {
+  __resetConfiguredForTest();
+  let calls = 0;
+  install({
+    configure: (() => {
+      calls += 1;
+      if (calls === 1) throw new Error("boom");
+    }) as never,
+  });
+  const realWarn = console.warn;
+  console.warn = () => {};
+  try {
+    await configurePurchases({ apiKey: "test_a" });
+    await configurePurchases({ apiKey: "test_b" });
+  } finally {
+    console.warn = realWarn;
+  }
+  assert.equal(calls, 2, "a failed attempt must not latch the configure-once guard");
+});
