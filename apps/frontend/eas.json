@@ -38,7 +38,9 @@
       },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://prufture-api.onrender.com",
-        "EXPO_PUBLIC_IDENTITY_STEP": "off"
+        "EXPO_PUBLIC_IDENTITY_STEP": "off",
+        "EXPO_PUBLIC_REVENUECAT_IOS_KEY": "<<RevenueCat PUBLIC iOS key appl_... — human fills>>",
+        "EXPO_PUBLIC_REVENUECAT_ANDROID_KEY": "<<RevenueCat PUBLIC Android key goog_... — human fills>>"
       }
     }
   },

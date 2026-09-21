@@ -36,6 +36,31 @@ export function __resetConfiguredForTest(): void {
 }
 
 /**
+ * The PUBLIC RevenueCat SDK key for the platform this bundle is running on.
+ *
+ * RevenueCat issues a different public key per platform — `appl_…` for iOS, `goog_…` for
+ * Android — and configuring with the other platform's key fails at runtime. A single shared
+ * env var cannot serve a two-platform release, so each has its own.
+ *
+ * These are PUBLIC keys and are meant to ship in the client. The SECRET key (`sk_…`) is
+ * server-side only and must never appear in this bundle — see apps/api/src/entitlement.ts.
+ */
+export function revenuecatApiKey(platform: string): string {
+  if (platform === "ios") return process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY ?? "";
+  if (platform === "android") return process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY ?? "";
+  return "";
+}
+
+/**
+ * Configure the SDK for the running platform. The caller passes `Platform.OS` — this module
+ * deliberately does not import react-native, so it stays unit-testable under node.
+ * Safe on every launch: a missing key or a second call are both no-ops, and it never throws.
+ */
+export async function configurePurchasesForPlatform(platform: string): Promise<void> {
+  await configurePurchases({ apiKey: revenuecatApiKey(platform) });
+}
+
+/**
  * Configure the RevenueCat SDK exactly once with the given public API key.
  * No-op (with a logged typed warning) when `apiKey` is falsy — never throws.
  */

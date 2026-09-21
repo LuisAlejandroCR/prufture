@@ -7,17 +7,26 @@ import "react-native-get-random-values";
 // the detail screens are plain stack screens with in-screen back controls.
 
 import { useEffect } from "react";
+import { Platform } from "react-native";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { color } from "../src/theme";
 import { API_URL, useAutoSync } from "../src/useAutoSync";
 import { notifyReportConfirmed, registerForPush } from "../src/notifications";
+import { configurePurchasesForPlatform } from "../src/purchases";
 
 export default function RootLayout() {
   // Anonymous push registration: no permission -> the app is unchanged, just no push.
   useEffect(() => {
     void registerForPush(API_URL);
+  }, []);
+
+  // Configure RevenueCat once per launch with the platform's PUBLIC key. Without this the SDK
+  // is never initialised and every entitlement check degrades — which the paywall renders as
+  // "unavailable", never as "free". No key configured (e.g. Expo Go) is a silent no-op.
+  useEffect(() => {
+    void configurePurchasesForPlatform(Platform.OS);
   }, []);
 
   // Drain the offline queue when coverage returns or the app is foregrounded.

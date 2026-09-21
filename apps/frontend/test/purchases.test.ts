@@ -5,10 +5,13 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import type Purchases from "react-native-purchases";
+import { readFileSync } from "node:fs";
 import {
   __resetConfiguredForTest,
+  configurePurchasesForPlatform,
   __setPurchasesModuleForTest,
   configurePurchases,
+  revenuecatApiKey,
   getEntitlement,
   getOfferings,
   purchasePackage,
@@ -170,4 +173,64 @@ test("getEntitlement: SDK throw maps to available:false without throwing", async
   });
   const result = await getEntitlement();
   assert.equal(result.available, false);
+});
+
+test("revenuecatApiKey: each platform gets its OWN public key, never the other one's", () => {
+  process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY = "appl_ios_public";
+  process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY = "goog_android_public";
+  try {
+    assert.equal(revenuecatApiKey("ios"), "appl_ios_public");
+    assert.equal(revenuecatApiKey("android"), "goog_android_public");
+    // Configuring RevenueCat with the other platform's key fails at runtime, so the two must
+    // never be interchangeable.
+    assert.notEqual(revenuecatApiKey("ios"), revenuecatApiKey("android"));
+  } finally {
+    delete process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY;
+    delete process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY;
+  }
+});
+
+test("revenuecatApiKey: unset key or unknown platform yields '' (configure then no-ops)", () => {
+  delete process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY;
+  delete process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY;
+  assert.equal(revenuecatApiKey("ios"), "");
+  assert.equal(revenuecatApiKey("android"), "");
+  assert.equal(revenuecatApiKey("web"), "");
+  assert.equal(revenuecatApiKey(""), "");
+});
+
+test("configurePurchasesForPlatform: no key => SDK configure is never called, no throw", async () => {
+  delete process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY;
+  let calls = 0;
+  install({ configure: () => { calls += 1; } });
+  await configurePurchasesForPlatform("ios");
+  assert.equal(calls, 0);
+});
+
+test("configurePurchasesForPlatform: ios key present => configured with exactly that key", async () => {
+  process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY = "appl_ios_public";
+  process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY = "goog_android_public";
+  try {
+    const seen: string[] = [];
+    install({ configure: ((opts: { apiKey: string }) => { seen.push(opts.apiKey); }) as never });
+    await configurePurchasesForPlatform("ios");
+    assert.deepEqual(seen, ["appl_ios_public"]);
+  } finally {
+    delete process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY;
+    delete process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY;
+  }
+});
+
+test("store URLs in app.json are absolute https and point at the published pages", () => {
+  const app = JSON.parse(readFileSync(new URL("../app.json", import.meta.url), "utf8")) as {
+    expo: { extra: { privacyPolicyUrl: string; supportUrl: string } };
+  };
+  const { privacyPolicyUrl, supportUrl } = app.expo.extra;
+  // App review rejects a placeholder or a relative URL outright.
+  for (const url of [privacyPolicyUrl, supportUrl]) {
+    assert.ok(url.startsWith("https://"), `${url} must be absolute https`);
+    assert.ok(!url.includes("[["), `${url} still holds a placeholder`);
+  }
+  assert.ok(privacyPolicyUrl.endsWith("/privacy"));
+  assert.ok(supportUrl.endsWith("/support"));
 });

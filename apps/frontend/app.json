@@ -61,8 +61,8 @@
     "extra": {
       "eas": { "projectId": "ff9cdaeb-a7be-4a1c-a76f-7594b2b51aef" },
       "router": {},
-      "privacyPolicyUrl": "[[PRIVACY_POLICY_URL]]",
-      "supportUrl": "[[SUPPORT_URL]]"
+      "privacyPolicyUrl": "https://prufture-app.vercel.app/privacy",
+      "supportUrl": "https://prufture-app.vercel.app/support"
     }
   }
 }
