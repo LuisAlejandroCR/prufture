@@ -27,6 +27,7 @@ function payload(hash: string) {
 /** Stub RevenueCat: entitled / not entitled / unreachable. */
 function revenuecat(mode: "entitled" | "denied" | "down"): void {
   process.env.REVENUECAT_SECRET_KEY = SECRET;
+  process.env.REVENUECAT_PROJECT_ID = "proj1ab2c3d4";
   globalThis.fetch = (async () => {
     if (mode === "down") throw new Error("network down");
     const items = mode === "entitled" ? [{ entitlement_id: "coordinator_pro" }] : [];
@@ -48,6 +49,7 @@ afterEach(() => {
   globalThis.fetch = realFetch;
   delete process.env.REVENUECAT_SECRET_KEY;
   delete process.env.REVENUECAT_API_BASE;
+  delete process.env.REVENUECAT_PROJECT_ID;
 });
 
 test("gate: no app user id => 401 on every coordinator route", async () => {
@@ -216,4 +218,11 @@ test("toCsv is pure: a cell with every delimiter is quoted and its quotes double
     "proofHash,taskId,geohashRegion,capturedAt,attestationCount,reviewStatus,reviewNote,reviewedAt",
   );
   assert.ok(csv.includes('"task,""with""\r\nbreaks"'));
+});
+
+test("gate: secret key set but REVENUECAT_PROJECT_ID missing => 503, never 402", async () => {
+  process.env.REVENUECAT_SECRET_KEY = SECRET;
+  delete process.env.REVENUECAT_PROJECT_ID;
+  const res = await get("/coordinator/reports", asCoordinator);
+  assert.equal(res.status, 503, "a misconfigured server must not look like an unpaid customer");
 });
