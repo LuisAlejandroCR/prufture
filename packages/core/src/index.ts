@@ -3,4 +3,5 @@
 export * from "./types.js";
 export * from "./result.js";
 export * from "./hash.js";
+export * from "./geohash.js";
 export * from "./signature.js";

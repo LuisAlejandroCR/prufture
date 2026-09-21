@@ -3,7 +3,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { generateKeyPair, hashBytes, signPayload, verifyProof } from "@proof/core";
+import { coarsenGeohash, generateKeyPair, hashBytes, isCoarseGeohash, signPayload, verifyProof } from "@proof/core";
 import { base64ToBytes } from "../src/base64.js";
 import { encodeGeohash } from "../src/geohash.js";
 import { buildQueueRow } from "../src/queue-row.js";
@@ -47,4 +47,22 @@ test("invariant: a tampered queued row fails verification", () => {
   const row = captureOffline(Buffer.from("photo").toString("base64"), 10, 20, "t");
   assert.equal(verifyProof({ ...row, geohash: "00000" }), false);
   assert.equal(verifyProof({ ...row, proofHash: "f".repeat(64) }), false);
+});
+
+test("capture coarsens before signing, so a fine cell can never be signed or sent", () => {
+  // capture.ts applies coarsenGeohash to whatever the location screen hands it. Mirrored here
+  // because the real module needs the native keystore; the coarsening itself is pure.
+  for (let i = 0; i < 200; i += 1) {
+    const fine = encodeGeohash(Math.random() * 180 - 90, Math.random() * 360 - 180, 9);
+    assert.equal(fine.length, 9);
+    const signedCell = coarsenGeohash(fine);
+    assert.equal(signedCell, fine.slice(0, 5));
+    assert.equal(isCoarseGeohash(signedCell), true);
+  }
+});
+
+test("the precise cell the api would reject is exactly the one capture never signs", () => {
+  const fine = encodeGeohash(59.3326, 18.0649, 9);
+  assert.equal(isCoarseGeohash(fine), false);
+  assert.equal(isCoarseGeohash(coarsenGeohash(fine)), true);
 });

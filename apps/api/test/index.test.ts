@@ -15,7 +15,7 @@ const call = (path: string, body: unknown) =>
     body: JSON.stringify(body),
   });
 
-function payload(hash: string, geohash = "9q8yyk8yuv") {
+function payload(hash: string, geohash = "9q8yy") {
   return { proofHash: hash, taskId: "solar-panel-installation", geohash, capturedAt: "2026-09-06T14:32:00.000Z" };
 }
 
@@ -71,9 +71,20 @@ test("fuzz: distinct attesters count once each; order and volume do not matter",
   assert.equal(getProof("2".repeat(64))!.attestations.length, attesters.length);
 });
 
+test("/sync rejects a geohash finer than the coarse cell, so the chain never sees one", async () => {
+  const res = await call("/sync", signPayload(payload("7".repeat(64), "9q8yyk8yuvxx"), kp.privateKey));
+  assert.equal(res.status, 400);
+  const j = (await res.json()) as { error: string; maxLength: number };
+  assert.equal(j.error, "geohash too precise");
+  assert.equal(j.maxLength, 5);
+  assert.equal(getProof("7".repeat(64)), undefined, "a rejected proof must not be stored");
+});
+
 test("invariant: /proof and /proofs expose only a coarse region, never the full geohash", async () => {
+  // Written straight to the store, bypassing /sync: this is a legacy entry from before the
+  // precision check existed. The read path must still coarsen it.
   const full = "9q8yyk8yuvxx";
-  await call("/sync", signPayload(payload("3".repeat(64), full), kp.privateKey));
+  upsertProof(payload("3".repeat(64), full));
 
   const one = await (await app.request("/proof/" + "3".repeat(64))).json() as Record<string, unknown>;
   assert.equal(one.geohashRegion, full.slice(0, 5));

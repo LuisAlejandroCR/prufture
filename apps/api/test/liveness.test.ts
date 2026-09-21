@@ -19,7 +19,7 @@ const post = (path: string, body: unknown) =>
 const payload = (hash: string) => ({
   proofHash: hash,
   taskId: "solar-panel-installation",
-  geohash: "9q8yyk8yuv",
+  geohash: "9q8yy",
   capturedAt: "2026-09-06T14:32:00.000Z",
 });
 
