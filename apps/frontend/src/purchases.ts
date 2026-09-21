@@ -79,7 +79,10 @@ export async function configurePurchasesForPlatform(platform: string): Promise<v
 
 /**
  * Configure the RevenueCat SDK exactly once with the given public API key.
- * No-op (with a logged typed warning) when `apiKey` is falsy — never throws.
+ * NEVER throws. `_layout.tsx` calls this at launch as a floating promise, and
+ * `react-native-purchases` is a NATIVE module that does not exist in Expo Go — so without this
+ * guard the dynamic import rejects and every Expo Go launch raises an unhandled rejection.
+ * A missing key, an absent native module and a failing `configure` all degrade to a warning.
  */
 export async function configurePurchases({ apiKey }: { apiKey: string }): Promise<void> {
   if (!apiKey) {
@@ -87,9 +90,15 @@ export async function configurePurchases({ apiKey }: { apiKey: string }): Promis
     return;
   }
   if (configured) return;
-  const RC = await loadPurchases();
-  RC.configure({ apiKey });
-  configured = true;
+  try {
+    const RC = await loadPurchases();
+    RC.configure({ apiKey });
+    configured = true;
+  } catch (e) {
+    // Expected in Expo Go (no native module). Purchases stay unavailable; getEntitlement()
+    // already degrades, and useEntitlement maps that to "unavailable", never to "free".
+    console.warn("[purchases] configurePurchases failed, purchases unavailable (degraded):", String(e));
+  }
 }
 
 function toOffering(offering: PurchasesOffering | null): Offering | null {
