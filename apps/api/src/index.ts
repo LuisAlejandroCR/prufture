@@ -7,6 +7,11 @@
 // POST /register-push - store an anonymous Expo push token (random device id, no identity).
 // GET  /proof/:hash - public verification data, zero PII (never the precise-location blob).
 // GET  /proofs      - aggregate list for the stakeholder dashboard.
+//
+// Coordinator surface (PAID, gated by requireCoordinator -> server-side RevenueCat check):
+// GET  /coordinator/reports    - review state per proof, still zero-PII.
+// POST /coordinator/review     - record a triage verdict (pending/accepted/rejected + note).
+// GET  /coordinator/export.csv - the same rows as CSV.
 
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
@@ -16,6 +21,7 @@ import {
   addAttestation,
   allProofs,
   getProof,
+  setReview,
   setPreciseLocationCipher,
   setVerifiedAttribute,
   setVerifiedPerson,
@@ -26,6 +32,13 @@ import { submitAttestation } from "./relayer.js";
 import { checkLiveness, getVerifiedAttribute } from "./neuro.js";
 import { sendVerifyUrl, type Channel } from "./channels.js";
 import { maybeNotify } from "./notify.js";
+import {
+  isReviewStatus,
+  requireCoordinator,
+  REVIEW_NOTE_MAX,
+  toCoordinatorRow,
+  toCsv,
+} from "./coordinator.js";
 
 const VERIFY_BASE = process.env.VERIFY_BASE_URL ?? "http://localhost:3000";
 const CHANNELS: Channel[] = ["whatsapp", "email", "telegram"];
@@ -262,6 +275,59 @@ app.get("/proofs", (c) =>
     })),
   ),
 );
+
+// --- Coordinator surface -----------------------------------------------------------------
+// Everything below requires an active coordinator_pro entitlement, checked server-side on every
+// request. Reporters never reach these routes and never pay; see docs/pilot_engagement.md.
+// These routes add review state on top of the public data — they never add a reporter identity,
+// a precise location, a signature or a public key.
+
+app.use("/coordinator/*", requireCoordinator);
+
+app.get("/coordinator/reports", (c) =>
+  c.json(allProofs().map((e) => toCoordinatorRow(e, REGION_PREFIX_LEN))),
+);
+
+app.post("/coordinator/review", async (c) => {
+  let body: { proofHash?: unknown; status?: unknown; note?: unknown };
+  try {
+    body = (await c.req.json()) as typeof body;
+  } catch {
+    return c.json({ error: "invalid json" }, 400);
+  }
+
+  const proofHash = typeof body.proofHash === "string" ? body.proofHash : "";
+  if (!proofHash) return c.json({ error: "missing proofHash" }, 400);
+  if (!isReviewStatus(body.status)) {
+    return c.json({ error: "invalid status", allowed: ["pending", "accepted", "rejected"] }, 400);
+  }
+
+  const note = typeof body.note === "string" ? body.note : "";
+  if (note.length > REVIEW_NOTE_MAX) {
+    return c.json({ error: "note too long", maxLength: REVIEW_NOTE_MAX }, 413);
+  }
+
+  const recorded = setReview(proofHash, {
+    status: body.status,
+    note,
+    reviewedAt: new Date().toISOString(),
+  });
+  if (!recorded) return c.json({ error: "unknown proofHash" }, 404);
+
+  const entry = getProof(proofHash)!;
+  return c.json({ status: "recorded", review: toCoordinatorRow(entry, REGION_PREFIX_LEN) }, 200);
+});
+
+app.get("/coordinator/export.csv", (c) => {
+  const csv = toCsv(allProofs().map((e) => toCoordinatorRow(e, REGION_PREFIX_LEN)));
+  return new Response(csv, {
+    status: 200,
+    headers: {
+      "content-type": "text/csv; charset=utf-8",
+      "content-disposition": 'attachment; filename="prufture-reports.csv"',
+    },
+  });
+});
 
 // Skip binding a socket under `node --test` so the HTTP surface can be exercised via app.request.
 if (!process.env.NODE_TEST_CONTEXT) {
