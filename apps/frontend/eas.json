@@ -47,8 +47,8 @@
   "submit": {
     "production": {
       "ios": {
-        "ascAppId": "<<App Store Connect app id (numeric) — human fills>>",
-        "appleTeamId": "<<Apple Developer Team ID — human fills>>"
+        "ascAppId": "6814578739",
+        "appleTeamId": "5462H7MWHB"
       },
       "android": {
         "serviceAccountKeyPath": "./play-service-account.json",
