@@ -36,6 +36,11 @@ export const env = {
   get revenuecatApiBase(): string {
     return process.env.REVENUECAT_API_BASE ?? "https://api.revenuecat.com/v2";
   },
+  // RevenueCat v2 endpoints are project-scoped: /v2/projects/{project_id}/customers/...
+  // Without this the entitlement check cannot build a valid URL and degrades typed.
+  get revenuecatProjectId(): string {
+    return process.env.REVENUECAT_PROJECT_ID ?? "";
+  },
 };
 
 export function relayerConfigured(): boolean {

@@ -14,6 +14,7 @@ interface RevenueCatEntitlementItem {
   expires_at?: unknown;
 }
 
+/** v2 list envelope: { object: "list", items: [...], next_page, url }. */
 interface RevenueCatEntitlementsResponse {
   items?: RevenueCatEntitlementItem[];
 }
@@ -31,13 +32,22 @@ export async function checkEntitlement(
   if (!env.revenuecatSecretKey) {
     return unavailable("revenuecat", "revenuecat not configured (REVENUECAT_SECRET_KEY missing)");
   }
+  if (!env.revenuecatProjectId) {
+    return unavailable("revenuecat", "revenuecat not configured (REVENUECAT_PROJECT_ID missing)");
+  }
 
   return guard("revenuecat", async () => {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
     try {
+      // v2 is project-scoped and the resource is `active_entitlements`, not `entitlements`:
+      // GET /v2/projects/{project_id}/customers/{customer_id}/active_entitlements
+      // (verified against the Developer API v2 reference, 2026-09-21). The older
+      // /v2/customers/{id}/entitlements shape does not exist and 404s.
       const base = env.revenuecatApiBase.replace(/\/$/, "");
-      const url = `${base}/customers/${encodeURIComponent(appUserId)}/entitlements`;
+      const project = encodeURIComponent(env.revenuecatProjectId);
+      const customer = encodeURIComponent(appUserId);
+      const url = `${base}/projects/${project}/customers/${customer}/active_entitlements`;
       const res = await fetch(url, {
         headers: { authorization: `Bearer ${env.revenuecatSecretKey}` },
         signal: controller.signal,
