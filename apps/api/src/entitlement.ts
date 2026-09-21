@@ -54,6 +54,16 @@ export async function checkEntitlement(
       });
 
       const body = (await res.json().catch(() => ({}))) as RevenueCatEntitlementsResponse;
+
+      // 404 on this path means RevenueCat has never seen this customer, i.e. they have never
+      // purchased — that is "not entitled", NOT a degraded service. Verified live against the
+      // real API on 2026-09-21: a valid project with an unknown customer returns 404
+      // resource_missing, while a project the key cannot access returns 403 authorization_error.
+      // So a 404 here is unambiguous and cannot mask a misconfigured REVENUECAT_PROJECT_ID.
+      // Without this branch, every coordinator who opens the app before subscribing would get a
+      // hard 503 from requireCoordinator instead of the paywall.
+      if (res.status === 404) return { entitled: false };
+
       if (!res.ok) {
         // Do not echo the response body — never log or return it.
         throw new Error(`revenuecat ${res.status}`);

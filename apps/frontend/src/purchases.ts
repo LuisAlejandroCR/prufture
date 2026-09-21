@@ -46,9 +46,26 @@ export function __resetConfiguredForTest(): void {
  * server-side only and must never appear in this bundle — see apps/api/src/entitlement.ts.
  */
 export function revenuecatApiKey(platform: string): string {
+  // RevenueCat Test Store: one platform-agnostic `test_...` key that works with no App Store or
+  // Play setup at all, so the purchase -> entitlement -> gated-endpoint path can be exercised
+  // before the store accounts exist. It takes precedence deliberately, and ONLY a key that
+  // actually looks like a Test Store key is accepted here — so a real `appl_`/`goog_` key
+  // pasted into this variable by mistake is ignored rather than silently used everywhere.
+  const test = process.env.EXPO_PUBLIC_REVENUECAT_TEST_KEY ?? "";
+  if (test.startsWith("test_")) return test;
+
   if (platform === "ios") return process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY ?? "";
   if (platform === "android") return process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY ?? "";
   return "";
+}
+
+/**
+ * True when the SDK would run against the Test Store rather than a real store. Purchases made in
+ * this mode are NOT real revenue and prove our integration only — never Apple's or Google's.
+ * A release build must not ship with this set; `eas.json`'s production profile leaves it out.
+ */
+export function usingTestStore(): boolean {
+  return (process.env.EXPO_PUBLIC_REVENUECAT_TEST_KEY ?? "").startsWith("test_");
 }
 
 /**

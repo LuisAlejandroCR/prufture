@@ -12,6 +12,7 @@ import {
   __setPurchasesModuleForTest,
   configurePurchases,
   revenuecatApiKey,
+  usingTestStore,
   getEntitlement,
   getOfferings,
   purchasePackage,
@@ -233,4 +234,50 @@ test("store URLs in app.json are absolute https and point at the published pages
   }
   assert.ok(privacyPolicyUrl.endsWith("/privacy"));
   assert.ok(supportUrl.endsWith("/support"));
+});
+
+test("Test Store key takes precedence on BOTH platforms", () => {
+  process.env.EXPO_PUBLIC_REVENUECAT_TEST_KEY = "test_storekey123";
+  process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY = "appl_ios_public";
+  process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY = "goog_android_public";
+  try {
+    assert.equal(revenuecatApiKey("ios"), "test_storekey123");
+    assert.equal(revenuecatApiKey("android"), "test_storekey123");
+    assert.equal(usingTestStore(), true);
+  } finally {
+    delete process.env.EXPO_PUBLIC_REVENUECAT_TEST_KEY;
+    delete process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY;
+    delete process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY;
+  }
+});
+
+test("a non-test key pasted into the test variable is IGNORED, not used everywhere", () => {
+  // Guards the realistic mistake: dropping the iOS key into the test slot would otherwise
+  // configure Android with an appl_ key, which fails at runtime.
+  process.env.EXPO_PUBLIC_REVENUECAT_TEST_KEY = "appl_pasted_by_mistake";
+  process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY = "goog_android_public";
+  try {
+    assert.equal(revenuecatApiKey("android"), "goog_android_public");
+    assert.equal(usingTestStore(), false);
+  } finally {
+    delete process.env.EXPO_PUBLIC_REVENUECAT_TEST_KEY;
+    delete process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY;
+  }
+});
+
+test("usingTestStore is false when the variable is unset", () => {
+  delete process.env.EXPO_PUBLIC_REVENUECAT_TEST_KEY;
+  assert.equal(usingTestStore(), false);
+});
+
+test("the production eas profile must not ship a Test Store key", () => {
+  const eas = JSON.parse(readFileSync(new URL("../eas.json", import.meta.url), "utf8")) as {
+    build: Record<string, { env?: Record<string, string> }>;
+  };
+  const prod = eas.build.production?.env ?? {};
+  assert.equal(
+    prod.EXPO_PUBLIC_REVENUECAT_TEST_KEY,
+    undefined,
+    "a Test Store key in the production profile would ship fake purchases to real users",
+  );
 });

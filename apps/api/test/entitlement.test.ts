@@ -164,3 +164,44 @@ test("a customer id with URL-unsafe characters is encoded into the path", async 
   await checkEntitlement("anon/user?with#chars");
   assert.ok(seen[0]!.endsWith("/customers/anon%2Fuser%3Fwith%23chars/active_entitlements"), seen[0]);
 });
+
+test("404 unknown customer => entitled:false and AVAILABLE (never purchased, not a degradation)", async () => {
+  configure(true);
+  // Live-verified 2026-09-21: a valid project with a customer RevenueCat has never seen returns
+  // 404 resource_missing. Treating that as degraded would 503 every coordinator who opens the
+  // app before subscribing, instead of showing them the paywall.
+  globalThis.fetch = (async () =>
+    new Response(
+      JSON.stringify({ type: "resource_missing", message: "Could not find customer ID associated with this project" }),
+      { status: 404 },
+    )) as typeof fetch;
+
+  const r = await checkEntitlement("never-purchased-user");
+  assert.equal(r.available, true, "an unknown customer is a definite answer, not an outage");
+  assert.deepEqual(r.data, { entitled: false });
+  assert.equal(r.error, null);
+});
+
+test("403 wrong project => DEGRADED, never a confident 'not entitled'", async () => {
+  configure(true);
+  // Live-verified 2026-09-21: a project the key cannot access returns 403 authorization_error.
+  // This is the case that must stay degraded — a misconfigured server must not silently report
+  // every paying customer as unsubscribed.
+  globalThis.fetch = (async () =>
+    new Response(
+      JSON.stringify({ type: "authorization_error", message: "The API key does not belong to the project." }),
+      { status: 403 },
+    )) as typeof fetch;
+
+  const r = await checkEntitlement("anon-user-1");
+  assert.equal(r.available, false);
+  assert.equal(r.data, null);
+});
+
+test("401 bad key => degraded, and the key is never echoed in the error", async () => {
+  configure(true);
+  globalThis.fetch = (async () => new Response("{}", { status: 401 })) as typeof fetch;
+  const r = await checkEntitlement("anon-user-1");
+  assert.equal(r.available, false);
+  assert.ok(!String(r.error).includes(SECRET));
+});
