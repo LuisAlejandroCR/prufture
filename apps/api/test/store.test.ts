@@ -122,3 +122,28 @@ test("verifiedPerson: unknown proof -> false; set survives a reload; not present
   store.__setStorePathForTests(p);
   assert.equal(store.getProof(H("e"))!.verifiedPerson, true);
 });
+
+test("a coordinator review survives a reload and stores no reviewer identity", () => {
+  const p = freshPath();
+  store.__setStorePathForTests(p);
+  store.upsertProof(payload(H("c")));
+  assert.equal(
+    store.setReview(H("c"), { status: "accepted", note: "panel visible", reviewedAt: "t2" }),
+    true,
+  );
+  assert.equal(store.setReview(H("d"), { status: "accepted", note: "", reviewedAt: "t2" }), false);
+  store.__flushForTests();
+
+  store.__setStorePathForTests(p);
+  const back = store.getProof(H("c"));
+  assert.equal(back!.review!.status, "accepted");
+  assert.equal(back!.review!.note, "panel visible");
+
+  // The review record is exactly three fields — no reviewer id, no app user id, no email.
+  const raw = readFileSync(p, "utf8");
+  const obj = JSON.parse(raw) as Record<string, { review?: Record<string, unknown> }>;
+  assert.deepEqual(Object.keys(obj[H("c")]!.review!).sort(), ["note", "reviewedAt", "status"]);
+  for (const bad of ["reviewer", "appuserid", "x-app-user-id", "revenuecat", "sk_"]) {
+    assert.equal(raw.toLowerCase().includes(bad), false, `leaked ${bad}`);
+  }
+});

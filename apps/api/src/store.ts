@@ -15,6 +15,17 @@ export interface AttestationRecord {
   attestedAt: string;
 }
 
+/**
+ * Coordinator triage verdict on a proof. Deliberately carries NO reviewer identity — the paid
+ * surface authenticates per request via RevenueCat, it does not build a reviewer directory.
+ * `note` is coordinator free text and must never reach a public route.
+ */
+export interface ReviewRecord {
+  status: "pending" | "accepted" | "rejected";
+  note: string;
+  reviewedAt: string;
+}
+
 /** A verified attribute recorded against a proof. Boolean only — zero PII by construction. */
 export interface VerifiedAttributeRecord {
   attribute: string;
@@ -36,6 +47,8 @@ export interface Entry {
    * any public route (see docs/location_privacy.md).
    */
   preciseLocationCipher?: string;
+  /** Coordinator triage verdict. Absent until /coordinator/review is called; reads as "pending". */
+  review?: ReviewRecord;
   // Groups 1..N signed proofs of one field report. NOT part of the signed payload and never
   // exposed on a public route — used only to send ONE programme notification per report.
   reportId?: string;
@@ -91,6 +104,20 @@ function load(): void {
               typeof v.verifiedPersonDegraded === "boolean" ? v.verifiedPersonDegraded : undefined,
             preciseLocationCipher:
               typeof v.preciseLocationCipher === "string" ? v.preciseLocationCipher : undefined,
+            // Re-validated on the way in: a hand-edited or truncated file must not resurrect a
+            // review with a status the route layer would never accept.
+            review:
+              v.review &&
+              typeof v.review === "object" &&
+              (v.review.status === "pending" ||
+                v.review.status === "accepted" ||
+                v.review.status === "rejected")
+                ? {
+                    status: v.review.status,
+                    note: typeof v.review.note === "string" ? v.review.note : "",
+                    reviewedAt: typeof v.review.reviewedAt === "string" ? v.review.reviewedAt : "",
+                  }
+                : undefined,
             reportId: typeof v.reportId === "string" ? v.reportId : undefined,
           });
         }
@@ -198,6 +225,18 @@ export function setPreciseLocationCipher(proofHash: string, cipher: string): boo
   const entry = byHash.get(proofHash);
   if (!entry) return false;
   entry.preciseLocationCipher = cipher;
+  scheduleFlush();
+  return true;
+}
+
+/**
+ * Record a coordinator triage verdict against a proof. Replaces any previous verdict — the
+ * store holds the current state, not an audit trail. False if the proof is unknown.
+ */
+export function setReview(proofHash: string, rec: ReviewRecord): boolean {
+  const entry = byHash.get(proofHash);
+  if (!entry) return false;
+  entry.review = rec;
   scheduleFlush();
   return true;
 }
