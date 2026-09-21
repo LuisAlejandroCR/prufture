@@ -18,7 +18,7 @@ const post = (path: string, body: unknown) =>
 const payload = (hash: string) => ({
   proofHash: hash,
   taskId: "solar-panel-installation",
-  geohash: "9q8yyk8yuv",
+  geohash: "9q8yy",
   capturedAt: "2026-09-06T14:32:00.000Z",
 });
 
@@ -55,10 +55,10 @@ test("stores an opaque blob and never exposes it on any public route", async () 
   for (const body of [proofBody, proofsBody]) {
     assert.ok(!body.includes(CIPHER), "cipher leaked");
     assert.ok(!body.toLowerCase().includes("preciselocation"), "cipher field name leaked");
-    assert.ok(!body.includes("9q8yyk8yuv"), "full geohash leaked");
     assert.ok(!/"(lat|lng|latitude|longitude)"/i.test(body), "coordinate field leaked");
   }
-  // /proof still coarsens the signed geohash to the 5-char region.
+  // /proof exposes the 5-char region and nothing finer. /sync now rejects a finer cell outright
+  // ("/sync rejects a geohash finer than the coarse cell" in index.test.ts), so none can be stored.
   assert.match(proofBody, /"geohashRegion":"9q8yy"/);
 });
 

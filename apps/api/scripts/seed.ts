@@ -11,8 +11,8 @@ const BASE = (process.argv[2] ?? process.env.SEED_BASE_URL ?? "http://localhost:
 const SEED_KEY = "1".repeat(64);
 
 const SAMPLES = [
-  { taskId: "solar-panel-install", geohash: "u6sce7dk2", note: "seed: solar panel installation" },
-  { taskId: "water-pump-repair", geohash: "9q8yyk8yu", note: "seed: water pump repair" },
+  { taskId: "solar-panel-install", geohash: "u6sce", note: "seed: solar panel installation" },
+  { taskId: "water-pump-repair", geohash: "9q8yy", note: "seed: water pump repair" },
 ] as const;
 
 function proofFor(s: (typeof SAMPLES)[number]): ProofPublicPayload {

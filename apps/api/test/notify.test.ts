@@ -30,7 +30,7 @@ let seq = 0;
 const hash = () => (seq++).toString(16).padStart(2, "0").repeat(32); // 64 hex chars, unique
 function proof(h: string, extra: Record<string, unknown> = {}) {
   const p = signPayload(
-    { proofHash: h, taskId: "solar-panel-installation", geohash: "9q8yyk8yuv", capturedAt: "2026-09-06T14:32:00.000Z" },
+    { proofHash: h, taskId: "solar-panel-installation", geohash: "9q8yy", capturedAt: "2026-09-06T14:32:00.000Z" },
     kp.privateKey,
   );
   return { ...p, ...extra };

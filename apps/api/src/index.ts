@@ -10,7 +10,7 @@
 
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
-import { verifyProof, type SignedProof } from "@proof/core";
+import { COARSE_GEOHASH_LEN, isCoarseGeohash, verifyProof, type SignedProof } from "@proof/core";
 import { env } from "./env.js";
 import {
   addAttestation,
@@ -44,6 +44,13 @@ app.post("/sync", async (c) => {
     return c.json({ error: "invalid json" }, 400);
   }
   if (!verifyProof(body)) return c.json({ error: "invalid signature" }, 400);
+
+  // Trust boundary for location precision. The geohash is inside the signed payload, so the
+  // api cannot trim it without invalidating the signature — an over-precise cell is rejected
+  // instead, which is what keeps a fine cell off-chain. Clients coarsen before signing.
+  if (!isCoarseGeohash(body.geohash)) {
+    return c.json({ error: "geohash too precise", maxLength: COARSE_GEOHASH_LEN }, 400);
+  }
 
   const payload = { proofHash: body.proofHash, taskId: body.taskId, geohash: body.geohash, capturedAt: body.capturedAt };
   const reportId = typeof body.reportId === "string" && body.reportId ? body.reportId : undefined;
@@ -217,8 +224,9 @@ app.post("/register-push", async (c) => {
 });
 
 // REGION_PREFIX_LEN: how many geohash chars leave the api. 5 ≈ ~5 km cell, never exact GPS.
-// The full geohash never leaves this process — not on /proof/:hash, not on /proofs.
-const REGION_PREFIX_LEN = 5;
+// /sync now rejects anything finer, so new entries are already coarse; this slice stays as
+// defence in depth for entries stored before that check existed.
+const REGION_PREFIX_LEN = COARSE_GEOHASH_LEN;
 
 app.get("/proof/:hash", (c) => {
   const entry = getProof(c.req.param("hash"));
