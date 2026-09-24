@@ -94,6 +94,29 @@ const byHash = new Map<string, Entry>();
 const notifiedKeys = new Set<string>();
 let flushTimer: NodeJS.Timeout | null = null;
 
+/**
+ * Re-validate attestation records on the way in, for the same reason `review` is re-validated
+ * below: the store file is the one input this module does not produce itself, and /proof/:hash
+ * serves `attestations` as an array rather than picking fields from it. Without this, any extra
+ * key present in the file — from a hand edit, a restore, a migration, or a future writer — is
+ * served on a public, unauthenticated endpoint. Exactly three keys survive.
+ */
+function sanitizeAttestations(value: unknown): AttestationRecord[] {
+  if (!Array.isArray(value)) return [];
+  const out: AttestationRecord[] = [];
+  for (const rec of value) {
+    if (!rec || typeof rec !== "object") continue;
+    const r = rec as Record<string, unknown>;
+    if (typeof r.attester !== "string" || typeof r.txHash !== "string") continue;
+    out.push({
+      attester: r.attester,
+      txHash: r.txHash,
+      attestedAt: typeof r.attestedAt === "string" ? r.attestedAt : "",
+    });
+  }
+  return out;
+}
+
 function load(): void {
   byHash.clear();
   notifiedKeys.clear();
@@ -115,7 +138,7 @@ function load(): void {
         if (v && typeof v === "object" && v.payload && typeof v.payload === "object") {
           byHash.set(hash, {
             payload: v.payload,
-            attestations: Array.isArray(v.attestations) ? v.attestations : [],
+            attestations: sanitizeAttestations(v.attestations),
             verifiedAttribute: v.verifiedAttribute,
             verifiedPerson: typeof v.verifiedPerson === "boolean" ? v.verifiedPerson : undefined,
             verifiedPersonDegraded:
