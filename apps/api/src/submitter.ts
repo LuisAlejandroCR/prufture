@@ -45,6 +45,15 @@ export const ATTEST_SELECTOR = toFunctionSelector(
   "attest((bytes32,(address,uint64,bool,bytes32,bytes,uint256)))",
 );
 
+interface AbiFunctionLike {
+  type?: string;
+  name?: string;
+}
+
+function isHex32(v: string): boolean {
+  return /^0x[0-9a-fA-F]{64}$/.test(v);
+}
+
 function sameAddress(a: string, b: string): boolean {
   try {
     return getAddress(a) === getAddress(b);
@@ -58,8 +67,10 @@ function sameAddress(a: string, b: string): boolean {
  * converts that into ExternalUnavailable, so a violation degrades rather than sending.
  *
  * Checks, in order: the chain, the target contract, the function name, that the bundled ABI
- * exposes nothing but attest(), the attest() selector itself, and that no value or beneficiary
- * can ride along. The last group is what makes "the relayer moves no funds" enforceable.
+ * exposes nothing but attest(), that the ABI's attest() has exactly the allowlisted SIGNATURE
+ * (derived as a selector, so a same-named function with different parameters is refused), the
+ * schema UID, and that no value or beneficiary can ride along. The last two are what make
+ * "exactly four fields, and the relayer moves no funds" enforceable.
  */
 export function assertAllowed(req: SubmitRequest): void {
   if (req.chainId !== env.chainId) {
@@ -78,8 +89,18 @@ export function assertAllowed(req: SubmitRequest): void {
   if (fns.length !== 1 || fns[0] !== "attest") {
     throw new Error("submitter: ABI exposes a method other than attest()");
   }
-  if (toFunctionSelector("attest((bytes32,(address,uint64,bool,bytes32,bytes,uint256)))") !== ATTEST_SELECTOR) {
-    throw new Error("submitter: attest() selector mismatch");
+  // Derive the selector from the ABI THAT WILL BE USED, not from the constant. Comparing the
+  // constant to itself proved nothing: a function still called "attest" but taking different
+  // parameters encodes to a different selector and would otherwise pass every check above.
+  const attestEntry = (req.abi as AbiFunctionLike[]).find((e) => e?.type === "function" && e.name === "attest");
+  let selector: string;
+  try {
+    selector = toFunctionSelector(attestEntry as never);
+  } catch {
+    throw new Error("submitter: attest() entry is not a usable ABI function");
+  }
+  if (selector !== ATTEST_SELECTOR) {
+    throw new Error("submitter: attest() signature is not the allowlisted one");
   }
 
   const request = req.args[0] as
@@ -87,6 +108,16 @@ export function assertAllowed(req: SubmitRequest): void {
     | undefined;
   const data = request?.data;
   if (!data) throw new Error("submitter: malformed attest request");
+
+  // The schema UID decides what structure gets written on chain. Without this check an adapter
+  // could attest arbitrary data under this relayer's key while passing every other rule, which
+  // would break the "exactly proofHash / taskId / geohash / capturedAt" guarantee.
+  if (!isHex32(env.easSchemaUid)) {
+    throw new Error("submitter: no allowlisted EAS schema is configured");
+  }
+  if (typeof request?.schema !== "string" || request.schema.toLowerCase() !== env.easSchemaUid.toLowerCase()) {
+    throw new Error("submitter: schema is not the allowlisted EAS schema");
+  }
 
   if (data.value !== 0n) throw new Error("submitter: non-zero transaction value is not allowlisted");
   if (data.expirationTime !== 0n) throw new Error("submitter: expirationTime must be 0");

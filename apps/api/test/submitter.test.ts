@@ -18,6 +18,10 @@ import { selectedSubmitter, submitAttestation } from "../src/relayer.js";
 import { env } from "../src/env.js";
 import type { ProofPublicPayload } from "@proof/core";
 
+// The allowlist now pins the schema UID, so the suite configures one. env.* are live reads.
+const SCHEMA_UID = `0x${"24".repeat(32)}`;
+process.env.EAS_SCHEMA_UID = SCHEMA_UID;
+
 function payload(o: Partial<ProofPublicPayload> = {}): ProofPublicPayload {
   return {
     proofHash: bytesToHex(randomBytes(32)).slice(2),
@@ -113,6 +117,53 @@ test("fails closed: a malformed request is rejected rather than sent", () => {
 
 test("the allowlist is pinned to the configured chain id", () => {
   assert.equal(env.chainId, baseSepolia.id);
+});
+
+test("fails closed: a same-named attest() with different parameters is rejected", () => {
+  // The dangerous case: every other rule passes — right chain, right contract, one function
+  // named attest, zero value — but the signature encodes to a different selector entirely.
+  const foreign = [
+    {
+      name: "attest",
+      type: "function",
+      stateMutability: "payable",
+      inputs: [
+        { name: "to", type: "address" },
+        { name: "amount", type: "uint256" },
+      ],
+      outputs: [{ name: "", type: "bytes32" }],
+    },
+  ];
+  assert.throws(
+    () => assertAllowed({ ...allowedRequest(), abi: foreign }),
+    /signature is not the allowlisted one/,
+  );
+});
+
+test("fails closed: an unusable attest() ABI entry is rejected, not skipped", () => {
+  const junk = [{ name: "attest", type: "function" }];
+  assert.throws(() => assertAllowed({ ...allowedRequest(), abi: junk }), /submitter:/);
+});
+
+test("fails closed: an arbitrary schema UID is rejected", () => {
+  const req = allowedRequest();
+  const arg = req.args[0] as { schema: string; data: unknown };
+  for (const schema of [`0x${"99".repeat(32)}`, "0x", "", "not-hex"]) {
+    assert.throws(
+      () => assertAllowed({ ...req, args: [{ ...arg, schema }] }),
+      /schema is not the allowlisted EAS schema/,
+      `schema ${schema} must be refused`,
+    );
+  }
+});
+
+test("fails closed: with no schema configured at all, nothing is allowlisted", () => {
+  delete process.env.EAS_SCHEMA_UID;
+  try {
+    assert.throws(() => assertAllowed(allowedRequest()), /no allowlisted EAS schema is configured/);
+  } finally {
+    process.env.EAS_SCHEMA_UID = SCHEMA_UID;
+  }
 });
 
 // --- adapter selection -------------------------------------------------------------------
