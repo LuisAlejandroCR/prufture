@@ -6,7 +6,7 @@
 // The pure EAS request builder lives in relayer-request.ts and is re-exported here so existing
 // callers and the invariant tests keep their import path.
 
-import { unavailable, type ExternalResult, type ProofPublicPayload } from "@proof/core";
+import { guard, unavailable, type ExternalResult, type ProofPublicPayload } from "@proof/core";
 import { env } from "./env.js";
 import { localKeySubmitter } from "./submitters/local-key.js";
 import { noneSubmitter } from "./submitters/none.js";
@@ -30,12 +30,44 @@ export function selectedSubmitter(): AttestationSubmitter {
   return SUBMITTERS[name] ?? noneSubmitter;
 }
 
+/**
+ * Run an adapter and make its typed contract STRUCTURAL rather than a promise.
+ *
+ * Every adapter today guards internally, so nothing currently throws here. But the whole point
+ * of the port is that adapters get added, and one that throws — or returns something that is
+ * not an ExternalResult — would otherwise propagate out of /sync and break offline capture,
+ * which is the one thing that must never happen. The port enforces the contract it defines.
+ */
+export async function submitThrough(
+  submitter: AttestationSubmitter,
+  payload: ProofPublicPayload,
+): Promise<ExternalResult<AttestResult>> {
+  const result = await guard("relayer/eas", async () => {
+    const r = await submitter.submit(payload);
+    if (!r || typeof r.available !== "boolean") {
+      throw new Error("submitter returned a non-conforming result");
+    }
+    return r;
+  });
+
+  // guard() wraps a conforming envelope in another envelope; unwrap back to the adapter's own.
+  return result.available ? result.data : result;
+}
+
 export async function submitAttestation(
   payload: ProofPublicPayload,
 ): Promise<ExternalResult<AttestResult>> {
   const submitter = selectedSubmitter();
 
-  if (!submitter.isConfigured()) {
+  // isConfigured() is adapter code too, so it is not trusted to stay quiet either.
+  let configured: boolean;
+  try {
+    configured = submitter.isConfigured();
+  } catch {
+    return unavailable("relayer/eas", `${submitter.name} adapter failed its configuration check`);
+  }
+
+  if (!configured) {
     // Same typed shape as before; the message names the config, never a credential.
     return unavailable(
       "relayer/eas",
@@ -45,7 +77,7 @@ export async function submitAttestation(
     );
   }
 
-  return submitter.submit(payload);
+  return submitThrough(submitter, payload);
 }
 
 // Re-exported so a deployment can assert which chain the allowlist is pinned to.
