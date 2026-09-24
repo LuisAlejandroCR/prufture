@@ -5,13 +5,8 @@
 
 import { test, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
-import { env } from "../src/env.js";
+import { env, relayerConfigured } from "../src/env.js";
 import { submitAttestation } from "../src/relayer.js";
-
-const here = dirname(fileURLToPath(import.meta.url));
 
 const RPC_KEYS = ["RPC_URL", "DWELLIR_RPC_URL", "RELAYER_PRIVATE_KEY", "EAS_SCHEMA_UID"] as const;
 
@@ -56,37 +51,19 @@ test("an empty RPC_URL falls back to the deprecated name rather than blanking it
   assert.equal(env.rpcUrl, "https://legacy-vendor.example/base-sepolia");
 });
 
-// relayerPrivateKey / easSchemaUid are snapshot at module load (unlike the rpcUrl getter), so
-// the whole-config check runs in a subprocess with the env preset — the same convention
-// relayer.invariant.test.ts uses. This is what proves the deprecated name still configures a
-// real deployment end to end.
-function configuredUnder(vars: Record<string, string>): boolean {
-  const envUrl = pathToFileURL(resolve(here, "../src/env.ts")).href;
-  const script = `
-    import { relayerConfigured } from ${JSON.stringify(envUrl)};
-    console.log(relayerConfigured() ? "YES" : "NO");
-  `;
-  const out = execFileSync(process.execPath, ["--import", "tsx", "--input-type=module", "-e", script], {
-    encoding: "utf8",
-    env: { ...process.env, RPC_URL: "", DWELLIR_RPC_URL: "", ...vars },
-  });
-  return /YES/.test(out);
-}
-
 test("relayerConfigured() is satisfied by either endpoint name", () => {
-  const keys = { RELAYER_PRIVATE_KEY: `0x${"1".repeat(64)}`, EAS_SCHEMA_UID: `0x${"2".repeat(64)}` };
+  clear();
+  process.env.RELAYER_PRIVATE_KEY = `0x${"1".repeat(64)}`;
+  process.env.EAS_SCHEMA_UID = `0x${"2".repeat(64)}`;
 
-  assert.equal(configuredUnder(keys), false, "no endpoint under either name");
-  assert.equal(
-    configuredUnder({ ...keys, DWELLIR_RPC_URL: "https://legacy-vendor.example/base-sepolia" }),
-    true,
-    "deprecated name still configures the relayer",
-  );
-  assert.equal(
-    configuredUnder({ ...keys, RPC_URL: "https://any-provider.example/base-sepolia" }),
-    true,
-    "supported name configures the relayer",
-  );
+  assert.equal(relayerConfigured(), false, "no endpoint under either name");
+
+  process.env.DWELLIR_RPC_URL = "https://legacy-vendor.example/base-sepolia";
+  assert.equal(relayerConfigured(), true, "deprecated name still configures the relayer");
+
+  delete process.env.DWELLIR_RPC_URL;
+  process.env.RPC_URL = "https://any-provider.example/base-sepolia";
+  assert.equal(relayerConfigured(), true, "supported name configures the relayer");
 });
 
 test("with no endpoint the relayer degrades typed and names RPC_URL, not the vendor", async () => {

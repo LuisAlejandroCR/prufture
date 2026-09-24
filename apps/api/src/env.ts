@@ -1,7 +1,14 @@
 // env.ts: reads config from process.env. Missing values degrade features, never crash the server.
+//
+// EVERY field is a live getter, read at call time rather than snapshot at import. That uniformity
+// matters: when some fields were snapshot and others live, a "configured" check could disagree
+// with what the call would actually do, and a test had to spawn a subprocess just to vary config.
+// Nothing here caches, so a deploy — or a test — can change any value without re-importing.
 
 export const env = {
-  port: Number(process.env.PORT ?? 8787),
+  get port(): number {
+    return Number(process.env.PORT ?? 8787);
+  },
 
   // Vendor-neutral Base Sepolia JSON-RPC endpoint. RPC_URL is the supported name; any provider
   // serving the chain works, so switching is a config change and not a code change. The legacy
@@ -14,13 +21,27 @@ export const env = {
   get rpcUrlIsLegacy(): boolean {
     return !process.env.RPC_URL && Boolean(process.env.DWELLIR_RPC_URL);
   },
-  relayerPrivateKey: process.env.RELAYER_PRIVATE_KEY ?? "",
-  easContract: process.env.EAS_CONTRACT_ADDRESS ?? "0x4200000000000000000000000000000000000021",
-  easSchemaUid: process.env.EAS_SCHEMA_UID ?? "",
-  chainId: Number(process.env.BASE_SEPOLIA_CHAIN_ID ?? 84532),
-  neuroUrl: process.env.NEURO_AGENT_API_URL ?? "",
-  neuroToken: process.env.NEURO_AGENT_API_TOKEN ?? "",
-  neuroLivenessPath: process.env.NEURO_LIVENESS_PATH ?? "/liveness",
+  get relayerPrivateKey(): string {
+    return process.env.RELAYER_PRIVATE_KEY ?? "";
+  },
+  get easContract(): string {
+    return process.env.EAS_CONTRACT_ADDRESS ?? "0x4200000000000000000000000000000000000021";
+  },
+  get easSchemaUid(): string {
+    return process.env.EAS_SCHEMA_UID ?? "";
+  },
+  get chainId(): number {
+    return Number(process.env.BASE_SEPOLIA_CHAIN_ID ?? 84532);
+  },
+  get neuroUrl(): string {
+    return process.env.NEURO_AGENT_API_URL ?? "";
+  },
+  get neuroToken(): string {
+    return process.env.NEURO_AGENT_API_TOKEN ?? "";
+  },
+  get neuroLivenessPath(): string {
+    return process.env.NEURO_LIVENESS_PATH ?? "/liveness";
+  },
 
   // Auto-notify: on sync/attest, best-effort send the public verifyUrl to the PROGRAMME team
   // (never the reporter). Off unless explicitly enabled. Recipients are fixed and env-configured;

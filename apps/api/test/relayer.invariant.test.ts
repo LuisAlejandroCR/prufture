@@ -95,7 +95,8 @@ test("invariant: submitAttestation never throws and returns a typed envelope (un
 });
 
 test("invariant: submitAttestation degrades (never throws) even when misconfigured with a dead RPC", () => {
-  // env is read at module load, so run in a child process with a bogus but well-formed config.
+  // A child process keeps this end-to-end: a fresh module graph, a bogus but well-formed
+  // config, and a dead RPC — proving the degradation path without touching this process's env.
   const here = dirname(fileURLToPath(import.meta.url));
   const relayerUrl = pathToFileURL(resolve(here, "../src/relayer.ts")).href;
   const script = `

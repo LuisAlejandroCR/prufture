@@ -20,25 +20,28 @@ import {
   type LivenessPort,
 } from "../src/assurance.js";
 import { app } from "../src/index.js";
-import { env } from "../src/env.js";
 
 const PROVIDER_KEYS = ["LIVENESS_PROVIDER", "ATTRIBUTE_PROVIDER"];
 const realFetch = globalThis.fetch;
-const realNeuroUrl = env.neuroUrl;
-const realNeuroToken = env.neuroToken;
+const realNeuroUrl = process.env.NEURO_AGENT_API_URL;
+const realNeuroToken = process.env.NEURO_AGENT_API_TOKEN;
 
-// env.neuroUrl/neuroToken are plain writable properties snapshot at load, so the suite sets them
-// directly — the same approach neuro.test.ts uses.
+// env.* are live getters over process.env, so configuration is varied at the source.
+function setEnv(key: string, value: string | undefined): void {
+  if (value === undefined) delete process.env[key];
+  else process.env[key] = value;
+}
+
 function credentials(on: boolean): void {
-  env.neuroUrl = on ? "https://neuro.example/agent" : "";
-  env.neuroToken = on ? "secret-token-value" : "";
+  setEnv("NEURO_AGENT_API_URL", on ? "https://neuro.example/agent" : "");
+  setEnv("NEURO_AGENT_API_TOKEN", on ? "secret-token-value" : "");
 }
 
 afterEach(() => {
   globalThis.fetch = realFetch;
   for (const k of PROVIDER_KEYS) delete process.env[k];
-  env.neuroUrl = realNeuroUrl;
-  env.neuroToken = realNeuroToken;
+  setEnv("NEURO_AGENT_API_URL", realNeuroUrl);
+  setEnv("NEURO_AGENT_API_TOKEN", realNeuroToken);
 });
 
 const FRAMES = { frames: ["ZnJhbWUx", "ZnJhbWUy"], nonceHex: "a".repeat(32), challenges: ["blink", "left"] };
