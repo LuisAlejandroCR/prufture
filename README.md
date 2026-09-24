@@ -96,7 +96,7 @@ biometric consent, retention policy) are a UNICEF/legal workstream.
 - A second attestation over the same hash (deduped by attester).
 - Public `/verify/[hash]` and `/dashboard`, no login, coarse region only.
 - WhatsApp delivery of the verification link (Kapso); email degrades cleanly.
-- Automated tests: `packages/core` 2 · `apps/api` 58 · `apps/backend` 14 · `apps/frontend` 83.
+- Automated tests: `packages/core` 8 · `apps/api` 92 · `apps/backend` 29 · `apps/frontend` 135 (264 total, all passing).
 
 **Scoped next, not implemented:** on-device zero-knowledge proof (a commitment stands in); hardware
 attestation / TEE signing; App/Play Store publication (config written, not run); live Neuro
