@@ -5,4 +5,5 @@ export * from "./result.js";
 export * from "./hash.js";
 export * from "./geohash.js";
 export * from "./csv.js";
+export * from "./limits.js";
 export * from "./signature.js";

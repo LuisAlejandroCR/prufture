@@ -16,7 +16,14 @@
 
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
-import { COARSE_GEOHASH_LEN, isCoarseGeohash, verifyProof, type SignedProof } from "@proof/core";
+import {
+  COARSE_GEOHASH_LEN,
+  MAX_REPORT_ID_LEN,
+  firstOversizedField,
+  isCoarseGeohash,
+  verifyProof,
+  type SignedProof,
+} from "@proof/core";
 import { env } from "./env.js";
 import {
   addAttestation,
@@ -66,8 +73,20 @@ app.post("/sync", async (c) => {
     return c.json({ error: "geohash too precise", maxLength: COARSE_GEOHASH_LEN }, 400);
   }
 
+  // Size caps on the signed fields. These travel into EAS calldata, which the relayer pays gas
+  // for per byte, and into the durable store — and the signature is from a self-generated key,
+  // so the caller is unauthenticated. Like an over-precise geohash, an oversized signed field
+  // cannot be trimmed without invalidating the signature, so it is rejected.
+  const oversized = firstOversizedField(body);
+  if (oversized) {
+    return c.json({ error: `${oversized.field} too long`, maxLength: oversized.maxLength }, 413);
+  }
+
   const payload = { proofHash: body.proofHash, taskId: body.taskId, geohash: body.geohash, capturedAt: body.capturedAt };
-  const reportId = typeof body.reportId === "string" && body.reportId ? body.reportId : undefined;
+  const reportId =
+    typeof body.reportId === "string" && body.reportId && body.reportId.length <= MAX_REPORT_ID_LEN
+      ? body.reportId
+      : undefined;
   upsertProof(payload, reportId);
 
   // On-chain attestation is best-effort. A degraded relayer must not fail the sync:
