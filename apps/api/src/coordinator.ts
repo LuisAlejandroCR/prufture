@@ -5,6 +5,7 @@
 // Fail CLOSED: if the entitlement check is degraded we return 503, never "allow anyway".
 // A client-reported boolean is never trusted, and no reviewer identity is ever stored.
 
+import { csvCell } from "@proof/core";
 import type { Context, Next } from "hono";
 import { checkEntitlement } from "./entitlement.js";
 import type { Entry } from "./store.js";
@@ -76,31 +77,6 @@ export function toCoordinatorRow(entry: Entry, regionLen: number): CoordinatorRo
     reviewNote: entry.review?.note ?? "",
     reviewedAt: entry.review?.reviewedAt ?? "",
   };
-}
-
-// Leading characters that make Excel, LibreOffice and Google Sheets treat a cell as a formula
-// rather than text. A tab or carriage return counts because the app strips it and re-reads what
-// follows.
-const FORMULA_LEAD = /^[=+\-@\t\r]/;
-
-/**
- * Neutralise spreadsheet formula injection.
- *
- * taskId reaches this export straight from a reporter's signed payload, and anyone can generate
- * a key and sign one — there is no registration. So an unauthenticated value would otherwise be
- * executed by the spreadsheet of the programme officer who opens the export. Prefixing with a
- * single quote is the standard mitigation: spreadsheets read the cell as text and do not show
- * the quote, while a plain CSV reader sees one added character.
- */
-function neutraliseFormula(value: string): string {
-  return FORMULA_LEAD.test(value) ? `'${value}` : value;
-}
-
-/** RFC 4180 escaping. A note containing a comma, quote or newline must not break the row. */
-function csvCell(value: string): string {
-  const safe = neutraliseFormula(value);
-  if (/[",\r\n]/.test(safe)) return `"${safe.replace(/"/g, '""')}"`;
-  return safe;
 }
 
 export const CSV_HEADER = [

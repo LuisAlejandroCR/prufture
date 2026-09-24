@@ -1,12 +1,19 @@
 // ExportButton.tsx: builds the coarse CSV in the browser from data that is already
 // region-level. It cannot reach a full geohash, GPS point, or reporter identity.
+//
+// Cells are built with csvCell from @proof/core, the SAME helper the api's coordinator export
+// uses. The activity column derives from taskId, which comes from a reporter's signed payload
+// and is therefore untrusted — quoting alone would not stop a spreadsheet evaluating it as a
+// formula. Sharing the helper is what keeps this exporter and the api's from drifting apart.
 
 "use client";
 
+import { csvCell } from "@proof/core";
 import type { ProofSummary } from "../../../lib/api";
 import { activityLabel, programmeName, REVIEW_LABEL, reviewStatus } from "../../../lib/dashboard";
 
-function csv(proofs: ProofSummary[]): string {
+/** Exported for tests: the exact CSV the download button produces. */
+export function csv(proofs: ProofSummary[]): string {
   const head = ["activity", "programme", "approximate_region", "captured_date", "review_status", "confirmations"];
   const lines = proofs.map((p) => {
     const d = new Date(p.capturedAt);
@@ -18,7 +25,7 @@ function csv(proofs: ProofSummary[]): string {
       REVIEW_LABEL[reviewStatus(p)],
       String(p.attestationCount),
     ]
-      .map((c) => `"${c.replace(/"/g, '""')}"`)
+      .map(csvCell)
       .join(",");
   });
   return [head.join(","), ...lines].join("\n");
