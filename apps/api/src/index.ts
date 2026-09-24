@@ -2,7 +2,8 @@
 // POST /sync   - receive a signed proof, verify signature, attest on-chain (or degrade).
 // POST /attest - a second attester confirms the same proofHash ("more eyes").
 // POST /notify - send the public verifyUrl over a delivery channel (url only, no payload).
-// POST /verify-identity - attach a verified attribute (boolean) to a proof via Neuro, or degrade.
+// POST /verify-identity - attach a verified attribute (boolean) to a proof via the selected
+//   AttributePort, or degrade. Both assurance ports default OFF (see assurance.ts).
 // POST /precise-location - store an opaque encrypted precise-location blob against a proof.
 // POST /register-push - store an anonymous Expo push token (random device id, no identity).
 // GET  /proof/:hash - public verification data, zero PII (never the precise-location blob).
@@ -29,7 +30,7 @@ import {
 } from "./store.js";
 import { pushRegistrationCount, registerPushToken } from "./push-store.js";
 import { submitAttestation } from "./relayer.js";
-import { checkLiveness, getVerifiedAttribute } from "./neuro.js";
+import { checkLivenessVerdict, fetchVerifiedAttribute } from "./assurance.js";
 import { sendVerifyUrl, type Channel } from "./channels.js";
 import { maybeNotify } from "./notify.js";
 import {
@@ -152,7 +153,7 @@ app.post("/verify-identity", async (c) => {
   // Liveness mode: selfie frames, no proofHash yet. The verdict is attached later via
   // /liveness-result. Only a boolean is returned; frames are never stored or logged.
   if (Array.isArray(body.frames)) {
-    const result = await checkLiveness({
+    const result = await checkLivenessVerdict({
       frames: body.frames as string[],
       nonceHex: String(body.nonceHex ?? ""),
       challenges: Array.isArray(body.challenges) ? (body.challenges as string[]).map(String) : [],
@@ -168,7 +169,7 @@ app.post("/verify-identity", async (c) => {
     return c.json({ error: "unknown proofHash" }, 404);
   }
 
-  const result = await getVerifiedAttribute({ attribute: body.attribute, subjectRef: body.subjectRef });
+  const result = await fetchVerifiedAttribute({ attribute: body.attribute, subjectRef: body.subjectRef });
 
   // Degraded (sandbox down / unconfigured): 200 with the typed result, proof unchanged.
   if (!result.available) {
