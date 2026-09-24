@@ -1,5 +1,5 @@
 // register-schema.ts: one-off — registers the Proof-at-Capture EAS schema on Base Sepolia.
-// Run once with a funded RELAYER_PRIVATE_KEY + DWELLIR_RPC_URL, copy the printed UID into
+// Run once with a funded RELAYER_PRIVATE_KEY + RPC_URL, copy the printed UID into
 // EAS_SCHEMA_UID in apps/api/.env (never commit it). Steps live in docs/verification.md.
 // Least privilege note: this touches the SchemaRegistry, not the relayer's attest-only path.
 
@@ -35,10 +35,11 @@ const REGISTRY_ABI = [
 ] as const;
 
 async function main() {
-  const rpc = process.env.DWELLIR_RPC_URL;
+  // RPC_URL is the supported name; DWELLIR_RPC_URL stays as a deprecated fallback.
+  const rpc = process.env.RPC_URL || process.env.DWELLIR_RPC_URL;
   const rawKey = process.env.RELAYER_PRIVATE_KEY;
   if (!rpc || !rawKey) {
-    console.error("BLOCKED: set DWELLIR_RPC_URL and RELAYER_PRIVATE_KEY in the environment first.");
+    console.error("BLOCKED: set RPC_URL and RELAYER_PRIVATE_KEY in the environment first.");
     process.exit(1);
   }
   const pk = (rawKey.startsWith("0x") ? rawKey : `0x${rawKey}`) as Hex;

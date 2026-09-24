@@ -2,7 +2,18 @@
 
 export const env = {
   port: Number(process.env.PORT ?? 8787),
-  dwellirRpcUrl: process.env.DWELLIR_RPC_URL ?? "",
+
+  // Vendor-neutral Base Sepolia JSON-RPC endpoint. RPC_URL is the supported name; any provider
+  // serving the chain works, so switching is a config change and not a code change. The legacy
+  // DWELLIR_RPC_URL is still honoured as a deprecated fallback so an existing deployment keeps
+  // working across the rename. Read live (getter) so a test can flip it without re-importing.
+  get rpcUrl(): string {
+    return process.env.RPC_URL || process.env.DWELLIR_RPC_URL || "";
+  },
+  /** True when the endpoint came only from the deprecated DWELLIR_RPC_URL name. */
+  get rpcUrlIsLegacy(): boolean {
+    return !process.env.RPC_URL && Boolean(process.env.DWELLIR_RPC_URL);
+  },
   relayerPrivateKey: process.env.RELAYER_PRIVATE_KEY ?? "",
   easContract: process.env.EAS_CONTRACT_ADDRESS ?? "0x4200000000000000000000000000000000000021",
   easSchemaUid: process.env.EAS_SCHEMA_UID ?? "",
@@ -44,7 +55,7 @@ export const env = {
 };
 
 export function relayerConfigured(): boolean {
-  return Boolean(env.dwellirRpcUrl && env.relayerPrivateKey && env.easSchemaUid);
+  return Boolean(env.rpcUrl && env.relayerPrivateKey && env.easSchemaUid);
 }
 
 /** True when the given trigger should fire a notification per NOTIFY_ON. */
