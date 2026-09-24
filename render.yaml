@@ -39,6 +39,9 @@ services:
         sync: false
       - key: RELAYER_PRIVATE_KEY
         sync: false
+      # Submitter adapter: "local-key" (default) or "none". Unknown names fail closed to "none".
+      - key: ATTESTATION_SUBMITTER
+        sync: false
       - key: EAS_SCHEMA_UID
         sync: false
       - key: EAS_CONTRACT_ADDRESS
