@@ -4,9 +4,10 @@
 // old in-memory Map — no caller change. Swap the file backend for hosted KV/SQLite if the api ever
 // runs on ephemeral storage: see SWAP POINT below.
 
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { tmpdir } from "node:os";
+import { randomUUID } from "node:crypto";
 import type { ProofPublicPayload } from "@proof/core";
 
 export interface AttestationRecord {
@@ -67,7 +68,24 @@ const FLUSH_DEBOUNCE_MS = 50;
 function defaultStorePath(): string {
   if (process.env.STORE_PATH) return process.env.STORE_PATH;
   // Under `node --test` each file runs in its own process; keep the repo tree clean.
-  if (process.env.NODE_TEST_CONTEXT) return join(tmpdir(), `prufture-store-test-${process.pid}.json`);
+  //
+  // The name must be unique per RUN, not just per process. Keying it on the pid alone leaked
+  // state between runs: pids are recycled, the files were never deleted, and a test process
+  // landing on a recycled pid would load a previous run's store — which made "unknown proofHash
+  // => 404" assertions fail intermittently, because an earlier run had synced that hash.
+  // A random component makes collision impossible; the exit hook stops the files accumulating.
+  if (process.env.NODE_TEST_CONTEXT) {
+    const path = join(tmpdir(), `prufture-store-test-${process.pid}-${randomUUID()}.json`);
+    process.on("exit", () => {
+      try {
+        rmSync(path, { force: true });
+        rmSync(`${path}.tmp`, { force: true });
+      } catch {
+        // Best-effort cleanup; a leftover temp file must never fail a test run.
+      }
+    });
+    return path;
+  }
   return "./.data/store.json";
 }
 
@@ -247,6 +265,11 @@ export function getProof(proofHash: string): Entry | undefined {
 
 export function allProofs(): Entry[] {
   return [...byHash.values()];
+}
+
+/** Test-only: the path this process is actually using. Not used by the running server. */
+export function __storePathForTests(): string {
+  return storePath;
 }
 
 /** Test-only: repoint at a temp file and reload from disk. Not used by the running server. */
