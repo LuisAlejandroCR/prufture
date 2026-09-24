@@ -30,7 +30,11 @@ services:
       # Public site base, used to build the verifyUrl in POST /notify. Set to the Vercel URL.
       - key: VERIFY_BASE_URL
         sync: false
-      # On-chain attestation (Base Sepolia via Dwellir). Absent -> /sync degrades to "synced".
+      # On-chain attestation (Base Sepolia). Any JSON-RPC endpoint for the chain; the provider is
+      # a configuration choice. Absent -> /sync degrades to "synced".
+      - key: RPC_URL
+        sync: false
+      # DEPRECATED fallback name, honoured only when RPC_URL is unset. Drop once migrated.
       - key: DWELLIR_RPC_URL
         sync: false
       - key: RELAYER_PRIVATE_KEY

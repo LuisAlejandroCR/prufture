@@ -1,4 +1,5 @@
-// relayer.ts: submits an EAS attestation on Base Sepolia via Dwellir RPC, paying gas.
+// relayer.ts: submits an EAS attestation on Base Sepolia over a configured RPC endpoint, paying
+// gas. The endpoint is vendor-neutral (env.rpcUrl) — any provider serving the chain works.
 // Least privilege: this key may only call attest(). It never moves user funds — no
 // transfer, sendTransaction-with-value, approve, or contract call other than attest().
 // guard() ensures any failure becomes ExternalUnavailable and never throws the user flow.
@@ -120,7 +121,7 @@ export async function submitAttestation(
       source: "relayer/eas",
       checkedAt: new Date().toISOString(),
       data: null,
-      error: "relayer not configured (DWELLIR_RPC_URL / RELAYER_PRIVATE_KEY / EAS_SCHEMA_UID missing)",
+      error: "relayer not configured (RPC_URL / RELAYER_PRIVATE_KEY / EAS_SCHEMA_UID missing)",
     };
   }
 
@@ -133,7 +134,7 @@ export async function submitAttestation(
     const wallet = createWalletClient({
       account,
       chain: baseSepolia,
-      transport: http(env.dwellirRpcUrl),
+      transport: http(env.rpcUrl),
     });
 
     const txHash = await wallet.writeContract(buildAttestRequest(payload));

@@ -67,12 +67,13 @@ not something this repository can assert. The pilot's first job is to measure it
 2. The app hashes the photo, signs the proof with an ed25519 key held in the OS secure store, and
    stores it as `pending sync` in a local SQLite queue.
 3. When the network returns, the queue syncs itself to the backend relayer, which verifies the
-   signature and records a real EAS attestation on Base Sepolia via Dwellir RPC (it pays the gas).
+   signature and records a real EAS attestation on Base Sepolia over the configured RPC endpoint
+   (it pays the gas).
 4. A public `/verify/<hash>` page shows the status with no login; a `/dashboard` shows the programme
    view by coarse region. A second person can attest the same hash for community verification.
 5. The verification link is delivered to the programme team by WhatsApp, with email as a fallback.
 
-Every external call (relayer, Dwellir, Neuro, WhatsApp, email) returns a typed result and never
+Every external call (relayer, RPC, Neuro, WhatsApp, email) returns a typed result and never
 breaks the offline capture flow.
 
 ## Privacy posture
@@ -206,8 +207,8 @@ and MOSIP's statement that the platform
   external call degrades to a typed "unavailable" result.
 - To run the mobile app on a phone: the **Expo Go** app, or an internal EAS build (needs an Expo
   account).
-- Optional, only for the real on-chain path: a Base Sepolia RPC URL (Dwellir) and a funded
-  gas-only key.
+- Optional, only for the real on-chain path: any Base Sepolia RPC URL and a funded gas-only key.
+  The provider is a configuration choice — see the provider portability plan below.
 
 ```bash
 npm install
@@ -224,7 +225,8 @@ npm run front   # mobile via Expo Go
 ```
 
 With no `.env`, `/sync` returns `synced` instead of `attested` and channels report unavailable. For
-the real on-chain path, copy `.env.example` to `apps/api/.env` and set `DWELLIR_RPC_URL`,
+the real on-chain path, copy `.env.example` to `apps/api/.env` and set `RPC_URL` (any Base
+Sepolia JSON-RPC endpoint),
 `RELAYER_PRIVATE_KEY` (gas only, never funds), and `EAS_SCHEMA_UID` (from
 `npm run register-schema --workspace apps/api`). Seed sample proofs for the dashboard and a
 `/verify` page:
