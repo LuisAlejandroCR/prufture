@@ -49,6 +49,11 @@ services:
       - key: BASE_SEPOLIA_CHAIN_ID
         value: "84532"
       # Identity (Neuro). Absent -> /verify-identity degrades.
+      # Assurance ports default OFF; credentials alone do not enable them.
+      - key: LIVENESS_PROVIDER
+        sync: false
+      - key: ATTRIBUTE_PROVIDER
+        sync: false
       - key: NEURO_AGENT_API_URL
         sync: false
       - key: NEURO_AGENT_API_TOKEN
