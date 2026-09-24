@@ -160,6 +160,20 @@ path; attribute providers must support a minimal boolean or verifiable presentat
 identity data into the proof pipeline. A liveness vendor is not an attribute issuer, and one must not
 be selected as a substitute for the other.
 
+For the institutional attribute path, prefer a standards-based `openid4vp` adapter over a
+vendor-specific `mosip` adapter. That adapter can accept a selectively disclosed presentation from
+MOSIP's Inji wallet and verifier stack—or another compatible issuer—without requiring Prufture to
+deploy a national identity system. Inji Certify and eSignet are relevant when a government or NGO
+already operates the issuing and identity infrastructure; they are not prerequisites for reporting.
+MOSIP is not the liveness adapter: its platform specifies biometric integration points but relies on
+external biometric SDKs for the underlying matching, quality, and liveness capabilities.
+
+The `openid4vp` adapter must validate issuer trust, audience, nonce/state, signature, expiry, and
+credential status before reducing a presentation to the allowlisted boolean attribute. It must never
+persist the presentation or expose its claims to the proof, public API, logs, or chain. A missing
+wallet, credential, issuer, or network maps to `not_enrolled` or typed `unavailable`; it never blocks
+offline capture.
+
 **Exit criterion:** contract tests run unchanged for every adapter; unavailable assurance still saves
 the report offline; hostile vendor responses cannot escape the minimal verdict; and one consented
 end-to-end sandbox check is recorded before an adapter is labelled verified.
@@ -177,6 +191,11 @@ Useful primary references: [Base Sepolia RPC example](https://docs.base.org/cook
 [CDP Node](https://docs.cdp.coinbase.com/data/node/overview),
 [OpenZeppelin Relayer](https://docs.openzeppelin.com/relayer/quickstart), and
 [AWS Face Liveness flow and limitations](https://docs.aws.amazon.com/rekognition/latest/dg/face-liveness.html).
+For the credential path, see the
+[Inji Verify OpenID4VP integration guide](https://docs.inji.io/inji-verify/technical-overview/integration-guides/openid4vp-vp-verification-integration-guide),
+[Inji Certify](https://github.com/inji/inji-certify), [eSignet](https://github.com/mosip/esignet),
+and MOSIP's statement that the platform
+[relies on external biometric SDKs](https://docs.mosip.io/1.1.5/biometrics/biometric-sdk).
 
 ---
 
