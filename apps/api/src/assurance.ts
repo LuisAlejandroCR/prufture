@@ -13,7 +13,7 @@
 
 import type { ExternalResult } from "@proof/core";
 import { env } from "./env.js";
-import { unavailable } from "@proof/core";
+import { guard, unavailable } from "@proof/core";
 import { checkLiveness, getVerifiedAttribute, type LivenessInput, type VerifiedAttribute, type VerifiedAttributeInput } from "./neuro.js";
 
 export type { LivenessInput, VerifiedAttribute, VerifiedAttributeInput };
@@ -108,12 +108,45 @@ export function selectedAttributePort(): AttributePort {
  */
 export async function checkLivenessVerdict(input: LivenessInput): Promise<ExternalResult<LivenessVerdict>> {
   const port = selectedLivenessPort();
-  if (!port.isConfigured()) return unavailable("liveness", port.name === "none" ? OFF_LIVENESS : `${port.name} not configured`);
-  return port.check(input);
+  if (!isConfiguredSafely(port)) {
+    return unavailable("liveness", port.name === "none" ? OFF_LIVENESS : `${port.name} not configured`);
+  }
+  return runThrough("liveness", port.name, () => port.check(input));
 }
 
 export async function fetchVerifiedAttribute(input: VerifiedAttributeInput): Promise<ExternalResult<VerifiedAttribute>> {
   const port = selectedAttributePort();
-  if (!port.isConfigured()) return unavailable("attribute", port.name === "none" ? OFF_ATTRIBUTE : `${port.name} not configured`);
-  return port.get(input);
+  if (!isConfiguredSafely(port)) {
+    return unavailable("attribute", port.name === "none" ? OFF_ATTRIBUTE : `${port.name} not configured`);
+  }
+  return runThrough("attribute", port.name, () => port.get(input));
+}
+
+/** An adapter's isConfigured() is adapter code: a throw from it means "not configured". */
+function isConfiguredSafely(port: { isConfigured(): boolean }): boolean {
+  try {
+    return port.isConfigured() === true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Make the ports' typed contract STRUCTURAL rather than a promise every adapter has to keep.
+ * Both adapters today guard internally, so nothing throws here now — but assurance must never
+ * be able to break the reporter's flow, and the plan exists precisely so adapters get added.
+ */
+export async function runThrough<T>(
+  source: string,
+  name: string,
+  call: () => Promise<ExternalResult<T>>,
+): Promise<ExternalResult<T>> {
+  const wrapped = await guard(source, async () => {
+    const r = await call();
+    if (!r || typeof r.available !== "boolean") {
+      throw new Error(`${name} adapter returned a non-conforming result`);
+    }
+    return r;
+  });
+  return wrapped.available ? wrapped.data : wrapped;
 }
