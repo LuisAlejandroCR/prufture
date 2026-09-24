@@ -85,6 +85,10 @@ chain, and the on-chain decode of the live attestation confirms it carries nothi
 person is signed or put on-chain. Pilot legal pre-conditions (named controller, lawful basis,
 biometric consent, retention policy) are a UNICEF/legal workstream.
 
+Evaluating a replacement provider does not widen this posture: a side-by-side comparison run
+accepts only provably synthetic proofs and refuses anything else before a candidate provider is
+contacted, so no real report is ever sent to a provider under evaluation.
+
 ## What runs today
 
 - Offline capture → sha256 + ed25519 signature (key in the OS secure store) → SQLite queue → auto-sync.
@@ -97,8 +101,8 @@ biometric consent, retention policy) are a UNICEF/legal workstream.
 - A second attestation over the same hash (deduped by attester).
 - Public `/verify/[hash]` and `/dashboard`, no login, coarse region only.
 - WhatsApp delivery of the verification link (Kapso); email degrades cleanly.
-- Automated tests: `packages/core` 8 · `apps/api` 92 · `apps/backend` 29 · `apps/frontend` 135
-  (264 total).
+- Automated tests: `packages/core` 8 · `apps/api` 147 · `apps/backend` 29 · `apps/frontend` 135
+  (319 total).
 
 **Scoped next, not implemented:** on-device zero-knowledge proof (a commitment stands in); hardware
 attestation / TEE signing; App/Play Store publication (config written, not run); live Neuro
@@ -187,6 +191,24 @@ adapter available for rollback through one observation window. Update tests, dep
 privacy disclosures, threat model, and verification evidence in the same change. Schema v2 and a
 different anchoring protocol are deliberately excluded: neither is required to remove these vendor
 dependencies.
+
+**Implemented:** `apps/api/src/cutover.ts` enforces the synthetic-only rule in code rather than
+leaving it to an operator. A comparison payload must carry the reserved `synthetic-` task prefix
+*and* a `proofHash` recomputable from its own public fields, so a real media hash cannot be
+smuggled through by renaming the task. `compareSubmitters()` refuses a non-synthetic payload
+**before either adapter is called**, which is what stops a real report from reaching a candidate
+provider during an evaluation. A comparison row carries only the two adapter names, an outcome
+label, and two booleans — never a receipt body, a vendor response, or key material.
+`cutoverReady()` holds the switch on any divergence, and on an empty run.
+
+Run an observation window with:
+
+```bash
+npm run shadow-compare --workspace apps/api -- <candidate> [count]
+```
+
+It exits non-zero while a cutover is held. Keep the previous adapter configured for one full
+window after switching, so rollback stays a configuration change.
 
 Useful primary references: [Base Sepolia RPC example](https://docs.base.org/cookbook/use-case-guides/finance/access-real-time-asset-data-pyth-price-feeds/),
 [CDP Node](https://docs.cdp.coinbase.com/data/node/overview),
