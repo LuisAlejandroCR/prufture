@@ -5,16 +5,21 @@
 
 import { test, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { env } from "../src/env.js";
 import { getVerifiedAttribute } from "../src/neuro.js";
 
 const realFetch = globalThis.fetch;
-const realUrl = env.neuroUrl;
-const realToken = env.neuroToken;
+const realUrl = process.env.NEURO_AGENT_API_URL;
+const realToken = process.env.NEURO_AGENT_API_TOKEN;
+
+// env.* are live getters over process.env, so configuration is varied at the source.
+function setEnv(key: string, value: string | undefined): void {
+  if (value === undefined) delete process.env[key];
+  else process.env[key] = value;
+}
 
 function configure(on: boolean): void {
-  env.neuroUrl = on ? "https://neuro.example/agent" : "";
-  env.neuroToken = on ? "secret-token-value" : "";
+  setEnv("NEURO_AGENT_API_URL", on ? "https://neuro.example/agent" : "");
+  setEnv("NEURO_AGENT_API_TOKEN", on ? "secret-token-value" : "");
 }
 
 // Capture everything written to the console during a call, as one flat string.
@@ -36,8 +41,8 @@ async function withCapturedLogs<T>(fn: () => Promise<T>): Promise<{ result: T; l
 
 afterEach(() => {
   globalThis.fetch = realFetch;
-  env.neuroUrl = realUrl;
-  env.neuroToken = realToken;
+  setEnv("NEURO_AGENT_API_URL", realUrl);
+  setEnv("NEURO_AGENT_API_TOKEN", realToken);
 });
 
 // --- unit ---------------------------------------------------------------
@@ -53,7 +58,7 @@ test("unconfigured env => available:false, no throw, no data", async () => {
 
 test("only NEURO_AGENT_API_TOKEN missing => still degrades", async () => {
   configure(true);
-  env.neuroToken = "";
+  setEnv("NEURO_AGENT_API_TOKEN", "");
   const r = await getVerifiedAttribute();
   assert.equal(r.available, false);
 });
