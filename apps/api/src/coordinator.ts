@@ -5,6 +5,7 @@
 // Fail CLOSED: if the entitlement check is degraded we return 503, never "allow anyway".
 // A client-reported boolean is never trusted, and no reviewer identity is ever stored.
 
+import { csvCell } from "@proof/core";
 import type { Context, Next } from "hono";
 import { checkEntitlement } from "./entitlement.js";
 import type { Entry } from "./store.js";
@@ -76,12 +77,6 @@ export function toCoordinatorRow(entry: Entry, regionLen: number): CoordinatorRo
     reviewNote: entry.review?.note ?? "",
     reviewedAt: entry.review?.reviewedAt ?? "",
   };
-}
-
-/** RFC 4180 escaping. A note containing a comma, quote or newline must not break the row. */
-function csvCell(value: string): string {
-  if (/[",\r\n]/.test(value)) return `"${value.replace(/"/g, '""')}"`;
-  return value;
 }
 
 export const CSV_HEADER = [
