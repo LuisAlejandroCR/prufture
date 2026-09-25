@@ -37,9 +37,13 @@ jobs:
         node: ["20", "22"]
 
     steps:
-      - uses: actions/checkout@v4
+      # v5 of both actions runs on the Node 24 runtime. v4 targeted Node 20, which GitHub
+      # deprecated — the runner was already forcing those steps onto 24 and warning on every run.
+      # This is the runtime the actions themselves execute on, not the matrix above: the project's
+      # own Node 20 support is unaffected and still tested.
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: ${{ matrix.node }}
           cache: npm
