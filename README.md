@@ -1,10 +1,11 @@
 <!-- README.md: public overview of the Prufture project for FIRSTBLOCK-ATHON.
-     Leads with the UNICEF / U-Report impact case, then the minimum requirements to run it.
+     Leads with the impact case for community-reporting programmes generally — U-Report is the
+     worked example, not the only fit — then the minimum requirements to run it.
      It contains no private agent instructions or credentials: those stay out of the public repo. -->
 
 # Prufture
 
-Prufture (formerly Proof-at-Capture) lets a U-Report volunteer photograph a completed field
+Prufture (formerly Proof-at-Capture) lets a community volunteer photograph a completed field
 activity — a solar panel installed, a water pump repaired — and turn it into an independent,
 privacy-preserving record: signed on the phone, queued offline, and anchored on a public chain as
 nothing but a hash and three non-identifying fields. Anyone can verify the activity happened, when,
@@ -13,13 +14,22 @@ signal at the moment of capture.
 
 ---
 
-## Why this matters to UNICEF
+## Why this matters
 
-U-Report runs on community members reporting from places with intermittent or no coverage. Today the
-proof of their work is a photo in a chat app. That photo is only as trustable as the sender, it
-carries the sender's identity, and it can lose context, arrive late, or be sent twice. So the
-programme either takes the report on faith or asks the volunteer for identifying data that puts them
-at risk. Prufture removes that trade-off, and with it a set of recurring costs.
+Any programme that depends on people reporting from places with intermittent or no coverage has the
+same problem. Today the proof of their work is a photo in a chat app. That photo is only as
+trustable as the sender, it carries the sender's identity, and it can lose context, arrive late, or
+be sent twice. So the programme either takes the report on faith or asks the reporter for
+identifying data that puts them at risk. Prufture removes that trade-off, and with it a set of
+recurring costs.
+
+U-Report is the worked example throughout this README, because the project was built in response to
+a UNICEF hackathon challenge and that is the channel the first pilot targets. Nothing in the design
+is specific to it: the same engine fits any field-verification workload where evidence is captured
+away from connectivity and the reporter's identity is a liability rather than an asset — community
+health reporting, humanitarian cash and in-kind distribution, infrastructure and repair
+verification, environmental monitoring, grant and subsidy milestone checks. Read "programme" below
+as whichever of those you are.
 
 ### Manual verification work removed
 
@@ -49,15 +59,16 @@ at risk. Prufture removes that trade-off, and with it a set of recurring costs.
 
 - No wallet, no account, no ID document for the volunteer in the first pilot — nothing for a support
   desk to reset or verify.
-- One capture-sign-queue-anchor engine serves any NGO field-proof use case, with U-Report as the
-  first channel and UNICEF RapidPro as the institutional path — it is not a single-programme build.
+- One capture-sign-queue-anchor engine serves any field-proof use case. U-Report is the first
+  channel and UNICEF RapidPro the institutional path for the pilot, but neither is wired into the
+  engine: a different programme changes the task list and the delivery channel, not the core.
 
 ### On the numbers
 
 Prufture is built to remove the manual verification, re-collection, and PII-handling work described
 above. Putting a currency figure on that saving needs a programme baseline — reports per month, share
-that currently trigger a re-visit, staff cost per verification trip — which is a UNICEF data input,
-not something this repository can assert. The pilot's first job is to measure it.
+that currently trigger a re-visit, staff cost per verification trip — which is a programme data
+input, not something this repository can assert. The pilot's first job is to measure it.
 
 ---
 
@@ -83,7 +94,8 @@ chain, and the on-chain decode of the live attestation confirms it carries nothi
 **not** claimed as GDPR-compliant, anonymous, ZK, TEE-backed, hardware-attested, or
 "deepfake-proof". The selfie liveness check keeps a server-side boolean only — nothing about the
 person is signed or put on-chain. Pilot legal pre-conditions (named controller, lawful basis,
-biometric consent, retention policy) are a UNICEF/legal workstream.
+biometric consent, retention policy) are a programme/legal workstream, not a claim this
+repository makes.
 
 Evaluating a replacement provider does not widen this posture: a side-by-side comparison run
 accepts only provably synthetic proofs and refuses anything else before a candidate provider is

@@ -45,8 +45,11 @@ const slideBodies: React.ReactNode[] = [
     </p>
     <ul>
       <li>
-        U-Report runs where coverage doesn&rsquo;t &mdash;{" "}
+        Field programmes run where coverage doesn&rsquo;t &mdash;{" "}
         <span className="m">volunteers verify field tasks with no signal at the moment it matters</span>.
+      </li>
+      <li className="m">
+        U-Report is the first channel; the engine fits any field-verification programme.
       </li>
       <li className="m">Luis Alejandro C&aacute;rdenas &mdash; solo founder / builder</li>
     </ul>
