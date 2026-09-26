@@ -49,7 +49,27 @@ import {
 } from "./coordinator.js";
 
 const VERIFY_BASE = process.env.VERIFY_BASE_URL ?? "http://localhost:3000";
+// MAX_RECIPIENT_LEN: cap for /notify's `to`. An e.164 number is ~16 and the longest legal email
+// address is 254; 320 leaves room for either without letting an unauthenticated caller push an
+// arbitrarily large string into a provider request.
+const MAX_RECIPIENT_LEN = 320;
 const CHANNELS: Channel[] = ["whatsapp", "email", "telegram"];
+
+// readJsonObject: the one place a request body is parsed. Returns null for anything that is not
+// a JSON object — unparseable bytes, but also the literal `null`, a bare string or a number.
+// Guarding the parse alone is not enough: `JSON.parse("null")` succeeds, and the property access
+// that follows throws, which Hono reports as a 500. Every POST route here is unauthenticated,
+// so the body must never be able to choose the status code.
+async function readJsonObject(c: { req: { json: () => Promise<unknown> } }): Promise<Record<string, unknown> | null> {
+  let parsed: unknown;
+  try {
+    parsed = await c.req.json();
+  } catch {
+    return null;
+  }
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return null;
+  return parsed as Record<string, unknown>;
+}
 
 const app = new Hono();
 
@@ -58,12 +78,9 @@ app.get("/health", (c) => c.json({ ok: true, chainId: env.chainId }));
 app.post("/sync", async (c) => {
   // `reportId` is an OPTIONAL top-level field (NOT inside SignedProof, NOT signed) that groups
   // the 1..N photos of one field report so the programme team gets ONE notification per report.
-  let body: SignedProof & { reportId?: string };
-  try {
-    body = (await c.req.json()) as SignedProof & { reportId?: string };
-  } catch {
-    return c.json({ error: "invalid json" }, 400);
-  }
+  const raw = await readJsonObject(c);
+  if (!raw) return c.json({ error: "invalid json" }, 400);
+  const body = raw as unknown as SignedProof & { reportId?: string };
   if (!verifyProof(body)) return c.json({ error: "invalid signature" }, 400);
 
   // Trust boundary for location precision. The geohash is inside the signed payload, so the
@@ -110,7 +127,12 @@ app.post("/sync", async (c) => {
 });
 
 app.post("/attest", async (c) => {
-  const { proofHash } = (await c.req.json()) as { proofHash: string };
+  // Same guard every other POST route uses: a malformed body is the caller's error (400), not
+  // the server's (500). This route is unauthenticated, so the parse must never be the thing
+  // that decides the status code.
+  const body = await readJsonObject(c);
+  if (!body) return c.json({ error: "invalid json" }, 400);
+  const proofHash = typeof body.proofHash === "string" ? body.proofHash : "";
   const entry = getProof(proofHash);
   if (!entry) return c.json({ error: "unknown proofHash" }, 404);
 
@@ -142,14 +164,19 @@ app.post("/attest", async (c) => {
 });
 
 app.post("/notify", async (c) => {
-  const { proofHash, channel, to } = (await c.req.json()) as {
-    proofHash: string;
-    channel: Channel;
-    to: string;
-  };
+  const body = await readJsonObject(c);
+  if (!body) return c.json({ error: "invalid json" }, 400);
+  const proofHash = typeof body.proofHash === "string" ? body.proofHash : "";
+  const channel = body.channel as Channel;
+  const to = typeof body.to === "string" ? body.to : "";
   if (!getProof(proofHash)) return c.json({ error: "unknown proofHash" }, 404);
   if (!CHANNELS.includes(channel)) return c.json({ error: "unknown channel" }, 400);
   if (!to) return c.json({ error: "missing recipient" }, 400);
+  // The recipient is relayed verbatim into a provider request. Nothing else caps it, and this
+  // route is unauthenticated, so an unbounded `to` is unbounded outbound payload.
+  if (to.length > MAX_RECIPIENT_LEN) {
+    return c.json({ error: "recipient too long", maxLength: MAX_RECIPIENT_LEN }, 413);
+  }
 
   const url = `${VERIFY_BASE}/verify/${proofHash}`;
   const result = await sendVerifyUrl(channel, to, url);
@@ -157,7 +184,9 @@ app.post("/notify", async (c) => {
 });
 
 app.post("/verify-identity", async (c) => {
-  let body: {
+  const raw = await readJsonObject(c);
+  if (!raw) return c.json({ error: "invalid json" }, 400);
+  const body = raw as {
     proofHash?: string;
     attribute?: string;
     subjectRef?: string;
@@ -165,11 +194,6 @@ app.post("/verify-identity", async (c) => {
     nonceHex?: string;
     challenges?: unknown;
   };
-  try {
-    body = (await c.req.json()) as typeof body;
-  } catch {
-    return c.json({ error: "invalid json" }, 400);
-  }
 
   // Liveness mode: selfie frames, no proofHash yet. The verdict is attached later via
   // /liveness-result. Only a boolean is returned; frames are never stored or logged.
@@ -211,12 +235,9 @@ app.post("/verify-identity", async (c) => {
 });
 
 app.post("/liveness-result", async (c) => {
-  let body: { proofHash?: string; verifiedPerson?: unknown; degraded?: unknown };
-  try {
-    body = (await c.req.json()) as typeof body;
-  } catch {
-    return c.json({ error: "invalid json" }, 400);
-  }
+  const raw = await readJsonObject(c);
+  if (!raw) return c.json({ error: "invalid json" }, 400);
+  const body = raw as { proofHash?: string; verifiedPerson?: unknown; degraded?: unknown };
   if (!body.proofHash) return c.json({ error: "missing proofHash" }, 400);
   const ok = setVerifiedPerson(body.proofHash, body.verifiedPerson === true, body.degraded === true);
   if (!ok) return c.json({ error: "unknown proofHash" }, 404);
@@ -228,12 +249,8 @@ app.post("/liveness-result", async (c) => {
 const MAX_CIPHER_LEN = 4096;
 
 app.post("/precise-location", async (c) => {
-  let body: { proofHash?: unknown; cipher?: unknown };
-  try {
-    body = (await c.req.json()) as typeof body;
-  } catch {
-    return c.json({ error: "invalid json" }, 400);
-  }
+  const body = await readJsonObject(c);
+  if (!body) return c.json({ error: "invalid json" }, 400);
   const proofHash = typeof body.proofHash === "string" ? body.proofHash : "";
   const cipher = typeof body.cipher === "string" ? body.cipher : "";
   if (!proofHash || !cipher) return c.json({ error: "missing proofHash or cipher" }, 400);
@@ -245,12 +262,8 @@ app.post("/precise-location", async (c) => {
 });
 
 app.post("/register-push", async (c) => {
-  let body: { deviceId?: unknown; token?: unknown; proofOwnerRef?: unknown };
-  try {
-    body = (await c.req.json()) as typeof body;
-  } catch {
-    return c.json({ error: "invalid json" }, 400);
-  }
+  const body = await readJsonObject(c);
+  if (!body) return c.json({ error: "invalid json" }, 400);
   // proofOwnerRef is intentionally ignored: tokens are never linked to a proof or an identity.
   if (!registerPushToken(body.deviceId, body.token)) {
     return c.json({ error: "invalid deviceId or token" }, 400);
@@ -311,12 +324,8 @@ app.get("/coordinator/reports", (c) =>
 );
 
 app.post("/coordinator/review", async (c) => {
-  let body: { proofHash?: unknown; status?: unknown; note?: unknown };
-  try {
-    body = (await c.req.json()) as typeof body;
-  } catch {
-    return c.json({ error: "invalid json" }, 400);
-  }
+  const body = await readJsonObject(c);
+  if (!body) return c.json({ error: "invalid json" }, 400);
 
   const proofHash = typeof body.proofHash === "string" ? body.proofHash : "";
   if (!proofHash) return c.json({ error: "missing proofHash" }, 400);
