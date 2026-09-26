@@ -41,19 +41,31 @@ test("submitLiveness: passes verdict through; degrades on non-200 without throwi
     { frames: ["a"], nonceHex: "x", sequence: ["center"] },
     async () => okJson({ verifiedPerson: true, degraded: false }),
   );
-  assert.deepEqual(good, { verifiedPerson: true, degraded: false });
+  assert.deepEqual(good, { verifiedPerson: true, degraded: false, ticket: "" });
 
   const bad = await submitLiveness(
     "http://api.test",
     { frames: ["a"], nonceHex: "x", sequence: ["center"] },
     async () => new Response("nope", { status: 503 }),
   );
-  assert.deepEqual(bad, { verifiedPerson: false, degraded: true });
+  assert.deepEqual(bad, { verifiedPerson: false, degraded: true, ticket: "" });
+});
+
+test("submitLiveness carries the api's ticket; a missing or oversized one becomes \"\"", async () => {
+  const input = { frames: ["a"], nonceHex: "x", sequence: ["center" as const] };
+  const withTicket = await submitLiveness("http://api.test", input, async () =>
+    okJson({ verifiedPerson: true, degraded: false, ticket: "v1.abc.def" }),
+  );
+  assert.equal(withTicket.ticket, "v1.abc.def");
+  const oversized = await submitLiveness("http://api.test", input, async () =>
+    okJson({ verifiedPerson: true, degraded: false, ticket: "x".repeat(1000) }),
+  );
+  assert.equal(oversized.ticket, "");
 });
 
 test("attachLiveness buffers on failure; flushPendingLiveness clears it once the proof exists", async () => {
   __resetPendingLiveness();
-  await attachLiveness("http://api.test", "hash1", true, false, async () => new Response("", { status: 404 }));
+  await attachLiveness("http://api.test", "hash1", "v1.t.s", async () => new Response("", { status: 404 }));
   assert.equal(__pendingLiveness().length, 1);
 
   await flushPendingLiveness("http://api.test", async () => new Response("", { status: 404 }));
@@ -64,23 +76,32 @@ test("attachLiveness buffers on failure; flushPendingLiveness clears it once the
   __resetPendingLiveness();
 });
 
-test("attachLiveness sends proofHash + verifiedPerson + degraded", async () => {
+test("attachLiveness sends only proofHash + ticket — the api takes the verdict from the ticket", async () => {
   __resetPendingLiveness();
   let sent: unknown;
-  await attachLiveness("http://api.test", "hash2", false, false, async (_u, init) => {
+  await attachLiveness("http://api.test", "hash2", "v1.t.s", async (_u: unknown, init?: RequestInit) => {
     sent = JSON.parse(String(init?.body));
     return okJson({ status: "recorded" });
   });
-  assert.deepEqual(sent, { proofHash: "hash2", verifiedPerson: false, degraded: false });
+  assert.deepEqual(sent, { proofHash: "hash2", ticket: "v1.t.s" });
   assert.equal(__pendingLiveness().length, 0);
 });
 
-test("attachLiveness: a degraded verdict is sent with degraded:true, distinct from an actual fail", async () => {
+test("attachLiveness without a ticket sends nothing and buffers nothing", async () => {
   __resetPendingLiveness();
-  let sent: unknown;
-  await attachLiveness("http://api.test", "hash3", false, true, async (_u, init) => {
-    sent = JSON.parse(String(init?.body));
-    return okJson({ status: "recorded" });
+  let calls = 0;
+  await attachLiveness("http://api.test", "hash3", "", async () => {
+    calls++;
+    return okJson({});
   });
-  assert.deepEqual(sent, { proofHash: "hash3", verifiedPerson: false, degraded: true });
+  assert.equal(calls, 0);
+  assert.equal(__pendingLiveness().length, 0);
+});
+
+test("a refused ticket (400) or an already-recorded verdict (409) is not retried forever", async () => {
+  for (const status of [400, 409]) {
+    __resetPendingLiveness();
+    await attachLiveness("http://api.test", "hash4", "v1.t.s", async () => new Response("", { status }));
+    assert.equal(__pendingLiveness().length, 0, `status ${status} left the item pending`);
+  }
 });

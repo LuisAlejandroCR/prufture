@@ -68,6 +68,8 @@ export interface ReportDraft {
   livenessVerified: boolean;
   /** True when the check ran but the provider was degraded (not an actual failed check). */
   livenessDegraded: boolean;
+  /** The api's signed receipt for the verdict above (booleans + time + MAC). "" if none. */
+  livenessTicket: string;
   startedAt: number;
 }
 
@@ -102,6 +104,7 @@ export function startDraft(taskId: string): ReportDraft {
     livenessChecked: false,
     livenessVerified: false,
     livenessDegraded: false,
+    livenessTicket: "",
     startedAt: Date.now(),
   };
   void persistDraft(current);
@@ -152,11 +155,12 @@ export function setPreciseLocation(cipherHex: string): void {
   void persistDraft(current);
 }
 
-export function setLiveness(checked: boolean, verified: boolean, degraded = false): void {
+export function setLiveness(checked: boolean, verified: boolean, degraded = false, ticket = ""): void {
   if (!current) return;
   current.livenessChecked = checked;
   current.livenessVerified = checked ? verified : false;
   current.livenessDegraded = checked ? degraded : false;
+  current.livenessTicket = checked ? ticket : "";
   void persistDraft(current);
 }
 
@@ -247,8 +251,8 @@ export async function saveDraft(): Promise<SaveResult> {
   // it never blocks the "saved" screen and retries on the next sync pass if offline.
   if (firstProofHash) {
     const apiUrl = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8787";
-    if (draft.livenessChecked) {
-      void attachLiveness(apiUrl, firstProofHash, draft.livenessVerified, draft.livenessDegraded);
+    if (draft.livenessChecked && draft.livenessTicket) {
+      void attachLiveness(apiUrl, firstProofHash, draft.livenessTicket);
     }
     // The signed payload stays coarse-only. The encrypted precise point is sent
     // separately as an opaque blob, keyed to this proofHash. Fire-and-forget: it
