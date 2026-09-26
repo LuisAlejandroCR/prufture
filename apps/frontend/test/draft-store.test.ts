@@ -58,6 +58,7 @@ function draft(over: Partial<ReportDraft> = {}): ReportDraft {
     livenessChecked: true,
     livenessVerified: false,
     livenessDegraded: false,
+    livenessTicket: "",
     startedAt: 1_700_000_000_000,
     ...over,
   };

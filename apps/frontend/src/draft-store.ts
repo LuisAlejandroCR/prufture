@@ -24,6 +24,7 @@ interface PersistedDraft {
   livenessChecked: boolean;
   livenessVerified: boolean;
   livenessDegraded: boolean;
+  livenessTicket: string;
   startedAt: number;
   photos: PersistedPhoto[];
 }
@@ -116,6 +117,7 @@ function toPersisted(d: ReportDraft, photos: PersistedPhoto[]): PersistedDraft {
     livenessChecked: d.livenessChecked,
     livenessVerified: d.livenessVerified,
     livenessDegraded: d.livenessDegraded,
+    livenessTicket: d.livenessTicket,
     startedAt: d.startedAt,
     photos,
   };
@@ -172,6 +174,7 @@ export async function loadPersistedDraft(): Promise<ReportDraft | null> {
       livenessChecked: Boolean(p.livenessChecked),
       livenessVerified: Boolean(p.livenessVerified),
       livenessDegraded: Boolean(p.livenessDegraded),
+      livenessTicket: typeof p.livenessTicket === "string" ? p.livenessTicket : "",
       startedAt: typeof p.startedAt === "number" ? p.startedAt : Date.now(),
       photos: p.photos
         .filter((ph): ph is PersistedPhoto => !!ph && typeof ph.uri === "string")

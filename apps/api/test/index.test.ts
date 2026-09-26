@@ -45,9 +45,9 @@ test("/attest on a degraded relayer returns synced + current count, never throws
 
 test("/attest unknown proofHash → 404; /notify unknown proofHash → 404, unknown channel → 400", async () => {
   assert.equal((await call("/attest", { proofHash: "f".repeat(64) })).status, 404);
-  assert.equal((await call("/notify", { proofHash: "f".repeat(64), channel: "email", to: "x" })).status, 404);
+  assert.equal((await call("/notify", { proofHash: "f".repeat(64), channel: "email" })).status, 404);
   await call("/sync", signPayload(payload("e".repeat(64)), kp.privateKey));
-  assert.equal((await call("/notify", { proofHash: "e".repeat(64), channel: "smoke", to: "x" })).status, 400);
+  assert.equal((await call("/notify", { proofHash: "e".repeat(64), channel: "smoke" })).status, 400);
   assert.equal((await call("/notify", { proofHash: "e".repeat(64), channel: "email", to: "" })).status, 400);
 });
 

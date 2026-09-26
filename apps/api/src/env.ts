@@ -59,6 +59,10 @@ export const env = {
   get programmeEmail(): string {
     return process.env.PROGRAMME_EMAIL ?? "";
   },
+  // Telegram chat id for manual /notify re-sends. Optional; unset means telegram degrades.
+  get programmeTelegramChat(): string {
+    return process.env.PROGRAMME_TELEGRAM_CHAT_ID ?? "";
+  },
 
   // RevenueCat server-side entitlement check (apps/api/src/entitlement.ts). The secret key
   // never reaches the client — degrades (available:false) if unset.

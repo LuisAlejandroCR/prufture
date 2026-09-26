@@ -50,9 +50,9 @@ test("/attest: a non-string proofHash is a 404, not a crash", async () => {
   assert.equal(res.status, 404);
 });
 
-test("/notify: an oversized recipient is rejected with 413, on a proof that exists", async () => {
-  // The recipient is relayed verbatim into a provider request and nothing else caps it.
-  // Sync a real proof first, so the cap is reached rather than the unknown-proof 404.
+test("/notify: a caller-supplied recipient of any size is refused before it reaches a provider", async () => {
+  // The recipient used to be relayed verbatim into a provider request; it is now fixed
+  // server-side, so any `to` — oversized or not — is a 400 and never leaves the process.
   const kp = generateKeyPair();
   const proofHash = "d".repeat(64);
   const synced = await app.request("/sync", {
@@ -72,21 +72,8 @@ test("/notify: an oversized recipient is rejected with 413, on a proof that exis
   });
   assert.equal(synced.status, 200);
 
-  const res = await post(
-    "/notify",
-    JSON.stringify({ proofHash, channel: "email", to: `${"x".repeat(400)}@e.test` }),
-  );
-  assert.equal(res.status, 413);
-  const body = (await res.json()) as { error: string; maxLength: number };
-  assert.match(body.error, /recipient too long/);
-  assert.equal(body.maxLength, 320);
-});
-
-test("/notify: a normal recipient is unaffected by the cap", async () => {
-  const res = await post(
-    "/notify",
-    JSON.stringify({ proofHash: "e".repeat(64), channel: "email", to: "programme@example.org" }),
-  );
-  // Unknown proof -> 404, i.e. the cap did not fire on a real-world-length address.
-  assert.equal(res.status, 404);
+  for (const to of [`${"x".repeat(400)}@e.test`, "someone@example.org"]) {
+    const res = await post("/notify", JSON.stringify({ proofHash, channel: "email", to }));
+    assert.equal(res.status, 400);
+  }
 });

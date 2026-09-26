@@ -7,6 +7,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { signPayload, generateKeyPair } from "@proof/core";
 import { app } from "../src/index.js";
+import { issueTicket } from "../src/liveness-ticket.js";
 
 const kp = generateKeyPair();
 const post = (path: string, body: unknown) =>
@@ -36,15 +37,16 @@ test("/verify-identity in frames mode degrades to { verifiedPerson:false, degrad
 });
 
 test("/liveness-result: 404 for an unknown proof, records for a known one, idempotent", async () => {
-  const unknown = await post("/liveness-result", { proofHash: "a".repeat(64), verifiedPerson: true });
+  const ticket = issueTicket({ verifiedPerson: true, degraded: false });
+  const unknown = await post("/liveness-result", { proofHash: "a".repeat(64), ticket });
   assert.equal(unknown.status, 404);
 
   const hash = "b".repeat(64);
   await post("/sync", signPayload(payload(hash), kp.privateKey));
 
-  const first = await post("/liveness-result", { proofHash: hash, verifiedPerson: true });
+  const first = await post("/liveness-result", { proofHash: hash, ticket });
   assert.equal(first.status, 200);
-  const again = await post("/liveness-result", { proofHash: hash, verifiedPerson: true });
+  const again = await post("/liveness-result", { proofHash: hash, ticket });
   assert.equal(again.status, 200);
 
   const proof = await app.request(`/proof/${hash}`);
@@ -64,16 +66,20 @@ test("no response in the liveness path echoes a frame, nonce, score, or identity
   const hash = "d".repeat(64);
   await post("/sync", signPayload(payload(hash), kp.privateKey));
   const bodies: string[] = [];
-  bodies.push(
-    await (
-      await post("/verify-identity", {
-        frames: ["ZmFrZQ=="],
-        nonceHex: "deadbeefdeadbeefdeadbeefdeadbeef",
-        challenges: ["center"],
-      })
-    ).text(),
-  );
-  bodies.push(await (await post("/liveness-result", { proofHash: hash, verifiedPerson: true })).text());
+  const checked = (await (
+    await post("/verify-identity", {
+      frames: ["ZmFrZQ=="],
+      nonceHex: "deadbeefdeadbeefdeadbeefdeadbeef",
+      challenges: ["center"],
+    })
+  ).json()) as { ticket: string } & Record<string, unknown>;
+  // The ticket is an opaque MAC'd blob, so a substring check on it is meaningless. What it can
+  // carry is asserted structurally instead: exactly the two booleans and an issue time.
+  const { ticket, ...rest } = checked;
+  const claims = JSON.parse(Buffer.from(ticket.split(".")[1]!, "base64url").toString("utf8"));
+  assert.deepEqual(Object.keys(claims).sort(), ["d", "p", "t"]);
+  bodies.push(JSON.stringify(rest));
+  bodies.push(await (await post("/liveness-result", { proofHash: hash, ticket })).text());
   bodies.push(await (await app.request(`/proof/${hash}`)).text());
 
   for (const b of bodies) {
