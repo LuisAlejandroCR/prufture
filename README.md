@@ -242,6 +242,68 @@ and MOSIP's statement that the platform
 
 ---
 
+## Plan status
+
+As of 2026-09-26. "Done" means the code is merged and covered by tests. An exit criterion that needs
+live credentials, a provider sandbox, or a programme decision is listed as open, even when the code
+behind it is finished.
+
+### Done
+
+| Area | What is in place |
+|---|---|
+| Core pipeline | Offline capture → sha256 + ed25519 → SQLite queue → auto-sync; a live EAS attestation on Base Sepolia; public `/verify` and `/dashboard`; WhatsApp delivery (see *What runs today*) |
+| Phase 1 — RPC | `RPC_URL`, with `DWELLIR_RPC_URL` kept as a deprecated fallback; switching provider is a configuration change |
+| Phase 2 — submission | `AttestationSubmitter` port with `local-key` and `none` adapters; fail-closed allowlist (chain, contract, `attest()` selector, schema, zero value); idempotency by `proofHash` checked before any transaction; explicit RPC timeout |
+| Phase 3 — assurance | Separate `LivenessPort` and `AttributePort`, with `none` and `neuro` adapters, both off by default; the minimal verdict is enforced at the port; a misbehaving adapter degrades instead of throwing |
+| Phase 4 — cutover | Synthetic-only side-by-side comparison enforced in code; `shadow-compare` holds a cutover on any divergence or empty run |
+| Hardening | Caps on signed field sizes at `/sync`; CSV formula injection neutralised in both exporters; store extras cannot reach `/proof`; explicit timeouts on every delivery channel |
+| CI | Typecheck and tests on Node 20 and 22 for every push and pull request |
+
+### Open
+
+| Item | What it needs |
+|---|---|
+| Phase 1 exit criterion | Run the integration suite against a second Base Sepolia RPC endpoint, plus a failover drill. Needs a second endpoint's credentials |
+| Phase 2 second adapter | A managed signer or a self-hosted relayer (e.g. OpenZeppelin Relayer) as a second adapter; one real attestation in its sandbox; a denied method/value test |
+| Phase 3 `openid4vp` adapter | The current `AttributePort` is a single synchronous pull. A wallet presentation needs a request (nonce, state) and a separate wallet response, so this means new routes — an architecture decision. The plan also keeps assurance off until the pilot states why it is needed |
+| Phase 3 sandbox check | One consented end-to-end check before any adapter is labelled verified |
+| Phase 4 observation window | Run on a real candidate once one exists |
+| Unauthenticated `/notify` | Anyone holding a `proofHash` can make the programme's channel credentials send to any recipient. Needs an access-control decision |
+| Malformed request bodies | Some routes answer `null` or unparseable JSON with 500 instead of 400. A fix is open as a pull request |
+| Scoped next | On-device ZK proof, hardware attestation / TEE signing, store publication, live Neuro verified-attribute POST, schema v2 with the sealed precise location |
+| Programme inputs | A baseline for the cost figure (reports per month, re-visit share, cost per trip) and the pilot legal preconditions — programme work, not code |
+
+### Evaluated, not integrated: Cavos
+
+[Cavos](https://cavos.xyz/) provides embedded, self-custodial wallets: keys are held on the device,
+there is a paymaster for gas, and there are React and React Native SDKs
+([`cavos-labs/kit`](https://github.com/cavos-labs/kit)). We evaluated it on 2026-09-26 from its
+public repositories and did not integrate it, because it conflicts with guardrails that do not
+change:
+
+- **Chain.** Cavos implements Starknet, Solana and Stellar. Prufture anchors EAS attestations on
+  Base Sepolia (EVM), and the plan explicitly excludes switching to a different anchoring protocol.
+  Its gas sponsorship is Starknet-only.
+- **Identity.** A Cavos wallet is created from a stable `userId`, resolved through Google, Apple, or
+  email sign-in, or through a custom auth provider. Prufture's reporter has no wallet, no account and no
+  identity by design, and nothing about the reporter is signed. Adding a login to capture would
+  undo the privacy posture.
+- **Custody model.** Cavos signs on the user's device; the relayer here signs server-side and pays
+  gas so the reporter never holds funds. Cavos would not be a drop-in `AttestationSubmitter` adapter.
+
+Revisit Cavos if one of these becomes true:
+
+1. It supports an EVM chain where EAS is deployed.
+2. The programme decides to give its *staff* (coordinators, who are already identified) their own
+   signing key for a second attestation. That would be a separate, opt-in path that never touches
+   the reporter.
+
+In either case, Cavos would enter through the same process as any other adapter: the Phase 4
+synthetic-only comparison, and no reporter data sent to it during evaluation.
+
+---
+
 ## Minimum requirements to run
 
 - **Node.js 20 or newer** and npm (this is an npm-workspaces monorepo).
