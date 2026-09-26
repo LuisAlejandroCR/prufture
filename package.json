@@ -11,6 +11,7 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
+    "verify": "npm run typecheck && npm test",
     "front": "npm run start --workspace apps/frontend",
     "back": "npm run dev --workspace apps/backend",
     "api": "npm run dev --workspace apps/api"

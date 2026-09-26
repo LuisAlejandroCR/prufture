@@ -113,8 +113,8 @@ contacted, so no real report is ever sent to a provider under evaluation.
 - A second attestation over the same hash (deduped by attester).
 - Public `/verify/[hash]` and `/dashboard`, no login, coarse region only.
 - WhatsApp delivery of the verification link (Kapso); email degrades cleanly.
-- Automated tests: `packages/core` 22 · `apps/api` 241 · `apps/backend` 37 · `apps/frontend` 135
-  (435 total).
+- Automated tests: `packages/core` 22 · `apps/api` 256 · `apps/backend` 37 · `apps/frontend` 137
+  (452 total).
 
 **Scoped next, not implemented:** on-device zero-knowledge proof (a commitment stands in); hardware
 attestation / TEE signing; App/Play Store publication (config written, not run); live Neuro
@@ -257,7 +257,8 @@ behind it is finished.
 | Phase 2 — submission | `AttestationSubmitter` port with `local-key` and `none` adapters; fail-closed allowlist (chain, contract, `attest()` selector, schema, zero value); idempotency by `proofHash` checked before any transaction; explicit RPC timeout |
 | Phase 3 — assurance | Separate `LivenessPort` and `AttributePort`, with `none` and `neuro` adapters, both off by default; the minimal verdict is enforced at the port; a misbehaving adapter degrades instead of throwing |
 | Phase 4 — cutover | Synthetic-only side-by-side comparison enforced in code; `shadow-compare` holds a cutover on any divergence or empty run |
-| Hardening | Caps on signed field sizes at `/sync`; CSV formula injection neutralised in both exporters; store extras cannot reach `/proof`; explicit timeouts on every delivery channel |
+| Hardening | Caps on signed field sizes at `/sync`; CSV formula injection neutralised in both exporters; store extras cannot reach `/proof`; explicit timeouts on every delivery channel; malformed bodies answer 400, never 500; a body-size cap on every route |
+| Public write routes | `/notify` sends only to the fixed programme recipient, with a per-proof cooldown; `/liveness-result` records only a verdict signed by the server at `/verify-identity`, never one claimed by the caller; the liveness verdict and the sealed precise location are write-once |
 | CI | Typecheck and tests on Node 20 and 22 for every push and pull request |
 
 ### Open
@@ -269,8 +270,8 @@ behind it is finished.
 | Phase 3 `openid4vp` adapter | The current `AttributePort` is a single synchronous pull. A wallet presentation needs a request (nonce, state) and a separate wallet response, so this means new routes — an architecture decision. The plan also keeps assurance off until the pilot states why it is needed |
 | Phase 3 sandbox check | One consented end-to-end check before any adapter is labelled verified |
 | Phase 4 observation window | Run on a real candidate once one exists |
-| Unauthenticated `/notify` | Anyone holding a `proofHash` can make the programme's channel credentials send to any recipient. Needs an access-control decision |
-| Malformed request bodies | Some routes answer `null` or unparseable JSON with 500 instead of 400. A fix is open as a pull request |
+| `/verify-identity` attribute mode | The attribute is not bound to the proof's reporter and can be re-attached. Off by default; it is superseded by the `openid4vp` design above |
+| CI runners | GitHub Actions jobs on the account stopped starting on 2026-09-26 (billing). Until they run again, `npm run verify` locally is the gate |
 | Scoped next | On-device ZK proof, hardware attestation / TEE signing, store publication, live Neuro verified-attribute POST, schema v2 with the sealed precise location |
 | Programme inputs | A baseline for the cost figure (reports per month, re-visit share, cost per trip) and the pilot legal preconditions — programme work, not code |
 
@@ -316,8 +317,7 @@ synthetic-only comparison, and no reporter data sent to it during evaluation.
 
 ```bash
 npm install
-npm run typecheck
-npm run test
+npm run verify   # typecheck + every workspace's tests — the same gate CI runs
 ```
 
 Run the three services, each in its own terminal:
