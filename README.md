@@ -113,8 +113,8 @@ contacted, so no real report is ever sent to a provider under evaluation.
 - A second attestation over the same hash (deduped by attester).
 - Public `/verify/[hash]` and `/dashboard`, no login, coarse region only.
 - WhatsApp delivery of the verification link (Kapso); email degrades cleanly.
-- Automated tests: `packages/core` 22 · `apps/api` 224 · `apps/backend` 37 · `apps/frontend` 135
-  (418 total).
+- Automated tests: `packages/core` 22 · `apps/api` 241 · `apps/backend` 37 · `apps/frontend` 135
+  (435 total).
 
 **Scoped next, not implemented:** on-device zero-knowledge proof (a commitment stands in); hardware
 attestation / TEE signing; App/Play Store publication (config written, not run); live Neuro
