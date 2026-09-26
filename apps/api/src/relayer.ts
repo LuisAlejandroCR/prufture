@@ -6,11 +6,11 @@
 // The pure EAS request builder lives in relayer-request.ts and is re-exported here so existing
 // callers and the invariant tests keep their import path.
 
-import { guard, unavailable, type ExternalResult, type ProofPublicPayload } from "@proof/core";
+import { guard, ok, unavailable, type ExternalResult, type ProofPublicPayload } from "@proof/core";
 import { env } from "./env.js";
 import { localKeySubmitter } from "./submitters/local-key.js";
 import { noneSubmitter } from "./submitters/none.js";
-import type { AttestResult, AttestationSubmitter } from "./submitter.js";
+import { sameAddress, type AttestResult, type AttestationSubmitter } from "./submitter.js";
 
 export { buildAttestRequest, encodeProofData } from "./relayer-request.js";
 export type { AttestResult } from "./submitter.js";
@@ -57,7 +57,13 @@ export async function submitThrough(
 export async function submitAttestation(
   payload: ProofPublicPayload,
 ): Promise<ExternalResult<AttestResult>> {
-  const submitter = selectedSubmitter();
+  return submitVia(selectedSubmitter(), payload);
+}
+
+async function submitVia(
+  submitter: AttestationSubmitter,
+  payload: ProofPublicPayload,
+): Promise<ExternalResult<AttestResult>> {
 
   // isConfigured() is adapter code too, so it is not trusted to stay quiet either.
   let configured: boolean;
@@ -78,6 +84,54 @@ export async function submitAttestation(
   }
 
   return submitThrough(submitter, payload);
+}
+
+/** What a stored attestation must carry for attestOnce() to reuse it. */
+export interface PriorAttestation {
+  attester: string;
+  txHash: string;
+}
+
+// One submission per proofHash at a time: a concurrent caller joins the call already in flight
+// instead of starting a second transaction for the same proof.
+const inFlight = new Map<string, Promise<ExternalResult<AttestResult>>>();
+
+/**
+ * The stored attestation this submitter already made, if any. When the adapter can name its
+ * attester, only a record from that address counts, so a different key may still add its own.
+ * When it cannot, any record counts: re-paying gas for an anchored proof is the failure to avoid.
+ */
+function priorFor(submitter: AttestationSubmitter, existing: readonly PriorAttestation[]): PriorAttestation | undefined {
+  let self: string | null = null;
+  try {
+    self = submitter.attester?.() ?? null;
+  } catch {
+    self = null;
+  }
+  return self ? existing.find((a) => sameAddress(a.attester, self)) : existing[0];
+}
+
+/**
+ * Idempotent by proofHash — the portability guardrail. /sync and /attest are unauthenticated and
+ * proof hashes are public, so without this every re-send, retry or repeated /attest call paid
+ * for a fresh on-chain transaction that the store then discarded as a duplicate. The check runs
+ * BEFORE the submitter is called; a proof this submitter already anchored returns its stored
+ * record as the result.
+ */
+export async function attestOnce(
+  payload: ProofPublicPayload,
+  existing: readonly PriorAttestation[],
+  submitter: AttestationSubmitter = selectedSubmitter(),
+): Promise<ExternalResult<AttestResult>> {
+  const prior = priorFor(submitter, existing);
+  if (prior) return ok("relayer/eas", { txHash: prior.txHash, attester: prior.attester });
+
+  const pending = inFlight.get(payload.proofHash);
+  if (pending) return pending;
+
+  const call = submitVia(submitter, payload).finally(() => inFlight.delete(payload.proofHash));
+  inFlight.set(payload.proofHash, call);
+  return call;
 }
 
 // Re-exported so a deployment can assert which chain the allowlist is pinned to.

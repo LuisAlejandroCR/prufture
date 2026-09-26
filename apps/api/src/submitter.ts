@@ -34,6 +34,12 @@ export interface AttestationSubmitter {
   readonly name: string;
   /** True when this adapter has everything it needs to send. */
   isConfigured(): boolean;
+  /**
+   * The address this adapter attests from, when it can say so without sending anything. Used to
+   * skip a submission this adapter already made. Optional: an adapter that cannot tell is treated
+   * as having attested any proof that already carries an attestation, so it never pays twice.
+   */
+  attester?(): string | null;
   submit(payload: ProofPublicPayload): Promise<ExternalResult<AttestResult>>;
 }
 
@@ -54,7 +60,7 @@ function isHex32(v: string): boolean {
   return /^0x[0-9a-fA-F]{64}$/.test(v);
 }
 
-function sameAddress(a: string, b: string): boolean {
+export function sameAddress(a: string, b: string): boolean {
   try {
     return getAddress(a) === getAddress(b);
   } catch {
