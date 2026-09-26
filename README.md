@@ -113,8 +113,8 @@ contacted, so no real report is ever sent to a provider under evaluation.
 - A second attestation over the same hash (deduped by attester).
 - Public `/verify/[hash]` and `/dashboard`, no login, coarse region only.
 - WhatsApp delivery of the verification link (Kapso); email degrades cleanly.
-- Automated tests: `packages/core` 8 · `apps/api` 147 · `apps/backend` 29 · `apps/frontend` 135
-  (319 total).
+- Automated tests: `packages/core` 22 · `apps/api` 224 · `apps/backend` 37 · `apps/frontend` 135
+  (418 total).
 
 **Scoped next, not implemented:** on-device zero-knowledge proof (a commitment stands in); hardware
 attestation / TEE signing; App/Play Store publication (config written, not run); live Neuro
@@ -166,6 +166,14 @@ OpenZeppelin Relayer is the current self-hosted successor.
 **Exit criterion:** a provider sandbox submits one real attestation, duplicate submissions converge
 on the same proof, a denied method/value test fails closed, and loss of the provider returns a typed
 unavailable result without exposing key material.
+
+**Implemented:** the `AttestationSubmitter` port with `local-key` and `none` adapters, the
+fail-closed allowlist in `apps/api/src/submitter.ts`, and idempotency by `proofHash` in
+`attestOnce()` (`apps/api/src/relayer.ts`). `/sync` and `/attest` check the store *before* the
+submitter runs: a proof this relayer already anchored returns its stored record and sends nothing,
+and concurrent calls for one proof share a single submission. The RPC transport and every delivery
+channel carry an explicit 5 s timeout. Still open: a second, managed or self-hosted signer adapter
+and its sandbox run.
 
 ### Phase 3 — split Neuro into two ports
 

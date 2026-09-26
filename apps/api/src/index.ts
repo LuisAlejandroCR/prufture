@@ -36,7 +36,7 @@ import {
   upsertProof,
 } from "./store.js";
 import { pushRegistrationCount, registerPushToken } from "./push-store.js";
-import { submitAttestation } from "./relayer.js";
+import { attestOnce } from "./relayer.js";
 import { checkLivenessVerdict, fetchVerifiedAttribute } from "./assurance.js";
 import { sendVerifyUrl, type Channel } from "./channels.js";
 import { maybeNotify } from "./notify.js";
@@ -108,7 +108,8 @@ app.post("/sync", async (c) => {
 
   // On-chain attestation is best-effort. A degraded relayer must not fail the sync:
   // the proof is safely queued server-side and returns 200 with status "synced".
-  const attestation = await submitAttestation(payload);
+  // attestOnce: a re-sent proof this relayer already anchored reuses the stored record, no new tx.
+  const attestation = await attestOnce(payload, getProof(payload.proofHash)?.attestations ?? []);
   if (attestation.available) {
     addAttestation(payload.proofHash, {
       attester: attestation.data.attester,
@@ -135,7 +136,8 @@ app.post("/attest", async (c) => {
   const entry = getProof(proofHash);
   if (!entry) return c.json({ error: "unknown proofHash" }, 404);
 
-  const attestation = await submitAttestation(entry.payload);
+  // attestOnce: a repeat call for a proof this relayer already anchored costs no gas.
+  const attestation = await attestOnce(entry.payload, entry.attestations);
   if (!attestation.available) {
     return c.json({ status: "synced", attestationCount: entry.attestations.length, attestation });
   }
