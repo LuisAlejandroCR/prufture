@@ -11,7 +11,7 @@ import { env } from "./env.js";
 import { localKeySubmitter } from "./submitters/local-key.js";
 import { noneSubmitter } from "./submitters/none.js";
 import { ozRelayerSubmitter } from "./submitters/openzeppelin-relayer.js";
-import { sameAddress, type AttestResult, type AttestationSubmitter } from "./submitter.js";
+import { publicError, sameAddress, type AttestResult, type AttestationSubmitter } from "./submitter.js";
 
 export { buildAttestRequest, encodeProofData } from "./relayer-request.js";
 export type { AttestResult } from "./submitter.js";
@@ -53,7 +53,9 @@ export async function submitThrough(
   });
 
   // guard() wraps a conforming envelope in another envelope; unwrap back to the adapter's own.
-  return result.available ? result.data : result;
+  const r = result.available ? result.data : result;
+  // /sync returns this envelope publicly, so no adapter's error text may carry an endpoint URL.
+  return r.available ? r : { ...r, error: publicError(r.error) };
 }
 
 export async function submitAttestation(

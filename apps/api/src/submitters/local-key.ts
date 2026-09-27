@@ -1,24 +1,15 @@
-// local-key.ts: the compatibility adapter — the behaviour apps/api has always had, now behind
-// the AttestationSubmitter port. A private key in the process env signs attest() and the tx
-// goes out over env.rpcUrl. It owns key custody and transport only; assertAllowed() owns policy.
-//
-// Key material never leaves this module: not in the returned envelope, not in an error message.
-// guard() converts any throw here into a typed unavailable.
+// local-key.ts: the default AttestationSubmitter — RELAYER_PRIVATE_KEY signs attest() and the tx goes
+// out over rpc.ts. It owns key custody and transport only; assertAllowed() owns policy. Key material
+// never leaves this module, not in the result and not in an error message.
 
 import { guard, type ExternalResult, type ProofPublicPayload } from "@proof/core";
-import { createWalletClient, http, type Hex } from "viem";
+import { createWalletClient, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { baseSepolia } from "viem/chains";
 import { env, relayerConfigured } from "../env.js";
 import { buildAttestRequest } from "../relayer-request.js";
-import { assertAllowed, type AttestResult, type AttestationSubmitter } from "../submitter.js";
-
-// Explicit per-request budget for the RPC. writeContract makes a handful of calls (nonce, gas,
-// fees, send); with one retry each, a dead endpoint degrades in tens of seconds rather than
-// holding /sync open on viem's defaults. Retrying the send is safe: it re-broadcasts the same
-// signed transaction, so it cannot produce a second attestation.
-export const RPC_TIMEOUT_MS = 5000;
-export const RPC_RETRY_COUNT = 1;
+import { rpcTransport } from "../rpc.js";
+import { assertAllowed, publicError, type AttestResult, type AttestationSubmitter } from "../submitter.js";
 
 function privateKeyHex(): Hex {
   return env.relayerPrivateKey.startsWith("0x")
@@ -33,7 +24,7 @@ export const localKeySubmitter: AttestationSubmitter = {
     return relayerConfigured();
   },
 
-  // Derives the public address locally; nothing is signed or sent, and the key never leaves.
+  // Derived locally: nothing is signed or sent.
   attester(): string | null {
     if (!relayerConfigured()) return null;
     try {
@@ -46,8 +37,7 @@ export const localKeySubmitter: AttestationSubmitter = {
   async submit(payload: ProofPublicPayload): Promise<ExternalResult<AttestResult>> {
     return guard("relayer/eas", async () => {
       const request = buildAttestRequest(payload);
-
-      // Policy first: nothing below runs — and no key is derived — unless the call is allowlisted.
+      // Policy first: no key is derived unless the call is allowlisted.
       assertAllowed({ ...request, chainId: baseSepolia.id });
 
       const account = privateKeyToAccount(privateKeyHex());
@@ -55,11 +45,16 @@ export const localKeySubmitter: AttestationSubmitter = {
       const wallet = createWalletClient({
         account,
         chain: baseSepolia,
-        transport: http(env.rpcUrl, { timeout: RPC_TIMEOUT_MS, retryCount: RPC_RETRY_COUNT }),
+        transport: rpcTransport(),
       });
 
-      const txHash = await wallet.writeContract(request);
-      return { txHash, attester: account.address };
+      try {
+        const txHash = await wallet.writeContract(request);
+        return { txHash, attester: account.address };
+      } catch (e) {
+        // viem's message embeds the RPC URL (often holding the provider key) and the full call.
+        throw new Error(`rpc: ${publicError(e)}`);
+      }
     });
   },
 };

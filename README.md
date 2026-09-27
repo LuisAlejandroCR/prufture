@@ -113,8 +113,8 @@ contacted, so no real report is ever sent to a provider under evaluation.
 - A second attestation over the same hash (deduped by attester).
 - Public `/verify/[hash]` and `/dashboard`, no login, coarse region only.
 - WhatsApp delivery of the verification link (Kapso); email degrades cleanly.
-- Automated tests: `packages/core` 22 · `apps/api` 287 · `apps/backend` 37 · `apps/frontend` 137
-  (483 total).
+- Automated tests: `packages/core` 22 · `apps/api` 303 · `apps/backend` 37 · `apps/frontend` 137
+  (499 total).
 
 **Scoped next, not implemented:** on-device zero-knowledge proof (a commitment stands in); hardware
 attestation / TEE signing; App/Play Store publication (config written, not run); live Neuro
@@ -152,6 +152,21 @@ data residency, and cost rather than brand alone.
 
 **Exit criterion:** the same integration suite passes against Dwellir and one second RPC endpoint,
 and removing either endpoint still leaves offline capture working.
+
+**Implemented:** `RPC_FALLBACK_URLS` adds endpoints that are tried in order when `RPC_URL` is down
+or hung. Each endpoint has a 5 s timeout, and the whole list is retried once. The suite runs with
+`npm run rpc-check --workspace apps/api -- <endpoint> ...`. It checks the chain id, that the
+latest block is fresh, and that the live attestation reads back as exactly four fields. It then
+checks that every endpoint reads that record identically, and drills failover past a local hung
+endpoint and a refused port. `--attest` adds one real synthetic `attest()` per endpoint. Reports
+show an endpoint's host only, never its path, because providers put the API key there.
+
+The suite ran live on 2026-09-27 against `sepolia.base.org` and `base-sepolia-rpc.publicnode.com`,
+and both passed. PublicNode prunes old transaction receipts, so the receipt check only warns. The
+failover call answered in 5.1 s past the dead endpoints, and a list of only dead endpoints failed
+in 10.2 s, within its 22 s budget. Running the suite also exposed a leak, now fixed: `/sync`
+returned the RPC error verbatim, including the endpoint URL. Adapter errors are now reduced to
+one line with no URL, and the port enforces that for every adapter.
 
 ### Phase 2 — separate transaction policy from key custody
 
@@ -264,11 +279,11 @@ behind it is finished.
 | Area | What is in place |
 |---|---|
 | Core pipeline | Offline capture → sha256 + ed25519 → SQLite queue → auto-sync; a live EAS attestation on Base Sepolia; public `/verify` and `/dashboard`; WhatsApp delivery (see *What runs today*) |
-| Phase 1 — RPC | `RPC_URL`, with `DWELLIR_RPC_URL` kept as a deprecated fallback; switching provider is a configuration change |
+| Phase 1 — RPC | `RPC_URL`, with `DWELLIR_RPC_URL` kept as a deprecated fallback; switching provider is a configuration change; `RPC_FALLBACK_URLS` failover; the `rpc-check` suite, passed live against two independent public endpoints |
 | Phase 2 — submission | `AttestationSubmitter` port with `local-key`, `openzeppelin-relayer` and `none` adapters; fail-closed allowlist (chain, contract, `attest()` selector, schema, zero value); idempotency by `proofHash` checked before any transaction; explicit RPC timeout |
 | Phase 3 — assurance | Separate `LivenessPort` and `AttributePort`, with `none` and `neuro` adapters, both off by default; the minimal verdict is enforced at the port; a misbehaving adapter degrades instead of throwing |
 | Phase 4 — cutover | Synthetic-only side-by-side comparison enforced in code; `shadow-compare` holds a cutover on any divergence or empty run |
-| Hardening | Caps on signed field sizes at `/sync`; CSV formula injection neutralised in both exporters; store extras cannot reach `/proof`; explicit timeouts on every delivery channel; malformed bodies answer 400, never 500; a body-size cap on every route |
+| Hardening | Caps on signed field sizes at `/sync`; CSV formula injection neutralised in both exporters; store extras cannot reach `/proof`; explicit timeouts on every delivery channel; malformed bodies answer 400, never 500; a body-size cap on every route; no adapter error can carry an endpoint URL |
 | Public write routes | `/notify` sends only to the fixed programme recipient, with a per-proof cooldown; `/liveness-result` records only a verdict signed by the server at `/verify-identity`, never one claimed by the caller; the liveness verdict and the sealed precise location are write-once |
 | CI | Typecheck and tests on Node 20 and 22 for every push and pull request |
 
@@ -276,7 +291,7 @@ behind it is finished.
 
 | Item | What it needs |
 |---|---|
-| Phase 1 exit criterion | Run the integration suite against a second Base Sepolia RPC endpoint, plus a failover drill. Needs a second endpoint's credentials |
+| Phase 1 exit criterion | Two endpoints and the failover drill pass. Remaining: the managed primary chosen below, and one real `attest()` per endpoint (`rpc-check --attest`, which needs the funded gas key) |
 | Phase 2 exit criterion | The `openzeppelin-relayer` adapter is in place and tested against a fake relayer (denied address, network, value and contract all fail closed). One real attestation through a deployed OZ Relayer on Base Sepolia is still needed, run as `npm run shadow-compare --workspace apps/api -- openzeppelin-relayer` |
 | Phase 3 `openid4vp` adapter | The current `AttributePort` is a single synchronous pull. A wallet presentation needs a request (nonce, state) and a separate wallet response, so this means new routes — an architecture decision. The plan also keeps assurance off until the pilot states why it is needed |
 | Phase 3 sandbox check | One consented end-to-end check before any adapter is labelled verified |
@@ -285,6 +300,48 @@ behind it is finished.
 | CI runners | GitHub Actions jobs on the account stopped starting on 2026-09-26 (billing). Until they run again, `npm run verify` locally is the gate |
 | Scoped next | On-device ZK proof, hardware attestation / TEE signing, store publication, live Neuro verified-attribute POST, schema v2 with the sealed precise location |
 | Programme inputs | A baseline for the cost figure (reports per month, re-visit share, cost per trip) and the pilot legal preconditions — programme work, not code |
+
+### Replacing Dwellir and Neuro: vendor findings
+
+Researched on 2026-09-27 from each vendor's own documentation. Nothing below is integrated or
+contracted yet. Choosing a vendor, signing up, and giving biometric consent are programme decisions.
+
+**RPC, replacing Dwellir.** This is a configuration change only; the code is ready.
+
+| Candidate | Base Sepolia | Terms (vendor docs) | Role |
+|---|---|---|---|
+| [CDP Node](https://docs.cdp.coinbase.com/data/node/overview) (Coinbase, the operator of Base) | Yes | 10 M billing units free per month, then $0.50 per million; about 50 requests/s per project; a payment method is required from January 2026 | Recommended `RPC_URL`. The client key sits in the URL path, and the redaction above keeps it out of responses and reports |
+| `https://sepolia.base.org` | Yes | Public, no key, no SLA | `RPC_FALLBACK_URLS`, first entry; passed `rpc-check` live |
+| `https://base-sepolia-rpc.publicnode.com` | Yes | Public, no key, prunes old receipts | `RPC_FALLBACK_URLS`, second entry; passed `rpc-check` live |
+
+Others on Base's [node provider list](https://docs.base.org/base-chain/tools/node-providers)
+(Alchemy, QuickNode, Chainstack, Ankr, dRPC, OnFinality) can take the same slot after they pass
+`rpc-check`. Cut-over: set `RPC_URL` to the CDP endpoint and `RPC_FALLBACK_URLS` to the two public
+endpoints, run `rpc-check --attest`, then delete `DWELLIR_RPC_URL`.
+
+**Liveness, replacing Neuro's liveness.** Neither vendor fits the current port. `LivenessPort.check(frames)`
+sends frames the app captured itself, but both vendors run their own capture on the device.
+Both use a server-created session, a native capture step on the phone, and then a server-side
+result. That means a two-step port (start a session, then complete it) and an Expo dev build, not
+Expo Go.
+
+| Candidate | Client fit | What the backend receives | Notes |
+|---|---|---|---|
+| [AWS Rekognition Face Liveness](https://docs.aws.amazon.com/rekognition/latest/dg/face-liveness.html) | Amplify `FaceLivenessDetector` for React, iOS and Android; no official React Native SDK, so a native module is needed | A 0–100 confidence score, a reference image, and 0–4 audit images | A session [expires 3 minutes](https://docs.aws.amazon.com/rekognition/latest/APIReference/API_CreateFaceLivenessSession.html) after creation. Set `AuditImagesLimit` to 0 and no S3 output; the adapter reduces the score to `verifiedPerson` and discards the reference image. The client streams video to AWS, so it needs temporary AWS credentials |
+| [iProov](https://github.com/iProov/react-native) | Official `@iproov/react-native` SDK | A pass or fail verdict via a server token (REST API v2) | Commercial terms through sales; Liveness Assurance vs Genuine Presence Assurance |
+| Azure AI Face liveness | Native iOS and Android only; [Limited Access](https://learn.microsoft.com/en-us/azure/ai-services/face/concept-face-liveness-detection) approval required | — | Not recommended: gated, and no React Native path |
+
+**Verified attributes, replacing Neuro's attribute call.** Use the planned `openid4vp` adapter, built
+on [Inji Verify](https://docs.inji.io/inji-verify/technical-overview/integration-guides/openid4vp-vp-verification-integration-guide).
+`inji-verify-service` is the OpenID4VP backend, and it supports both a cross-device QR flow and a
+same-device flow. Its guide documents `ldp_vc` credentials (Ed25519Signature2020). The relying party
+gets a transaction id and a verification status, which the adapter reduces to the allowlisted
+boolean. This also needs the two-step port.
+
+**Proposed order:** (1) the RPC cut-over, which needs only a CDP project; (2) a two-step session
+port shared by liveness and attributes, with `none` adapters, behind the existing
+off-by-default switch; (3) one liveness adapter and the `openid4vp` adapter, each passing a
+consented sandbox check before it is labelled verified; (4) remove `neuro.ts`.
 
 ### Evaluated, not integrated: Cavos
 
