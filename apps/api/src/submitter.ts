@@ -34,6 +34,8 @@ export interface AttestationSubmitter {
   readonly name: string;
   /** True when this adapter has everything it needs to send. */
   isConfigured(): boolean;
+  /** Names the settings isConfigured() needs, for the "not configured" message. Never a value. */
+  readonly configHint?: string;
   /**
    * The address this adapter attests from, when it can say so without sending anything. Used to
    * skip a submission this adapter already made. Optional: an adapter that cannot tell is treated

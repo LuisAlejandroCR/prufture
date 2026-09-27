@@ -113,8 +113,8 @@ contacted, so no real report is ever sent to a provider under evaluation.
 - A second attestation over the same hash (deduped by attester).
 - Public `/verify/[hash]` and `/dashboard`, no login, coarse region only.
 - WhatsApp delivery of the verification link (Kapso); email degrades cleanly.
-- Automated tests: `packages/core` 22 · `apps/api` 256 · `apps/backend` 37 · `apps/frontend` 137
-  (452 total).
+- Automated tests: `packages/core` 22 · `apps/api` 287 · `apps/backend` 37 · `apps/frontend` 137
+  (483 total).
 
 **Scoped next, not implemented:** on-device zero-knowledge proof (a commitment stands in); hardware
 attestation / TEE signing; App/Play Store publication (config written, not run); live Neuro
@@ -172,8 +172,19 @@ fail-closed allowlist in `apps/api/src/submitter.ts`, and idempotency by `proofH
 `attestOnce()` (`apps/api/src/relayer.ts`). `/sync` and `/attest` check the store *before* the
 submitter runs: a proof this relayer already anchored returns its stored record and sends nothing,
 and concurrent calls for one proof share a single submission. The RPC transport and every delivery
-channel carry an explicit 5 s timeout. Still open: a second, managed or self-hosted signer adapter
-and its sandbox run.
+channel carry an explicit 5 s timeout.
+
+**Implemented (second adapter):** `ATTESTATION_SUBMITTER=openzeppelin-relayer`
+(`apps/api/src/submitters/openzeppelin-relayer.ts`) hands the allowlisted `attest()` calldata to
+a self-hosted [OpenZeppelin Relayer](https://docs.openzeppelin.com/relayer/quickstart), which
+holds the key; `apps/api` then holds no private key at all. Before anything is queued, the
+relayer's own record must be an unpaused EVM relayer on `base-sepolia` whose signer is the pinned
+`OZ_RELAYER_ADDRESS`. The queued transaction must come back from that address, to the EAS
+contract, with zero value. OZ Relayer confirms asynchronously, so the adapter polls for the hash
+within a fixed budget. If the budget runs out, the call returns a typed unavailable and the
+adapter remembers the queued transaction, so a retry re-polls it rather than paying for a second
+one. That memory lasts only as long as the process. Still open: one real attestation in an OZ
+Relayer sandbox, which needs a deployed relayer and its credentials.
 
 ### Phase 3 — split Neuro into two ports
 
@@ -244,7 +255,7 @@ and MOSIP's statement that the platform
 
 ## Plan status
 
-As of 2026-09-26. "Done" means the code is merged and covered by tests. An exit criterion that needs
+As of 2026-09-27. "Done" means the code is merged and covered by tests. An exit criterion that needs
 live credentials, a provider sandbox, or a programme decision is listed as open, even when the code
 behind it is finished.
 
@@ -254,7 +265,7 @@ behind it is finished.
 |---|---|
 | Core pipeline | Offline capture → sha256 + ed25519 → SQLite queue → auto-sync; a live EAS attestation on Base Sepolia; public `/verify` and `/dashboard`; WhatsApp delivery (see *What runs today*) |
 | Phase 1 — RPC | `RPC_URL`, with `DWELLIR_RPC_URL` kept as a deprecated fallback; switching provider is a configuration change |
-| Phase 2 — submission | `AttestationSubmitter` port with `local-key` and `none` adapters; fail-closed allowlist (chain, contract, `attest()` selector, schema, zero value); idempotency by `proofHash` checked before any transaction; explicit RPC timeout |
+| Phase 2 — submission | `AttestationSubmitter` port with `local-key`, `openzeppelin-relayer` and `none` adapters; fail-closed allowlist (chain, contract, `attest()` selector, schema, zero value); idempotency by `proofHash` checked before any transaction; explicit RPC timeout |
 | Phase 3 — assurance | Separate `LivenessPort` and `AttributePort`, with `none` and `neuro` adapters, both off by default; the minimal verdict is enforced at the port; a misbehaving adapter degrades instead of throwing |
 | Phase 4 — cutover | Synthetic-only side-by-side comparison enforced in code; `shadow-compare` holds a cutover on any divergence or empty run |
 | Hardening | Caps on signed field sizes at `/sync`; CSV formula injection neutralised in both exporters; store extras cannot reach `/proof`; explicit timeouts on every delivery channel; malformed bodies answer 400, never 500; a body-size cap on every route |
@@ -266,7 +277,7 @@ behind it is finished.
 | Item | What it needs |
 |---|---|
 | Phase 1 exit criterion | Run the integration suite against a second Base Sepolia RPC endpoint, plus a failover drill. Needs a second endpoint's credentials |
-| Phase 2 second adapter | A managed signer or a self-hosted relayer (e.g. OpenZeppelin Relayer) as a second adapter; one real attestation in its sandbox; a denied method/value test |
+| Phase 2 exit criterion | The `openzeppelin-relayer` adapter is in place and tested against a fake relayer (denied address, network, value and contract all fail closed). One real attestation through a deployed OZ Relayer on Base Sepolia is still needed, run as `npm run shadow-compare --workspace apps/api -- openzeppelin-relayer` |
 | Phase 3 `openid4vp` adapter | The current `AttributePort` is a single synchronous pull. A wallet presentation needs a request (nonce, state) and a separate wallet response, so this means new routes — an architecture decision. The plan also keeps assurance off until the pilot states why it is needed |
 | Phase 3 sandbox check | One consented end-to-end check before any adapter is labelled verified |
 | Phase 4 observation window | Run on a real candidate once one exists |

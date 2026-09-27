@@ -10,6 +10,7 @@ import { guard, ok, unavailable, type ExternalResult, type ProofPublicPayload } 
 import { env } from "./env.js";
 import { localKeySubmitter } from "./submitters/local-key.js";
 import { noneSubmitter } from "./submitters/none.js";
+import { ozRelayerSubmitter } from "./submitters/openzeppelin-relayer.js";
 import { sameAddress, type AttestResult, type AttestationSubmitter } from "./submitter.js";
 
 export { buildAttestRequest, encodeProofData } from "./relayer-request.js";
@@ -17,6 +18,7 @@ export type { AttestResult } from "./submitter.js";
 
 const SUBMITTERS: Record<string, AttestationSubmitter> = {
   "local-key": localKeySubmitter,
+  "openzeppelin-relayer": ozRelayerSubmitter,
   none: noneSubmitter,
 };
 
@@ -79,7 +81,7 @@ async function submitVia(
       "relayer/eas",
       submitter.name === "none"
         ? "attestation submitter disabled (ATTESTATION_SUBMITTER=none)"
-        : "relayer not configured (RPC_URL / RELAYER_PRIVATE_KEY / EAS_SCHEMA_UID missing)",
+        : `relayer not configured (${submitter.configHint ?? "RPC_URL / RELAYER_PRIVATE_KEY / EAS_SCHEMA_UID"} missing)`,
     );
   }
 
