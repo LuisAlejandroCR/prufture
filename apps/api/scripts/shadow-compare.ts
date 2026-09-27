@@ -10,10 +10,12 @@
 import { compareSubmitters, cutoverReady, syntheticPayload, type ComparisonRow } from "../src/cutover.js";
 import { localKeySubmitter } from "../src/submitters/local-key.js";
 import { noneSubmitter } from "../src/submitters/none.js";
+import { ozRelayerSubmitter } from "../src/submitters/openzeppelin-relayer.js";
 import type { AttestationSubmitter } from "../src/submitter.js";
 
 const ADAPTERS: Record<string, AttestationSubmitter> = {
   "local-key": localKeySubmitter,
+  "openzeppelin-relayer": ozRelayerSubmitter,
   none: noneSubmitter,
 };
 

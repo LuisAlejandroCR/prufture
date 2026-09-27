@@ -39,8 +39,18 @@ services:
         sync: false
       - key: RELAYER_PRIVATE_KEY
         sync: false
-      # Submitter adapter: "local-key" (default) or "none". Unknown names fail closed to "none".
+      # Submitter adapter: "local-key" (default), "openzeppelin-relayer", or "none". Unknown
+      # names fail closed to "none".
       - key: ATTESTATION_SUBMITTER
+        sync: false
+      # OpenZeppelin Relayer adapter only. The relayer holds the key; OZ_RELAYER_ADDRESS pins it.
+      - key: OZ_RELAYER_URL
+        sync: false
+      - key: OZ_RELAYER_ID
+        sync: false
+      - key: OZ_RELAYER_API_KEY
+        sync: false
+      - key: OZ_RELAYER_ADDRESS
         sync: false
       - key: EAS_SCHEMA_UID
         sync: false

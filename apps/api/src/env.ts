@@ -33,6 +33,26 @@ export const env = {
   get chainId(): number {
     return Number(process.env.BASE_SEPOLIA_CHAIN_ID ?? 84532);
   },
+
+  // OpenZeppelin Relayer (ATTESTATION_SUBMITTER=openzeppelin-relayer): a self-hosted service that
+  // holds the signing key, so none is kept in this process. OZ_RELAYER_ADDRESS pins the address
+  // the relayer must report; a relayer that answers with any other key is refused.
+  get ozRelayerUrl(): string {
+    return process.env.OZ_RELAYER_URL ?? "";
+  },
+  get ozRelayerId(): string {
+    return process.env.OZ_RELAYER_ID ?? "";
+  },
+  get ozRelayerApiKey(): string {
+    return process.env.OZ_RELAYER_API_KEY ?? "";
+  },
+  get ozRelayerAddress(): string {
+    return process.env.OZ_RELAYER_ADDRESS ?? "";
+  },
+  /** The OZ network name the relayer must be bound to. OZ calls Base Sepolia "base-sepolia". */
+  get ozRelayerNetwork(): string {
+    return process.env.OZ_RELAYER_NETWORK || "base-sepolia";
+  },
   get neuroUrl(): string {
     return process.env.NEURO_AGENT_API_URL ?? "";
   },
