@@ -1,7 +1,6 @@
-// seed.ts: POST two core-signed proofs to a running api so a fresh deploy has data at
-// /dashboard and a sample /verify/<hash>. Zero PII: the payload is only the 4 public fields.
+// seed.ts: POSTs two core-signed demo proofs to a running api's /sync so a fresh deploy has dashboard
+// data and a sample /verify/<hash>. Zero PII: only the 4 public fields.
 // Usage: npx tsx apps/api/scripts/seed.ts <api-base-url>   (default http://localhost:8787)
-// Distinct from register-schema.ts (one-off on-chain schema setup); this only calls POST /sync.
 
 import { hashBytes, signPayload, type ProofPublicPayload } from "@proof/core";
 

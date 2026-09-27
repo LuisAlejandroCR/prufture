@@ -1,8 +1,6 @@
-// public-writes.test.ts: the unauthenticated routes that write against a proof. Proof hashes are
-// public (/proofs), so each of these must hold on its own against a caller who knows a hash:
-//   - /liveness-result records only what a server-signed ticket says, never the body's claim;
-//   - a liveness verdict and a sealed precise location are write-once;
-//   - no route accepts an unbounded body.
+// public-writes.test.ts: the unauthenticated routes that write against a (public) proof hash. Liveness
+// records only what a server-signed ticket says, liveness and precise location are write-once, and no
+// route accepts an unbounded body.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -33,8 +31,6 @@ async function verifiedPerson(hash: string): Promise<unknown> {
   return ((await (await app.request(`/proof/${hash}`)).json()) as { verifiedPerson: unknown }).verifiedPerson;
 }
 
-// --- the ticket itself -------------------------------------------------------------------------
-
 test("a ticket round-trips its verdict", () => {
   assert.deepEqual(readTicket(issueTicket({ verifiedPerson: true, degraded: false })), { verifiedPerson: true, degraded: false });
   assert.deepEqual(readTicket(issueTicket({ verifiedPerson: false, degraded: true })), { verifiedPerson: false, degraded: true });
@@ -60,8 +56,6 @@ test("an expired ticket, or one issued in the future, is refused", () => {
   // Well inside the window, as an offline report syncing days later would be.
   assert.ok(readTicket(issueTicket({ verifiedPerson: true, degraded: false }, now - 7 * 86_400_000), now));
 });
-
-// --- /liveness-result ------------------------------------------------------------------------------
 
 test("/liveness-result ignores a claimed verdict in the body and requires a ticket", async () => {
   const hash = await syncedProof();
@@ -97,16 +91,12 @@ test("a recorded liveness verdict cannot be replaced by a different one", async 
   assert.equal(await verifiedPerson(hash), false);
 });
 
-// --- /precise-location -------------------------------------------------------------------------------
-
 test("a stored precise location cannot be replaced, but an identical retry is accepted", async () => {
   const hash = await syncedProof();
   assert.equal((await post("/precise-location", { proofHash: hash, cipher: "00ff00ff" })).status, 200);
   assert.equal((await post("/precise-location", { proofHash: hash, cipher: "00ff00ff" })).status, 200);
   assert.equal((await post("/precise-location", { proofHash: hash, cipher: "deadbeef" })).status, 409);
 });
-
-// --- body size -------------------------------------------------------------------------------------
 
 test("an oversized body is refused with 413 before any route reads it", async () => {
   const big = JSON.stringify({ proofHash: "a".repeat(64), pad: "x".repeat(MAX_BODY_BYTES) });

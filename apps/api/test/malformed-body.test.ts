@@ -1,10 +1,6 @@
 // malformed-body.test.ts: every POST route answers a malformed body with a 4xx, never a 500.
-//
-// /attest and /notify used to destructure `await c.req.json()` with no try/catch, so a body that
-// is not JSON threw inside the handler and Hono turned it into a 500. Every other POST route
-// already guarded. That mattered because these routes are unauthenticated: an unparseable body
-// is the caller's error, and a 500 both misreports whose fault it is and pages an operator for
-// traffic anyone can send.
+// These routes are unauthenticated: a bad body is the caller's error, and a 500 would misreport
+// whose fault it is and page an operator for traffic anyone can send.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";

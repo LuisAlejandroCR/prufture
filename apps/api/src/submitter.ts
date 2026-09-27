@@ -1,11 +1,6 @@
-// submitter.ts: phase 2 of the provider portability plan — transaction submission sits behind
-// an AttestationSubmitter port so key custody can be replaced without touching transaction
-// policy. relayer.ts keeps the pure request builder; this module decides who signs and sends.
-//
-// The allowlist below is the policy, and it is enforced here rather than in an adapter so that
-// EVERY present and future adapter inherits it. It fails closed: anything that is not the exact
-// EAS attest() call this relayer is permitted to make throws before a key is ever touched, and
-// guard() in the adapter turns that into a typed unavailable.
+// submitter.ts: the AttestationSubmitter port — adapters own key custody and transport, never policy.
+// assertAllowed() is the fail-closed allowlist every adapter inherits: anything but the exact EAS
+// attest() call throws before a key is touched, and the adapter's guard() makes that a typed unavailable.
 
 import type { ExternalResult, ProofPublicPayload } from "@proof/core";
 import { getAddress, toFunctionSelector, type Hex } from "viem";

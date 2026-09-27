@@ -1,7 +1,6 @@
 // neuro.test.ts: unit + fuzz + invariant coverage for the Neuro verified-attribute client.
-// Core guarantee under test: only { attribute, value:boolean } leaves getVerifiedAttribute,
-// it degrades (never throws) when unconfigured or when the endpoint hangs, and no key from a
-// hostile identity-shaped response body ever reaches the return value or the logs.
+// Only { attribute, value:boolean } may leave getVerifiedAttribute; it degrades (never throws) when
+// unconfigured or hung, and no field of a hostile identity-shaped body reaches the result or logs.
 
 import { test, afterEach } from "node:test";
 import assert from "node:assert/strict";
@@ -44,8 +43,6 @@ afterEach(() => {
   setEnv("NEURO_AGENT_API_URL", realUrl);
   setEnv("NEURO_AGENT_API_TOKEN", realToken);
 });
-
-// --- unit ---------------------------------------------------------------
 
 test("unconfigured env => available:false, no throw, no data", async () => {
   configure(false);
@@ -95,8 +92,7 @@ test("token is never placed in the returned object", async () => {
   assert.doesNotMatch(JSON.stringify(r), /secret-token-value/);
 });
 
-// --- invariant: hostile identity-shaped body never leaks ----------------
-
+// Invariant: a hostile identity-shaped body never leaks.
 const HOSTILE_BODY = {
   verified: true,
   value: true,
@@ -135,8 +131,6 @@ test("invariant: no key from a hostile identity body leaks into the result or lo
   assert.deepEqual(Object.keys(r.data).sort(), ["attribute", "value"]);
 });
 
-// --- fuzz: random hostile bodies, random attributes ---------------------
-
 function randToken(): string {
   return Math.random().toString(36).slice(2, 10);
 }
@@ -147,7 +141,6 @@ test("fuzz: 300 random response bodies never leak an unexpected key", async () =
     const noiseKeys = Array.from({ length: 1 + Math.floor(Math.random() * 6) }, () => randToken());
     const body: Record<string, unknown> = {};
     for (const k of noiseKeys) body[k] = Math.random() < 0.5 ? randToken() : Math.random();
-    // sometimes include a truthy verified/value, sometimes not
     if (Math.random() < 0.6) body[Math.random() < 0.5 ? "verified" : "value"] = Math.random() < 0.5;
     const status = Math.random() < 0.8 ? 200 : 400 + Math.floor(Math.random() * 3);
 
@@ -171,8 +164,7 @@ test("fuzz: 300 random response bodies never leak an unexpected key", async () =
   }
 });
 
-// --- timeout: a hung endpoint degrades within the 5s budget, never throws --
-
+// A hung endpoint degrades within the 5s budget, never throws.
 test("hung endpoint => degrades via abort within the timeout, never throws", async () => {
   configure(true);
   globalThis.fetch = ((_url: string, init?: RequestInit) =>

@@ -1,13 +1,6 @@
-// liveness-ticket.ts: a server-signed receipt for a liveness verdict.
-//
-// The selfie check runs before the proof exists (no proofHash yet), so the verdict is attached
-// later via POST /liveness-result. That route is unauthenticated and proof hashes are public, so
-// it must not take the verdict from the request body: anyone could mark any proof as "verified
-// person" on the public /verify page. /verify-identity returns this ticket with the verdict, and
-// /liveness-result records only what a valid ticket says.
-//
-// The ticket carries two booleans and an issue time — no frame, nonce, score or identity — and
-// an HMAC over them. It is not a bearer credential for anything else.
+// liveness-ticket.ts: a server-signed (HMAC) receipt for a liveness verdict. POST /liveness-result
+// is unauthenticated and proof hashes are public, so it records only what a valid ticket from
+// /verify-identity says, never a body verdict. Carries two booleans and a time — no frame or identity.
 
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 

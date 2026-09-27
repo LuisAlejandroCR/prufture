@@ -1,6 +1,5 @@
-// page.tsx: /dashboard Overview. Summary metrics, an attention list, and the recent
-// report workspace. Region level only: no login, no personal data, no exact location.
-// Fetch is server-side; the client table filters what is already coarse.
+// page.tsx: /dashboard Overview — summary metrics, an attention list and the recent-report workspace.
+// Fetched server-side; region level only, no login, no personal data, no exact location.
 
 import Link from "next/link";
 import { fetchProofs } from "../../lib/api";

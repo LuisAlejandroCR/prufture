@@ -1,7 +1,6 @@
-// map/page.tsx: /dashboard/map — coverage map. Server component: fetches the coarse
-// proof list, aggregates it into one cell per distinct 5-char geohash region, and hands
-// the cells to the client Leaflet map. No precise location exists on this route; the map
-// shows approximate zones (~2.4 km), never a reporter's position.
+// map/page.tsx: /dashboard/map server component — fetches the coarse proof list, aggregates it into
+// one cell per 5-char geohash region and hands the cells to the client map. No precise location
+// exists on this route; zones are approximate (~2.4 km), never a reporter's position.
 
 import { fetchProofs } from "../../../lib/api";
 import { coverage } from "../../../lib/dashboard";

@@ -1,10 +1,6 @@
-// page.tsx: public /privacy. The privacy policy URL required by App Store Connect and Google
-// Play, and linked from app.json. Every statement here must match what the code actually does —
-// see docs/location_privacy.md and docs/legal_posture.md. Distinct from /support (how to get
-// help) and /verify (a single report's public record).
-//
-// HONESTY RULE: no "GDPR-compliant", "zero-knowledge", "TEE" or "hardware attestation" claim.
-// Describe the mechanism, not a certification we do not hold.
+// page.tsx: public /privacy — the privacy policy URL for App Store Connect and Google Play. Every
+// statement must match what the code does (docs/location_privacy.md, docs/legal_posture.md).
+// HONESTY RULE: describe the mechanism; never claim a certification or guarantee we do not hold.
 
 import Link from "next/link";
 

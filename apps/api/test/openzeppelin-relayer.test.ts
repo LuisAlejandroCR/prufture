@@ -1,10 +1,6 @@
-// openzeppelin-relayer.test.ts: phase 2's second AttestationSubmitter adapter. The key lives in
-// a self-hosted OpenZeppelin Relayer, so these tests hold the adapter to what it can still
-// guarantee from outside: only allowlisted attest() calldata with zero value is ever queued,
-// the relayer must be the pinned one before anything is sent, a slow relayer never causes a
-// second transaction for the same proof, and no credential or vendor text leaks into a result.
-//
-// A fake relayer stands in for the service; nothing here touches the network or the chain.
+// openzeppelin-relayer.test.ts: the OZ Relayer submitter, against a fake relayer (no network or chain).
+// Only allowlisted zero-value attest() calldata is queued, only on the pinned relayer; a slow relayer
+// never causes a second tx for one proof, and no credential or vendor text leaks into a result.
 
 import { test, beforeEach } from "node:test";
 import assert from "node:assert/strict";
@@ -119,8 +115,6 @@ function adapter(fake: ReturnType<typeof fakeRelayer>, deps: Partial<OzRelayerDe
   return createOzRelayerSubmitter({ fetch: fake.fetchImpl, sleep: async () => {}, ...deps });
 }
 
-// --- configuration -----------------------------------------------------------------------------
-
 test("selected by ATTESTATION_SUBMITTER=openzeppelin-relayer", () => {
   process.env.ATTESTATION_SUBMITTER = "openzeppelin-relayer";
   assert.equal(selectedSubmitter().name, "openzeppelin-relayer");
@@ -166,8 +160,6 @@ test("attester() is the pinned address, checksummed, with no network call", () =
   assert.equal(adapter(fake).attester?.(), null);
 });
 
-// --- the happy path ----------------------------------------------------------------------------
-
 test("queues exactly the allowlisted attest() call with zero value and returns the hash", async () => {
   const fake = fakeRelayer();
   const p = payload();
@@ -212,8 +204,7 @@ test("a queued transaction is polled until the relayer reports its hash", async 
   assert.ok(fake.seen.some((s) => s.url.endsWith("/transactions/tx-1")));
 });
 
-// --- idempotency: a slow relayer never costs a second transaction -------------------------------
-
+// Idempotency: a slow relayer never costs a second transaction.
 test("still queued after the budget: unavailable now, and the retry re-polls instead of re-sending", async () => {
   const slow = fakeRelayer({ queued: { status: "pending" }, polls: [{ status: "pending" }] });
   const oz = adapter(slow, { pollAttempts: 2 });
@@ -262,8 +253,7 @@ test("attestOnce skips the relayer entirely for a proof its pinned address alrea
   assert.equal(fake.seen.length, 0, "no call reaches the relayer for an anchored proof");
 });
 
-// --- fail closed on the relayer's own record ---------------------------------------------------
-
+// Fail closed on the relayer's own record.
 for (const [label, relayer, reason] of [
   ["a relayer reporting a different address", { address: OTHER }, /pinned OZ_RELAYER_ADDRESS/],
   ["a relayer with no address", { address: undefined }, /pinned OZ_RELAYER_ADDRESS/],
@@ -289,8 +279,7 @@ test("OZ_RELAYER_NETWORK can pin a different network name", async () => {
   assert.equal(fake.posts().length, 0);
 });
 
-// --- fail closed on what the relayer says it queued --------------------------------------------
-
+// Fail closed on what the relayer says it queued.
 for (const [label, queued, reason] of [
   ["sent from another address", { from: OTHER, hash: TX_HASH }, /other than the pinned/],
   ["sent to another contract", { to: OTHER, hash: TX_HASH }, /does not target the EAS contract/],
@@ -311,8 +300,7 @@ test("a malformed hash is never returned as a transaction hash", async () => {
   assert.equal(r.available, false);
 });
 
-// --- the policy still applies: nothing unallowlisted reaches the relayer -----------------------
-
+// The policy still applies: nothing unallowlisted reaches the relayer.
 test("with no schema allowlisted, nothing is sent to the relayer", async () => {
   const fake = fakeRelayer();
   const oz = adapter(fake);
@@ -331,8 +319,7 @@ test("a malformed schema UID is refused by the allowlist before the relayer is c
   assert.equal(fake.seen.length, 0);
 });
 
-// --- hostile or broken relayer responses degrade without leaking -------------------------------
-
+// Hostile or broken relayer responses degrade without leaking.
 for (const [label, o] of [
   ["a 401", { status: 401, rawBody: JSON.stringify({ success: false, error: `bad key ${API_KEY}` }) }],
   ["a 500", { status: 500, rawBody: `internal ${API_KEY}` }],

@@ -1,7 +1,6 @@
-// push.ts: pure helpers for anonymous push-token registration.
-// No native imports so it unit-tests off-device. The register body is built from an
-// explicit whitelist — a device id and an Expo push token, nothing that identifies a person.
-// Native glue (permission prompt, token fetch, POST) lives in src/notifications.ts.
+// push.ts: pure helpers for anonymous push-token registration, with no native imports so they test
+// off-device. The register body is an explicit whitelist — device id + Expo token, nothing that
+// identifies a person. Native glue lives in src/notifications.ts.
 
 /** Exact shape POSTed to `${apiUrl}/register-push`. No account, no identity, no proof link. */
 export interface RegisterPushBody {

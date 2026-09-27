@@ -1,10 +1,6 @@
 // env-live.test.ts: every env.* field is read at call time, not snapshot at import.
-//
-// This used to be mixed: rpcUrl and the RevenueCat/notify fields were getters, while
-// relayerPrivateKey, easSchemaUid, neuroUrl and friends were captured once when the module
-// loaded. That split caused two concrete problems — a "configured" check could disagree with
-// what the call would actually do, and a test had to spawn a child process just to vary
-// configuration. These assertions stop the snapshot form creeping back in.
+// A snapshot let a "configured" check disagree with what the call would actually do, and forced tests
+// to spawn child processes to vary config; these assertions stop that form creeping back in.
 
 import { test, afterEach } from "node:test";
 import assert from "node:assert/strict";

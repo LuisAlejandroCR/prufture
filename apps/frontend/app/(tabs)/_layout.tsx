@@ -1,7 +1,6 @@
-// (tabs)/_layout.tsx: the five reporter destinations with a custom bottom bar.
-// Home, Tasks, [Report], Updates, Me. Report is a raised terracotta control that
-// opens the guided flow, not a normal tab. Selected icons are filled and sit on a
-// soft tinted pill; unselected icons are outlined. Every control has a label.
+// (tabs)/_layout.tsx: the five reporter destinations (Home, Tasks, [Report], Updates, Me) with a custom
+// bottom bar. Report is a raised terracotta control that opens the guided flow, not a normal tab;
+// selected icons are filled on a tinted pill, and every control has a label.
 
 import { Tabs, useRouter } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";

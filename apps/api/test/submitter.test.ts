@@ -1,8 +1,5 @@
-// submitter.test.ts: phase 2 of the provider portability plan. The AttestationSubmitter port
-// separates transaction POLICY (assertAllowed, here) from KEY CUSTODY (an adapter). These tests
-// are the policy's teeth: every check must FAIL CLOSED, so that any future adapter — managed
-// signer, self-hosted KMS relayer — inherits the same limits without restating them.
-//
+// submitter.test.ts: the transaction POLICY (assertAllowed) behind the AttestationSubmitter port. Every
+// check must FAIL CLOSED so any future adapter inherits the same limits without restating them.
 // Nothing here touches the chain or derives a key.
 
 import { test } from "node:test";
@@ -166,8 +163,6 @@ test("fails closed: with no schema configured at all, nothing is allowlisted", (
   }
 });
 
-// --- adapter selection -------------------------------------------------------------------
-
 test("the default adapter is local-key (unchanged behaviour)", () => {
   delete process.env.ATTESTATION_SUBMITTER;
   assert.equal(selectedSubmitter().name, "local-key");
@@ -213,8 +208,6 @@ test("the local-key adapter reports unconfigured without deriving a key", async 
   assert.equal(r.available, false);
   assert.equal(r.source, "relayer/eas");
 });
-
-// --- idempotency -------------------------------------------------------------------------
 
 test("duplicate submissions converge on the same proof (identical calldata)", () => {
   const p = payload();

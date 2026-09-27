@@ -1,8 +1,6 @@
-// assurance.test.ts: phase 3 of the provider portability plan. Liveness and verified attributes
-// are separate ports with separate adapters, BOTH DEFAULT OFF.
-//
-// The contract block at the bottom is the plan's exit criterion: the same assertions run
-// unchanged against every adapter, so adding one cannot widen what escapes the boundary.
+// assurance.test.ts: liveness and verified attributes are separate ports, BOTH DEFAULT OFF.
+// The contract block at the bottom runs the same assertions against every adapter, so adding one
+// cannot widen what escapes the boundary.
 
 import { test, afterEach } from "node:test";
 import assert from "node:assert/strict";
@@ -46,8 +44,7 @@ afterEach(() => {
 
 const FRAMES = { frames: ["ZnJhbWUx", "ZnJhbWUy"], nonceHex: "a".repeat(32), challenges: ["blink", "left"] };
 
-// --- both ports default off ---------------------------------------------------------------
-
+// Both ports default off.
 test("with no configuration at all, both ports are none", () => {
   assert.equal(selectedLivenessPort().name, "none");
   assert.equal(selectedAttributePort().name, "none");
@@ -85,8 +82,7 @@ test("selecting neuro without credentials still degrades typed, never throws", a
   assert.match(a.error ?? "", /not configured/);
 });
 
-// --- unavailable assurance never blocks the report ------------------------------------------
-
+// Unavailable assurance never blocks the report.
 test("a disabled liveness port still lets /verify-identity answer 200, degraded", async () => {
   const res = await app.request("/verify-identity", {
     method: "POST",
@@ -127,8 +123,7 @@ test("a disabled attribute port leaves the proof intact and answers 200 degraded
   assert.equal(body.verifiedAttribute, null);
 });
 
-// --- contract tests: identical for EVERY adapter ---------------------------------------------
-
+// Contract tests: identical for EVERY adapter.
 const LIVENESS_ADAPTERS: LivenessPort[] = [noneLiveness, neuroLiveness];
 const ATTRIBUTE_ADAPTERS: AttributePort[] = [noneAttribute, neuroAttribute];
 

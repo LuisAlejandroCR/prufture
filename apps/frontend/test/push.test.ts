@@ -1,5 +1,5 @@
 // push.test.ts: pure push-registration helpers (src/push.ts). No native imports here —
-// the Expo glue in src/notifications.ts is grepped by store-config.test.ts instead.
+// the Expo glue in src/notifications.ts is grepped by eas-config.test.ts instead.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";

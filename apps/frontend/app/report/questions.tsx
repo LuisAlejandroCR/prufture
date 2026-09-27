@@ -1,6 +1,5 @@
-// report/questions.tsx: only the answers needed to understand the activity.
-// One question per view, large choice buttons, progress, no free text, no PII.
-// Answers are held in the in-memory draft and survive going offline.
+// report/questions.tsx: only the answers needed to understand the activity — one question per view,
+// large choices, no free text, no PII. Answers live in the in-memory draft and survive going offline.
 
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";

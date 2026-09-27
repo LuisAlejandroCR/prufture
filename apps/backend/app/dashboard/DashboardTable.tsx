@@ -1,7 +1,6 @@
-// DashboardTable.tsx: the recent-report workspace. Programme, date, and status
-// filters plus a text search over the already-coarse proof list. This component
-// never sees a full geohash, GPS point, or reporter identity and cannot add one.
-// The row action opens the review page. Styling: globals.css tokens.
+// DashboardTable.tsx: the recent-report workspace — programme, date and status filters plus text
+// search over the already-coarse proof list; the row action opens the review page. It never sees
+// a full geohash, GPS point or reporter identity and cannot add one.
 
 "use client";
 

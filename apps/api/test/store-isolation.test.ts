@@ -1,12 +1,6 @@
-// store-isolation.test.ts: regression cover for a cross-run state leak.
-//
-// The test store used to be named after the process pid alone, and the files were never
-// removed. Pids get recycled, so a later run could land on a pid whose file still held a
-// previous run's proofs — and an assertion like "unknown proofHash => 404" would fail, because
-// that hash had in fact been synced by an earlier run. It failed rarely, which is worse.
-//
-// These tests pin the two properties that make that impossible: the path is unique per run, and
-// the process removes its own file on exit.
+// store-isolation.test.ts: regression cover for a cross-run state leak — pid-only store names were
+// recycled across runs and loaded a previous run's proofs, flaking "unknown proofHash => 404".
+// Pins the fix: the path is unique per run, and the process removes its own file on exit.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";

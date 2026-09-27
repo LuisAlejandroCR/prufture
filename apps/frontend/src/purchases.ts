@@ -1,12 +1,6 @@
-// purchases.ts: typed port over react-native-purchases (RevenueCat). Screens never import
-// the vendor SDK directly — everything they need comes through this module and useEntitlement.
-// Every call returns the project's ExternalResult envelope and never throws through the flow
-// (same contract as apps/api/src/neuro.ts).
-//
-// Privacy: the RevenueCat app user id must never be PII. This module leaves the SDK on its
-// default anonymous id (no logIn with an email/phone/hash — Purchases.configure alone is
-// enough). Subscriber attributes are never set: no report hash, location, task id, media
-// ref, or identity credential is ever attached to a RevenueCat user.
+// purchases.ts: typed port over react-native-purchases (RevenueCat); screens never import the SDK.
+// Every call returns an ExternalResult and never throws. Privacy: stays on the SDK's anonymous app
+// user id (no logIn) and never sets subscriber attributes — no report, location or identity data.
 
 import type Purchases from "react-native-purchases";
 import type { CustomerInfo, PurchasesOffering, PurchasesPackage } from "react-native-purchases";

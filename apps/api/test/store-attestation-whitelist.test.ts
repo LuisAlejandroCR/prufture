@@ -1,12 +1,6 @@
-// store-attestation-whitelist.test.ts: the store file is the one input store.ts does not
-// produce itself, and /proof/:hash serves `attestations` as an array rather than picking
-// fields out of it. So anything extra in a persisted attestation record reaches a public,
-// unauthenticated endpoint.
-//
-// Verified against the previous code: a record carrying reporterPublicKey, preciseGps and
-// volunteerName was served verbatim. load() re-validates `review` for exactly this reason
-// ("a hand-edited or truncated file must not resurrect a review..."); attestations now get
-// the same treatment.
+// store-attestation-whitelist.test.ts: the store file is the one input store.ts does not produce, and
+// /proof/:hash serves `attestations` as an array, so extra keys in a persisted record would reach a
+// public endpoint. load() must keep exactly attester / txHash / attestedAt.
 
 import { test, afterEach } from "node:test";
 import assert from "node:assert/strict";

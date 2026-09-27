@@ -1,6 +1,5 @@
-// feedback.test.ts: the haptics helpers must never break the report flow, the
-// enabled flag must gate them, and celebrationsAllowed() must fold in both the
-// reporter toggle and the OS reduce-motion setting. Pure: no device, no expo
+// feedback.test.ts: haptics never break the report flow, the enabled flag gates them, and
+// celebrationsAllowed() folds in both the reporter toggle and OS reduce-motion. Pure: no expo
 // native module resolves under node, which is itself part of the contract.
 
 import { test } from "node:test";

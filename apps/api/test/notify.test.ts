@@ -1,7 +1,6 @@
-// notify.test.ts: the programme auto-notification on /sync (and /attest).
-// Proves: off by default; exactly one send per reportId (deduped across proofs); trigger gating;
-// a down channel keeps /sync at 200 and does NOT lock the dedup key; the wire body is url-only
-// with no PII; and reportId / notifiedKey never appear on a public route.
+// notify.test.ts: the programme auto-notification on /sync (and /attest). Off by default, one send per
+// reportId, trigger-gated; a down channel keeps /sync at 200 without locking the dedup key; the wire
+// body is url-only, and reportId / notifiedKey never appear on a public route.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";

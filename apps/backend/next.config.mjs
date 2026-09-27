@@ -1,4 +1,5 @@
-// next.config.mjs: transpile the shared workspace package.
+// next.config.mjs: Next.js config for the dashboard / public site.
+// Transpiles the shared @proof/core workspace package, which ships TypeScript source.
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   transpilePackages: ["@proof/core"],

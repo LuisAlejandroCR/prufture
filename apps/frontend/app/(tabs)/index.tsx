@@ -1,6 +1,5 @@
-// (tabs)/index.tsx: Home. One glance, one next task, one primary action.
-// Shows the offline queue notice only when reports are waiting. No statistics,
-// no activity feed, no technical status. Presentation over src/queue + src/tasks.
+// (tabs)/index.tsx: Home — one glance, one next task, one primary action, plus the offline queue
+// notice only when reports are waiting. No statistics, feed or technical status.
 
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";

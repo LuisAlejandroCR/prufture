@@ -1,4 +1,5 @@
 // signature.test.ts: round-trip check for sign/verify and tamper rejection.
+// A single changed payload field must make verifyProof return false.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";

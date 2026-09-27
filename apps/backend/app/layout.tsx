@@ -1,7 +1,5 @@
-// layout.tsx: root layout for the public site.
-// Global tokens and base styles live in globals.css. Each route owns its own shell:
-// the landing and /verify use <main class="wrap"> (reading width); /dashboard uses the
-// full-width operational shell in dashboard/layout.tsx.
+// layout.tsx: root layout for the public site; global tokens and base styles live in globals.css.
+// Each route owns its shell: landing and /verify use <main class="wrap">, /dashboard its own layout.
 
 import type { ReactNode } from "react";
 import "./globals.css";

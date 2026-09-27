@@ -1,8 +1,6 @@
-// report/permissions.tsx: an explicit, honest access screen before any capture.
-// Camera and location are both required — no camera, no report; no location, no
-// report (proof of where is the point). One card per permission; Continue unlocks
-// only when both are granted. Denied -> an open-settings CTA, no way past.
-// Presentation over src/permissions.ts — no raw permission calls live in this file.
+// report/permissions.tsx: explicit, honest access screen before any capture. Camera and location are
+// both required (no location, no report); Continue unlocks only when both are granted, and denial
+// shows an open-settings CTA. All permission calls go through src/permissions.ts.
 
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";

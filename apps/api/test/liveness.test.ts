@@ -1,7 +1,6 @@
-// liveness.test.ts: the selfie liveness verdict path — /verify-identity (frames mode),
-// /liveness-result, and the verifiedPerson field on /proof/:hash. Neuro is unconfigured
-// in the test env, so the provider call always degrades. Also asserts no frame / nonce /
-// identity field is ever echoed back in a response.
+// liveness.test.ts: the selfie liveness verdict path — /verify-identity (frames mode), /liveness-result
+// and verifiedPerson on /proof/:hash, with Neuro unconfigured so the provider always degrades.
+// Also asserts no frame / nonce / identity field is ever echoed back in a response.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";

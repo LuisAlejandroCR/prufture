@@ -1,10 +1,6 @@
-// page.tsx: public /verify/[hash]. No login, ever. Plain-language lifecycle:
-// Report received / Waiting for more confirmation / Report confirmed, plus honest
-// "not found" and "temporarily unavailable" states. Shows the activity, an
-// approximate area (coarse region only), the capture date, the status, the number
-// of confirmations, and a public reference. The full reference and any external
-// record link live inside a collapsed technical section. No reporter identity, no
-// exact location, no private media.
+// page.tsx: public /verify/[hash], no login ever. Plain-language lifecycle (received / waiting for
+// confirmation / confirmed) plus honest "not found" and "unavailable" states, with technical detail
+// collapsed. Coarse region only — no reporter identity, exact location or private media.
 
 import Link from "next/link";
 import { assuranceFromProof, assuranceLabel, isNeutralAssurance } from "../../../lib/assurance";

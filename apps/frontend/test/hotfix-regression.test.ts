@@ -1,10 +1,6 @@
-// hotfix-regression.test.ts: guards the three on-device hotfixes that cannot be
-// rendered under Node (ui.tsx and useAutoSync.ts both pull in react-native).
-// Same source-assertion pattern as csprng.test.ts. On-device confirmation is the
-// APK screenshots the human takes.
-//
-// - BUG 1: <Screen> must apply the safe-area top inset, not drop it.
-// - BUG 3: reachability is online unless explicitly false; an initial sync on mount.
+// hotfix-regression.test.ts: source assertions for on-device hotfixes that cannot render under Node:
+// <Screen> applies the safe-area top inset (BUG 1), and reachability is online unless explicitly
+// false with an initial sync on mount (BUG 3). Device confirmation is the human's APK screenshots.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";

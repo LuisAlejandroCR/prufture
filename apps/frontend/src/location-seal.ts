@@ -1,9 +1,6 @@
-// location-seal.ts: encrypt the precise location point on-device to the programme
-// team's public key. Libsodium sealed-box style: an ephemeral X25519 key agreement
-// feeds an HKDF-SHA256 key for XChaCha20-Poly1305. Only the holder of the programme
-// PRIVATE key can open the result; the app never has a decrypt key.
-// Distinct from src/geohash.ts (coarse, plaintext, signed) — this is the precise tier,
-// which is never signed and never reaches the chain (see docs/location_privacy.md).
+// location-seal.ts: seals the precise location on-device to the programme team's X25519 public key
+// (ephemeral X25519 -> HKDF-SHA256 -> XChaCha20-Poly1305); the app never holds a decrypt key. This
+// precise tier is never signed and never reaches the chain (see docs/location_privacy.md).
 
 import { xchacha20poly1305 } from "@noble/ciphers/chacha";
 import { x25519 } from "@noble/curves/ed25519";

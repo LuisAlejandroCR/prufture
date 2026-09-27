@@ -1,7 +1,6 @@
-// permissions.ts: the single place the guided report flow asks the OS for access.
-// No screen calls expo-camera / expo-location permission APIs directly — they call
-// here, so rationale copy and the required/optional policy live in one file.
-// Distinct from src/capture.ts (produces the proof) and src/geohash.ts (coarsening).
+// permissions.ts: the single place the guided report flow asks the OS for camera and location access.
+// Screens call here, never the expo permission APIs directly, so rationale copy and the
+// required/optional policy live in one file.
 
 import { Camera } from "expo-camera";
 import * as Location from "expo-location";

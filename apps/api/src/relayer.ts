@@ -1,10 +1,6 @@
-// relayer.ts: the attestation entry point. It no longer knows how a transaction is signed or
-// sent — that is the AttestationSubmitter port (submitter.ts) and its adapters. This module
-// selects the adapter and keeps the contract every caller already relies on:
-// submitAttestation() returns a typed ExternalResult and never throws the user flow.
-//
-// The pure EAS request builder lives in relayer-request.ts and is re-exported here so existing
-// callers and the invariant tests keep their import path.
+// relayer.ts: the attestation entry point — selects the AttestationSubmitter adapter and keeps the
+// caller contract: submitAttestation() returns a typed ExternalResult and never throws the user flow.
+// Re-exports the pure builder from relayer-request.ts so existing import paths keep working.
 
 import { guard, ok, unavailable, type ExternalResult, type ProofPublicPayload } from "@proof/core";
 import { env } from "./env.js";
@@ -76,7 +72,7 @@ async function submitVia(
   }
 
   if (!configured) {
-    // Same typed shape as before; the message names the config, never a credential.
+    // The message names the config, never a credential.
     return unavailable(
       "relayer/eas",
       submitter.name === "none"
