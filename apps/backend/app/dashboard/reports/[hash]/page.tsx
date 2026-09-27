@@ -1,8 +1,6 @@
-// reports/[hash]/page.tsx: review one report. Activity and status, approximate area
-// and capture time, a safe evidence summary, the confirmation count, and a review
-// timeline. Actions that the current backend does not support are shown as disabled
-// and labelled, never faked. No reporter identity, no exact location, no private
-// media path.
+// reports/[hash]/page.tsx: review one report — status, approximate area, capture time, evidence
+// summary, confirmation count and timeline. Unsupported actions are shown disabled and labelled,
+// never faked. No reporter identity, exact location or private media path.
 
 import Link from "next/link";
 import { fetchProof } from "../../../../lib/api";

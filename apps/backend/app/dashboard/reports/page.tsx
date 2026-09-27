@@ -1,5 +1,5 @@
-// reports/page.tsx: the full report workspace. Same coarse data as Overview, with
-// the filter set and table given the whole width. Region level only, no personal data.
+// reports/page.tsx: the full-width report workspace — same coarse data and filters as Overview.
+// Region level only, no personal data.
 
 import { fetchProofs } from "../../../lib/api";
 import { DashboardTable } from "../DashboardTable";

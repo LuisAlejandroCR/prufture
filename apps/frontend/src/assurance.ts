@@ -1,7 +1,6 @@
-// assurance.ts: the explicit personhood-assurance states shown back to a reporter, and how
-// they map onto the server's /proof/:hash fields (verifiedPerson, verifiedPersonDegraded).
-// Kept as one pure module so every screen renders the same wording from the same mapping —
-// no screen should ever compare verifiedPerson === false directly.
+// assurance.ts: the explicit personhood-assurance states shown to a reporter, mapped from the
+// server's verifiedPerson / verifiedPersonDegraded. One pure module so every screen uses the same
+// wording — no screen should ever compare verifiedPerson === false directly.
 
 export type Assurance = "verified" | "invalid" | "reused" | "unavailable" | "not_enrolled";
 

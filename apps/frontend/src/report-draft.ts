@@ -1,9 +1,6 @@
-// report-draft.ts: state for the guided report the reporter is building now.
-// The in-memory `current` is the fast path; every mutation also writes through to
-// src/draft-store.ts so an app kill mid-report loses nothing (fire-and-forget, never
-// blocking). Nothing here is signed: on "Finish", the draft is turned into proofs
-// through src/capture.ts, one signed proof per photo, all carrying the same raw taskId.
-// Distinct from src/queue.ts (the durable proof queue).
+// report-draft.ts: state for the guided report being built. In-memory `current` is the fast path;
+// every mutation writes through to draft-store.ts (fire-and-forget) so an app kill loses nothing.
+// Nothing is signed here: on "Finish" the draft becomes one signed proof per photo via capture.ts.
 
 // `./capture` pulls in the native keystore + sqlite. It is NOT imported here (that would
 // break the off-device unit tests); the real captureProof is injected once at app start
@@ -75,8 +72,6 @@ export interface ReportDraft {
 
 let current: ReportDraft | null = null;
 
-// --- capture-proof injection seam --------------------------------------------------
-
 type CaptureProof = typeof CaptureProofFn;
 let captureProofImpl: CaptureProof | null = null;
 
@@ -89,8 +84,6 @@ export function setCaptureProof(fn: CaptureProof): void {
 export function __setCaptureProofForTest(fn: CaptureProof | null): void {
   captureProofImpl = fn;
 }
-
-// --- draft lifecycle --------------------------------------------------------------
 
 export function startDraft(taskId: string): ReportDraft {
   current = {
@@ -169,8 +162,6 @@ export function clearDraft(): void {
   void clearPersistedDraft();
 }
 
-// --- resume routing --------------------------------------------------------------
-
 export interface ResumeTarget {
   pathname: string;
   params: Record<string, string>;
@@ -199,8 +190,6 @@ export function resumeTarget(draft: ReportDraft, task: TaskDef): ResumeTarget {
   }
   return { pathname: "/report/review", params: { id } };
 }
-
-// --- save -----------------------------------------------------------------------
 
 export interface SaveResult {
   saved: number;

@@ -1,8 +1,6 @@
-// rpc-check.ts: phase 1 exit check — runs the rpc-check suite on every endpoint, checks they agree,
-// then drills failover against a local hung endpoint and a refused port. Exits non-zero unless two
-// or more endpoints pass. --attest also sends one synthetic attestation through each (funded key).
-//
-//   npm run rpc-check --workspace apps/api -- [--attest] [endpoint ...]   (default: env.rpcUrls)
+// rpc-check.ts: phase 1 exit check — the rpc-check suite on every endpoint (args or env.rpcUrls),
+// agreement, and a failover drill against a local hung endpoint and a refused port. Exits non-zero
+// unless two endpoints pass. --attest sends one synthetic attest() through each (needs the gas key).
 
 import { createServer, type Server } from "node:net";
 import { createPublicClient, http, type Hex } from "viem";

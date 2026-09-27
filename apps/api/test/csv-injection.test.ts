@@ -1,13 +1,6 @@
 // csv-injection.test.ts: the coordinator CSV export must not hand a spreadsheet a formula.
-//
-// taskId reaches toCsv() straight from a reporter's SIGNED PAYLOAD, and anyone can generate a
-// key and sign a proof — there is no registration. So this is unauthenticated input landing in
-// the spreadsheet of the programme officer who opens the export. Verified against the previous
-// code: =HYPERLINK(...), =cmd|'/c calc'!A1, +1+1, -2+3, @SUM(1+1) and a leading tab were all
-// written as live formulas.
-//
-// reviewNote is coordinator-written and covered too: a coordinator export should not be able to
-// attack another coordinator either.
+// taskId comes from a self-signed (unauthenticated) payload and lands in a programme officer's
+// spreadsheet; reviewNote is covered too, so one coordinator cannot attack another.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";

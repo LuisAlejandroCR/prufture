@@ -1,6 +1,6 @@
-// api.test.ts: unit + fuzz + invariant tests for the /verify + /dashboard data layer.
-// Proves: region coarsening can never widen or diverge from the input, and every fetch
-// helper maps transport outcomes to an honest state without throwing.
+// api.test.ts: unit + fuzz + invariant tests for the /verify + /dashboard data layer. Region
+// coarsening can never widen or diverge from the input, and every fetch helper maps transport
+// outcomes to an honest state without throwing.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";

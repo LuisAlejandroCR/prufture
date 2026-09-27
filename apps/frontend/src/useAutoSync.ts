@@ -1,7 +1,6 @@
-// useAutoSync.ts: binds the pure syncPending() to real deps and drains the queue on reconnect.
-// runPendingSync() = the bound call (fetch + queue fns + EXPO_PUBLIC_API_URL); shared in-flight
-// promise means no overlap. useAutoSync() fires it once on connectivity-restored and on
-// app-foreground. Distinct from src/sync.ts, which stays pure and native-free for unit tests.
+// useAutoSync.ts: binds the pure syncPending() to real deps and drains the queue on reconnect and
+// app-foreground. runPendingSync() shares one in-flight promise, so runs never overlap; src/sync.ts
+// stays pure and native-free for unit tests.
 
 import { useEffect, useRef } from "react";
 import { AppState, type AppStateStatus } from "react-native";
@@ -13,10 +12,9 @@ import { syncPending, type SyncSummary } from "./sync";
 export const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8787";
 
 /**
- * Treat the device as online unless connectivity is explicitly false.
- * `isInternetReachable` is `null` on the first NetInfo emit on some platforms;
- * the old `Boolean(isConnected && isInternetReachable)` read that null as offline
- * and never recovered, so auto-sync never fired even on Wi-Fi.
+ * Treat the device as online unless connectivity is explicitly false. `isInternetReachable` is null
+ * on the first NetInfo emit on some platforms; reading that null as offline meant auto-sync never
+ * fired, even on Wi-Fi.
  */
 export function isOnline(state: {
   isConnected: boolean | null;

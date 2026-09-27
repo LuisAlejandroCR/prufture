@@ -1,7 +1,6 @@
-// entitlement.ts: server-side RevenueCat entitlement check. This is the source of truth for
-// any future coordinator-gated endpoint — a client-reported boolean is never trusted.
-// Degrades via guard()/unavailable() — never throws, never logs the secret key or the raw
-// response body (same contract as neuro.ts).
+// entitlement.ts: server-side RevenueCat entitlement check — the source of truth for coordinator-
+// gated endpoints; a client-reported boolean is never trusted. Degrades via guard()/unavailable(),
+// never throws, and never logs the secret key or the raw response body.
 
 import { guard, unavailable, type ExternalResult } from "@proof/core";
 import { env } from "./env.js";
@@ -55,13 +54,10 @@ export async function checkEntitlement(
 
       const body = (await res.json().catch(() => ({}))) as RevenueCatEntitlementsResponse;
 
-      // 404 on this path means RevenueCat has never seen this customer, i.e. they have never
-      // purchased — that is "not entitled", NOT a degraded service. Verified live against the
-      // real API on 2026-09-21: a valid project with an unknown customer returns 404
-      // resource_missing, while a project the key cannot access returns 403 authorization_error.
-      // So a 404 here is unambiguous and cannot mask a misconfigured REVENUECAT_PROJECT_ID.
-      // Without this branch, every coordinator who opens the app before subscribing would get a
-      // hard 503 from requireCoordinator instead of the paywall.
+      // 404 here means RevenueCat has never seen this customer (never purchased): "not entitled",
+      // NOT degraded. Verified live 2026-09-21: unknown customer -> 404 resource_missing, while an
+      // inaccessible project -> 403, so this cannot mask a bad REVENUECAT_PROJECT_ID. Without it,
+      // every coordinator opening the app before subscribing would get a 503 instead of the paywall.
       if (res.status === 404) return { entitled: false };
 
       if (!res.ok) {

@@ -1,8 +1,6 @@
-// CoverageMap.tsx: client boundary for the coverage map. The Leaflet map touches
-// `window` at module load, so the real map (./map/CoverageMapInner) is pulled in via
-// next/dynamic with ssr:false. This file only forwards the already-coarse CoverageCell
-// list — one 5-char cell per rectangle, never a reporter's position (that data does
-// not exist on any public route).
+// CoverageMap.tsx: client boundary for the coverage map. Leaflet touches `window` at module load,
+// so ./map/CoverageMapInner is loaded via next/dynamic with ssr:false. Forwards only the coarse
+// CoverageCell list — one 5-char cell per rectangle, never a reporter's position.
 
 "use client";
 

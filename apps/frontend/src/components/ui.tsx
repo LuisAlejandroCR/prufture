@@ -1,7 +1,6 @@
-// ui.tsx: shared presentational primitives for the reporter app.
-// Screen frame, card, primary/secondary buttons, status pill, reassurance line,
-// row-with-chevron, section label, progress dots, notice box. Token-driven only.
-// Distinct from components/icons/Icon.tsx (drawing) and the screen files (composition).
+// ui.tsx: shared presentational primitives for the reporter app — screen frame, card, buttons,
+// status pill, reassurance line, chevron row, section label, progress dots and notice box.
+// Token-driven only (src/theme.ts); screens compose these.
 
 import type { ReactNode } from "react";
 import {
@@ -27,10 +26,9 @@ import {
 import { Icon, type IconName } from "./icons/Icon";
 
 /**
- * Top padding for the screen frame: apply the real safe-area inset when there is
- * one (notch / status bar), with a small floor when there is none. The previous
- * rule inverted the ternary and dropped the pad exactly when a device had an
- * inset, so every header rendered under the OS clock.
+ * Top padding for the screen frame: the real safe-area inset when there is one (notch / status bar),
+ * else a small floor. An inverted ternary once dropped the pad on inset devices, hiding every header
+ * under the OS clock.
  */
 export function screenPaddingTop(insetTop: number): number {
   return insetTop || space.md;

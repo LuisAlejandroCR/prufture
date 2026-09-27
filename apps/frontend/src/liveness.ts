@@ -1,8 +1,6 @@
-// liveness.ts: run a short selfie liveness challenge and send it once to the api.
-// NO commitment is computed here and nothing is signed: the frames + nonce leave
-// the device exactly once (POST /verify-identity) and are never written to storage.
-// The api turns them into a single boolean (verifiedPerson) recorded server-side
-// against the proofHash. Distinct from src/capture.ts (the signed proof payload).
+// liveness.ts: runs a short selfie liveness challenge and sends it once to the api (POST
+// /verify-identity). Nothing is signed or committed; frames + nonce leave the device exactly once and
+// are never stored — the api turns them into one verifiedPerson boolean against the proofHash.
 
 export type Gesture = "center" | "left" | "right" | "blink";
 
@@ -114,7 +112,7 @@ export async function submitLiveness(
   }
 }
 
-// --- attach the verdict to a proof, with an offline retry buffer ---------------
+// Attach the verdict to a proof, with an offline retry buffer.
 
 interface PendingAttach {
   proofHash: string;

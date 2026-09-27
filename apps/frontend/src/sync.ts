@@ -1,8 +1,6 @@
-// sync.ts: push pending proofs to the api when connectivity returns.
-// PURE and injectable (fetch + queue fns are passed in) so it unit-tests off-device.
-// The /sync body is the 6 SignedProof fields from toSignedProof() plus, when the row
-// has one, the local-only reportId alongside (never signed) — mediaUri and every other
-// local column can never leak. Mirrors @proof/core result.ts semantics: never throws.
+// sync.ts: pushes pending proofs to the api when connectivity returns. PURE and injectable, never
+// throws. The /sync body is the 6 whitelisted SignedProof fields plus the unsigned local reportId,
+// so mediaUri and other local columns can never leak.
 
 import type { QueuedProof, SignedProof } from "@proof/core";
 import { flushPendingLiveness } from "./liveness";
@@ -139,7 +137,7 @@ export async function syncPending(deps: SyncDeps): Promise<SyncSummary> {
   return summary;
 }
 
-// --- encrypted precise location: attach to a proof, with an offline retry buffer ---
+// Encrypted precise location: attach to a proof, with an offline retry buffer.
 
 interface PendingPrecise {
   proofHash: string;

@@ -1,9 +1,6 @@
-// coordinator.ts: the paid surface. Gates the coordinator routes on a SERVER-side RevenueCat
-// entitlement check and holds the review workflow + CSV export. Distinct from entitlement.ts
-// (which only asks RevenueCat one boolean) and index.ts (the public, unauthenticated routes).
-//
-// Fail CLOSED: if the entitlement check is degraded we return 503, never "allow anyway".
-// A client-reported boolean is never trusted, and no reviewer identity is ever stored.
+// coordinator.ts: the paid surface — gates /coordinator/* on a SERVER-side RevenueCat entitlement
+// and holds the review workflow + CSV export. Fails CLOSED (503 when the check is degraded, never
+// "allow anyway"); a client-reported boolean is never trusted and no reviewer identity is stored.
 
 import { csvCell } from "@proof/core";
 import type { Context, Next } from "hono";

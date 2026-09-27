@@ -1,7 +1,6 @@
-// geohash.ts: the one place that defines how coarse a location may be before it is signed.
-// The signed payload is what reaches the chain, so coarsening has to happen BEFORE signPayload,
-// not on the way out. Distinct from apps/frontend/src/geohash.ts (lat/lng -> cell encoder) and
-// apps/backend/lib/geohash.ts (cell -> bounding box): this module only trims and validates.
+// geohash.ts: the one place that defines how coarse a location may be before it is signed. The
+// signed payload reaches the chain, so coarsening must happen BEFORE signPayload. Only trims and
+// validates; the frontend geohash.ts encodes lat/lng and the backend geohash.ts decodes to a box.
 
 /** Geohash chars allowed to be signed or published. 5 chars is a ~5 km cell, never a fix. */
 export const COARSE_GEOHASH_LEN = 5;

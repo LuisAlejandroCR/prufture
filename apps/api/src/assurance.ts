@@ -1,15 +1,6 @@
-// assurance.ts: phase 3 of the provider portability plan. "Neuro" was one vendor bolted onto two
-// unrelated jobs — proving a live person is present, and proving one attribute about someone.
-// They have different vendors, different consent, and different risk, so they get separate ports.
-//
-// BOTH DEFAULT OFF. Assurance is optional by design: the plan keeps it disabled until a pilot
-// states why it is needed, and an unknown provider name fails closed to `none` rather than
-// silently enabling a vendor. Nothing here may block offline capture: every path returns a typed
-// ExternalResult and the caller degrades.
-//
-// The minimal-verdict rule is enforced at this boundary: a LivenessPort may only ever yield
-// { verifiedPerson: boolean } and an AttributePort only { attribute, value: boolean }. No score,
-// no session id, no frame, no claim, no raw vendor response passes through.
+// assurance.ts: separate liveness and verified-attribute ports, both DEFAULT OFF; an unknown provider
+// fails closed to `none`. Minimal-verdict rule enforced here: only { verifiedPerson } or { attribute,
+// value } pass — no score, session, frame or raw vendor response — and nothing can block offline capture.
 
 import type { ExternalResult } from "@proof/core";
 import { env } from "./env.js";

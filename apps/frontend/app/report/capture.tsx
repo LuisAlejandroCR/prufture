@@ -1,6 +1,5 @@
-// report/capture.tsx: one required photo at a time. Instruction, step progress,
-// camera, capture, flash, back, safety hint. Permission-denied and camera-error
-// states are designed. After capture: preview with Use photo / Take again.
+// report/capture.tsx: one required photo at a time — instruction, progress, camera, preview with
+// Use photo / Take again, and designed permission-denied and camera-error states.
 // Wired to expo-camera and src/report-draft; nothing uploads here.
 
 import { CameraView, useCameraPermissions } from "expo-camera";
@@ -83,7 +82,6 @@ export default function ReportCaptureScreen() {
     );
   }
 
-  // Permission denied.
   if (!permission.granted) {
     return (
       <Screen footer={<PrimaryButton label="Allow camera" onPress={requestPermission} />}>

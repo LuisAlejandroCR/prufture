@@ -1,7 +1,6 @@
-// api.ts: server-side fetch helpers against @proof/api.
-// Never throws. Distinguishes "service unreachable" (degraded) from "proof not indexed" (404)
-// so /verify can show an honest message in each case. Full geohash is coarsened here and
-// never reaches the browser bundle or view-source — only a region prefix is exposed.
+// api.ts: server-side fetch helpers against @proof/api. Never throws, and tells "service unreachable"
+// (degraded) apart from "proof not indexed" (404) so /verify is honest in each case. The geohash is
+// coarsened here, so only a region prefix ever reaches the browser bundle.
 
 const BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8787";
 

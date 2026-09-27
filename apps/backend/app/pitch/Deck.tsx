@@ -1,7 +1,6 @@
-// Deck.tsx: client wrapper for the /pitch route. One slide is shown at a time (the rest are
-// display:none); arrow keys, on-screen arrows, a click on the left/right third, and a
-// horizontal swipe move between them. A "N / total" indicator tracks position.
-// prefers-reduced-motion drops the fade. Content lives in page.tsx.
+// Deck.tsx: client pager for the /pitch slides (content lives in page.tsx). One slide shows at a time;
+// arrow keys, on-screen arrows, side-third clicks and swipes navigate, with a "N / total" indicator.
+// prefers-reduced-motion drops the fade.
 
 "use client";
 

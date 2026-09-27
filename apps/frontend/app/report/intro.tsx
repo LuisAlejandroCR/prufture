@@ -1,8 +1,6 @@
-// report/intro.tsx: reduce uncertainty before the first capture. Step count,
-// estimate, offline note, short privacy reminder, one primary action. Starts a
-// fresh draft for this task — unless a recent unfinished draft for the SAME task
-// is already saved on the phone, in which case it offers continue / start over.
-// Presentation over src/report-draft + src/tasks.
+// report/intro.tsx: reduce uncertainty before the first capture — step count, estimate, offline and
+// privacy notes, one primary action. Starts a fresh draft, unless a recent unfinished draft for the
+// SAME task is on the phone, in which case it offers continue / start over.
 
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";

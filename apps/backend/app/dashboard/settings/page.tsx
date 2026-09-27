@@ -1,5 +1,5 @@
-// settings/page.tsx: dashboard settings placeholder. The demo has no per-user
-// configuration, so this states what is fixed rather than showing dead controls.
+// settings/page.tsx: dashboard settings placeholder. The demo has no per-user configuration, so
+// this states what is fixed rather than showing dead controls.
 
 export default function SettingsPage() {
   return (

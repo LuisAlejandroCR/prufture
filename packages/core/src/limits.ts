@@ -1,16 +1,6 @@
-// limits.ts: size caps for the public payload fields, enforced at the api trust boundary.
-//
-// Why these exist at all: taskId and capturedAt are inside the SIGNED payload, and the signature
-// is made by a self-generated key — there is no registration, so anyone can sign a proof. Those
-// fields then travel into EAS calldata, which the relayer pays gas for, and into the durable
-// store. EVM calldata is charged per byte, so an unbounded taskId lets an unauthenticated caller
-// spend the programme's gas-only key at will, and grow the store file without limit.
-//
-// The api cannot trim a signed field without invalidating the signature — the same constraint
-// that applies to an over-precise geohash — so an oversized field is REJECTED, not truncated.
-//
-// The caps are deliberately far above real values: the longest taskId the dashboard recognises
-// is "latrine-construction" (20 characters) and capturedAt is an ISO-8601 instant (~24).
+// limits.ts: size caps for the public payload fields, enforced at the api trust boundary. Signed
+// fields come from self-generated keys and end up in gas-paid EAS calldata and the store, so an
+// oversized field is REJECTED (trimming would break the signature). Caps sit far above real values.
 
 /** Max characters for `taskId`. Real values are ~20; this leaves generous room. */
 export const MAX_TASK_ID_LEN = 64;

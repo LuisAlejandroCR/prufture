@@ -1,8 +1,6 @@
-// push-store.ts: anonymous Expo push tokens, keyed by a random device id.
-// No account, no identity, no link to any proofHash — by construction this cannot
-// tell you who filed what. In-memory only: a token is disposable and re-registered
-// on every app launch. Kept separate from store.ts so the proof persistence and its
-// tests are untouched.
+// push-store.ts: anonymous Expo push tokens, keyed by a random device id, held in memory only.
+// No account, identity or proofHash link — by construction it cannot tell you who filed what; a
+// token is disposable and re-registered on every app launch.
 
 export interface PushRegistration {
   deviceId: string;

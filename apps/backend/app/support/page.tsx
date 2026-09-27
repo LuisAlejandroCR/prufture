@@ -1,10 +1,6 @@
-// page.tsx: public /support. The support URL required by App Store Connect and Google Play, and
-// linked from app.json. Answers the questions a reporter or a coordinator actually arrives with,
-// and gives one working contact route. Distinct from /privacy (what happens to data) and /pitch
-// (the project deck).
-//
-// The contact address comes from NEXT_PUBLIC_SUPPORT_EMAIL. If it is unset the page says so
-// honestly rather than printing a fake address — a dead support link fails app review.
+// page.tsx: public /support — the support URL for App Store Connect and Google Play, answering what
+// reporters and coordinators actually ask. The contact comes from NEXT_PUBLIC_SUPPORT_EMAIL; if unset
+// the page says so rather than printing a fake address (a dead support link fails app review).
 
 import Link from "next/link";
 

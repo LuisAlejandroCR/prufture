@@ -1,13 +1,6 @@
-// field-limits.test.ts: /sync caps the signed public-payload fields.
-//
-// taskId and capturedAt are inside the SIGNED payload, but the signature comes from a
-// self-generated key — there is no registration, so anyone can produce a valid one. Those fields
-// then travel into EAS calldata, which the relayer pays gas for PER BYTE, and into the durable
-// store. Without a cap, an unauthenticated caller can spend the programme's gas-only key at will
-// and grow the store file without limit.
-//
-// A signed field cannot be trimmed without invalidating the signature — the same constraint the
-// geohash check faces — so an oversized field must be REJECTED, and the proof must not be stored.
+// field-limits.test.ts: /sync caps the signed public-payload fields. Anyone can sign, and these
+// fields become gas-paid EAS calldata and store bytes, so an oversized field is REJECTED (trimming
+// would break the signature) and the proof is never stored.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";

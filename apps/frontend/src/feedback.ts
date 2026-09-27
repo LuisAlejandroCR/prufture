@@ -1,13 +1,6 @@
-// feedback.ts: the single haptics + celebration-gating module for the report flow.
-// Wraps expo-haptics (loaded lazily so unit tests and haptic-less devices never
-// break), exposes tap/bump/thud/success/warn, a persisted hapticsEnabled flag, a
-// reduce-motion-aware celebrationsAllowed(), and the moment timing constants.
-// Distinct from src/theme.ts (visual tokens) and the report screens (composition).
-//
-// reduceMotionOn() lazy-loads the AccessibilityInfo SUBMODULE, never `import("react-native")`:
-// the barrel form makes Metro asyncRequire + metroImportAll enumerate every react-native
-// export, which fires the deprecated PushNotificationIOS getter and crashes Expo Go with an
-// Invariant Violation. Importing the one submodule keeps this file Node-loadable for tests.
+// feedback.ts: the single haptics + celebration-gating module for the report flow — tap/bump/thud/
+// success/warn, a persisted hapticsEnabled flag, reduce-motion-aware celebrationsAllowed() and moment
+// timings. expo-haptics and AccessibilityInfo load lazily so tests and haptic-less devices never break.
 
 /** How long each guided "moment" holds before the actions settle in. */
 export const MOMENT_SAVED_MS = 2000;
@@ -98,7 +91,9 @@ let reduceMotionOverride: (() => boolean | Promise<boolean>) | null = null;
 async function reduceMotionOn(): Promise<boolean> {
   if (reduceMotionOverride) return reduceMotionOverride();
   try {
-    // Submodule path only — NOT `import("react-native")` (see the file header).
+    // Submodule path only — NOT `import("react-native")`: the barrel makes Metro enumerate every
+    // export, firing the deprecated PushNotificationIOS getter and crashing Expo Go with an Invariant
+    // Violation. The submodule also keeps this file Node-loadable for tests.
     type ReduceMotion = { isReduceMotionEnabled(): Promise<boolean> };
     const mod = (await import(
       "react-native/Libraries/Components/AccessibilityInfo/AccessibilityInfo"

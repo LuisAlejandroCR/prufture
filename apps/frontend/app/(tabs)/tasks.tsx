@@ -1,6 +1,5 @@
-// (tabs)/tasks.tsx: find a task without scanning a portal. Count, compact category
-// filter, task cards, empty state. Search appears only when the list is long.
-// Works from the cached catalog when offline. Presentation over src/tasks.
+// (tabs)/tasks.tsx: find a task without scanning a portal — count, compact category filter and task
+// cards; search appears only when the list is long. Works from the cached catalog when offline.
 
 import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";

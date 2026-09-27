@@ -1,9 +1,6 @@
-// report/identity.tsx: a short selfie liveness challenge, step 1 of the report.
-// Front camera, three randomized gestures, one small frame per gesture. The frames
-// leave the device once (submitLiveness -> POST /verify-identity) and are never
-// stored; only two booleans (livenessChecked / livenessVerified) go on the draft.
-// Honest degrade: provider down / no creds -> "could not confirm", Continue anyway.
-// Presentation over src/liveness.ts + src/report-draft.ts. Nothing is signed here.
+// report/identity.tsx: optional selfie liveness step — three randomized gestures, one small frame each.
+// Frames leave the device once (POST /verify-identity) and are never stored; only booleans reach the
+// draft. Provider down or unconfigured degrades to "could not confirm" with Continue anyway.
 
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -16,9 +13,8 @@ import { ensureDraft, setLiveness } from "../../src/report-draft";
 import { getTask } from "../../src/tasks";
 import { color, radius, space, type } from "../../src/theme";
 
-// From worker/idn-celebrate (src/feedback MOMENT_IDENTITY_MS). That branch is not on
-// origin yet, so the value is inlined here — refactor to the shared constant + haptics
-// once idn-celebrate lands. See STATUS.
+// Duplicates src/feedback MOMENT_IDENTITY_MS, inlined before that constant existed; switch to the
+// shared constant + haptics.
 const MOMENT_IDENTITY_MS = 1500;
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8787";
