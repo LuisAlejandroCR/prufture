@@ -1,13 +1,6 @@
-// port-robustness.test.ts: the ports enforce their own contract.
-//
-// The README promises every external call returns a typed result and never breaks the offline
-// capture flow. Before this, that held only because every adapter happened to guard internally:
-// the port itself called `submitter.submit()` and `port.check()` unguarded, so an adapter that
-// threw propagated straight out of /sync. Verified against the previous code — a throwing
-// adapter made submitAttestation reject rather than degrade.
-//
-// The ports exist so that adapters get ADDED. These tests pin the guarantee at the boundary
-// that defines it, rather than trusting each future adapter to remember.
+// port-robustness.test.ts: the submitter and assurance ports enforce their own typed contract, so an
+// adapter that throws or returns junk degrades instead of propagating out of /sync. Pinned at the
+// boundary rather than trusting every future adapter to guard itself.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -34,8 +27,6 @@ function assertTypedEnvelope(r: unknown): asserts r is { available: boolean; sou
   assert.equal(typeof e.source, "string");
   assert.equal(typeof e.checkedAt, "string");
 }
-
-// --- attestation port ---------------------------------------------------------------------
 
 test("an adapter that throws degrades instead of breaking the caller", async () => {
   const r = await submitThrough(
@@ -85,8 +76,6 @@ test("a conforming unavailable result is passed through unchanged too", async ()
   const r = await submitThrough(submitter(async () => own), payload);
   assert.deepEqual(r, own);
 });
-
-// --- assurance ports ----------------------------------------------------------------------
 
 test("runThrough degrades on a throwing assurance adapter", async () => {
   const r = await runThrough("liveness", "misbehaving", async () => {

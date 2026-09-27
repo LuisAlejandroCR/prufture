@@ -1,6 +1,5 @@
-// layout.tsx: the desktop operational shell for /dashboard and its sub-routes.
-// Persistent left sidebar + full-width main. Designed for 1280-1920 px; at smaller
-// widths globals.css keeps everything readable and shows a "desktop view" note.
+// layout.tsx: the desktop operational shell for /dashboard — persistent sidebar + full-width main,
+// designed for 1280-1920 px; at smaller widths globals.css keeps it readable with a "desktop view" note.
 
 import type { ReactNode } from "react";
 import { Sidebar } from "./Sidebar";

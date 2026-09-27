@@ -1,10 +1,6 @@
-// ExportButton.tsx: builds the coarse CSV in the browser from data that is already
-// region-level. It cannot reach a full geohash, GPS point, or reporter identity.
-//
-// Cells are built with csvCell from @proof/core, the SAME helper the api's coordinator export
-// uses. The activity column derives from taskId, which comes from a reporter's signed payload
-// and is therefore untrusted — quoting alone would not stop a spreadsheet evaluating it as a
-// formula. Sharing the helper is what keeps this exporter and the api's from drifting apart.
+// ExportButton.tsx: builds the coarse, region-level CSV download in the browser. Cells go through
+// csvCell from @proof/core — the SAME helper as the api export — because the activity column comes
+// from an untrusted signed taskId, and quoting alone would not stop a spreadsheet formula.
 
 "use client";
 

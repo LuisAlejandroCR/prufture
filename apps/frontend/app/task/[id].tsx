@@ -1,7 +1,5 @@
-// task/[id].tsx: Task Details. Exactly what to do before opening the camera.
-// Category and title, approximate area, one-sentence purpose, a "what to capture"
-// checklist, a privacy warning where people may appear, an estimate, one primary
-// action. Presentation over src/tasks; the report flow owns the draft.
+// task/[id].tsx: Task Details — exactly what to do before opening the camera: purpose, approximate
+// area, a "what to capture" checklist, a privacy warning where people may appear, and one action.
 
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { StyleSheet, Text, View } from "react-native";

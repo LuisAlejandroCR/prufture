@@ -1,7 +1,6 @@
-// Icon.tsx: the single SVG icon set for the reporter app (react-native-svg).
-// One 24x24 grid, 2px stroke, rounded caps. `filled` swaps outlined nav icons to solid.
-// Functional meaning always pairs an icon with text or an accessibility label; this
-// component only draws. Distinct from components/* screen pieces.
+// Icon.tsx: the single SVG icon set for the reporter app (react-native-svg) — 24x24 grid, 2px stroke,
+// rounded caps; `filled` swaps nav icons to solid. Only draws: meaning always comes from paired text
+// or an accessibility label.
 
 import { memo } from "react";
 import Svg, { Circle, Line, Path, Polyline, Rect } from "react-native-svg";

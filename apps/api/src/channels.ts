@@ -1,7 +1,6 @@
 // channels.ts: post-proof delivery behind one interface — sendVerifyUrl(channel, to, url).
-// Every channel sends ONLY the public verifyUrl. It never sends the media, the signed payload,
-// a volunteer identifier, or an exact location. Every channel degrades via guard(): a missing
-// key or a dead provider returns a typed ExternalUnavailable and never throws the caller.
+// Every channel sends ONLY the public verifyUrl (never media, payload, identity or exact location)
+// and degrades via guard(): a missing key or dead provider is a typed unavailable, never a throw.
 
 import { guard, type ExternalResult } from "@proof/core";
 
@@ -61,7 +60,6 @@ export async function sendVerifyUrl(
   }
 }
 
-// --- Kapso / WhatsApp -------------------------------------------------------
 // Kapso is used as a thin wrapper over the WhatsApp Cloud API. Text message, URL only.
 async function sendWhatsApp(to: string, url: string): Promise<ExternalResult<ChannelSendResult>> {
   const key = env("KAPSO_API_KEY");
@@ -84,7 +82,7 @@ async function sendWhatsApp(to: string, url: string): Promise<ExternalResult<Cha
   });
 }
 
-// --- Email (Resend-compatible) --------------------------------------------
+// Resend-compatible email API.
 async function sendEmail(to: string, url: string): Promise<ExternalResult<ChannelSendResult>> {
   const key = env("EMAIL_API_KEY");
   const from = env("EMAIL_FROM");
@@ -111,7 +109,6 @@ async function sendEmail(to: string, url: string): Promise<ExternalResult<Channe
   });
 }
 
-// --- Telegram (optional) --------------------------------------------------
 async function sendTelegram(to: string, url: string): Promise<ExternalResult<ChannelSendResult>> {
   const token = env("TELEGRAM_BOT_TOKEN");
   if (!token) return unconfigured("telegram", "TELEGRAM_BOT_TOKEN");

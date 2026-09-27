@@ -1,13 +1,6 @@
-// cutover.ts: phase 4 of the provider portability plan — switch one boundary at a time.
-//
-// Before a boundary is switched, the incumbent and the candidate adapter are run side by side
-// and their TYPED OUTCOMES compared. The plan permits that only with non-sensitive synthetic
-// proofs, so this module enforces it rather than asking an operator to remember: a payload that
-// is not provably synthetic is refused before either adapter is called.
-//
-// What a comparison reports is deliberately thin — availability, an outcome label, and for
-// attestations whether the calldata matched. No vendor response, no receipt body, no key, and
-// nothing derived from a real report can appear in it, because nothing real gets this far.
+// cutover.ts: provider-portability phase 4 — run incumbent and candidate adapters side by side and
+// compare TYPED OUTCOMES before switching a boundary. Enforces synthetic-only payloads (a real proof is
+// refused before either adapter is called), and reports only availability and calldata agreement.
 
 import { hashBytes, type ExternalResult, type ProofPublicPayload } from "@proof/core";
 import type { AttestationSubmitter } from "./submitter.js";

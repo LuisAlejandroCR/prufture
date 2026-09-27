@@ -1,13 +1,6 @@
-// notifications.ts: report-status push, anonymous by construction.
-// registerForPush() asks for the OS notification permission (POST_NOTIFICATIONS on Android 13+),
-// gets the Expo push token, and POSTs it with a random device id — never an account, an identity,
-// or a proof reference. No permission -> the app behaves exactly as before, just without push.
-// notifyReportConfirmed() is the local fallback fired by useAutoSync when a report is confirmed.
-// Pure helpers (payload whitelist, token check) live in src/push.ts so they stay unit-testable.
-//
-// expo-notifications is NEVER imported at module load: in Expo Go (SDK 53+) its iOS path reaches
-// the removed PushNotificationIOS native module and throws an Invariant Violation at import time,
-// which would crash the whole app on boot. It is lazy-imported, and skipped entirely in Expo Go.
+// notifications.ts: anonymous report-status push — registers an Expo token with a random device id
+// (never an account, identity or proof reference) plus a local "confirmed" fallback. expo-notifications
+// is lazy-imported and skipped in Expo Go, where importing it crashes on PushNotificationIOS at boot.
 
 import Constants from "expo-constants";
 import * as Crypto from "expo-crypto";

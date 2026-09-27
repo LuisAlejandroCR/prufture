@@ -1,8 +1,6 @@
-// store.ts: durable attestation index keyed by proofHash, persisted as one JSON file.
-// Holds only the zero-PII public payload, attestation records, and a boolean verified attribute.
-// File-backed (node:fs, atomic rename) so proofs survive an api restart. Same exported API as the
-// old in-memory Map — no caller change. Swap the file backend for hosted KV/SQLite if the api ever
-// runs on ephemeral storage: see SWAP POINT below.
+// store.ts: durable attestation index keyed by proofHash, persisted as one JSON file (atomic rename).
+// Holds only the zero-PII public payload, attestation records and boolean verdicts. Needs a persistent
+// disk; to run on ephemeral storage swap load()/flushNow() for hosted KV (see SWAP POINT below).
 
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -67,13 +65,9 @@ const FLUSH_DEBOUNCE_MS = 50;
 
 function defaultStorePath(): string {
   if (process.env.STORE_PATH) return process.env.STORE_PATH;
-  // Under `node --test` each file runs in its own process; keep the repo tree clean.
-  //
-  // The name must be unique per RUN, not just per process. Keying it on the pid alone leaked
-  // state between runs: pids are recycled, the files were never deleted, and a test process
-  // landing on a recycled pid would load a previous run's store — which made "unknown proofHash
-  // => 404" assertions fail intermittently, because an earlier run had synced that hash.
-  // A random component makes collision impossible; the exit hook stops the files accumulating.
+  // Under `node --test` each file runs in its own process; keep the repo tree clean. The name must be
+  // unique per RUN: pid-only names were recycled across runs and loaded a stale store, making "unknown
+  // proofHash => 404" assertions flaky. The random part prevents that; the exit hook cleans up.
   if (process.env.NODE_TEST_CONTEXT) {
     const path = join(tmpdir(), `prufture-store-test-${process.pid}-${randomUUID()}.json`);
     process.on("exit", () => {

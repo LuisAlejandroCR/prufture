@@ -1,7 +1,6 @@
-// exports/page.tsx: programme review support. Only currently supported export
-// behaviour is offered, and the contents are explained before download. Exports
-// exclude PII, exact coordinates, private media links, secrets, and internal
-// thresholds. The one real export is the coarse aggregate the dashboard already shows.
+// exports/page.tsx: programme review exports — only supported behaviour is offered, explained before
+// download. Exports exclude PII, exact coordinates, private media links, secrets and internal
+// thresholds; the one real export is the coarse aggregate the dashboard already shows.
 
 import { ExportButton } from "./ExportButton";
 import { fetchProofs } from "../../../lib/api";

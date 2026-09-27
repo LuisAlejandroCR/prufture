@@ -1,8 +1,6 @@
-// report/sent.tsx: close the loop with a real celebration. Success + thud haptics,
-// a top-center confetti burst, and a congratulations block that names what the
-// reporter helped document. No claim of final approval, no crypto words. Motion and
-// confetti honor reduce-motion via src/feedback; the haptics always fire.
-// Presentation over src/queue + src/feedback (reads the confirmation count only).
+// report/sent.tsx: closes the loop with a real celebration — haptics, confetti and a block naming what
+// the reporter helped document. No claim of final approval, no crypto words. Motion and confetti honor
+// reduce-motion via src/feedback; the haptics always fire.
 
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";

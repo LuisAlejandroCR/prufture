@@ -1,4 +1,5 @@
 // geohash.test.ts: the coarsening contract — what may be signed and what the api must reject.
+// An over-precise or malformed cell must fail isCoarseGeohash rather than be silently trimmed.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";

@@ -1,6 +1,5 @@
-// notify-route.test.ts: POST /notify is unauthenticated and proof hashes are public. It used to
-// send the verify link to whatever `to` the caller supplied, which made the programme's own
-// WhatsApp/email credentials an open relay. These tests hold the fixed-recipient contract:
+// notify-route.test.ts: POST /notify is unauthenticated and proof hashes are public, so a caller-chosen
+// `to` made the programme's WhatsApp/email credentials an open relay. Holds the fixed-recipient contract:
 // the caller picks a channel, never a recipient, and a delivered re-send has a cooldown.
 
 import { test, beforeEach, afterEach } from "node:test";

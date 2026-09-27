@@ -1,7 +1,6 @@
-// metro.config.js: monorepo-aware Metro config for apps/frontend.
-// Watches the workspace root, resolves hoisted node_modules, enables package
-// exports, and lets @proof/core's Node-ESM ".js" import specifiers fall back to
-// the ".ts"/".tsx" source that Metro would otherwise fail to resolve.
+// metro.config.js: monorepo-aware Metro config for apps/frontend — watches the workspace root,
+// resolves hoisted node_modules, enables package exports, and maps @proof/core's Node-ESM ".js"
+// specifiers back to the ".ts"/".tsx" source that Metro would otherwise fail to resolve.
 
 const path = require("path");
 const { getDefaultConfig } = require("expo/metro-config");

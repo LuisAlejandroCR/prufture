@@ -1,7 +1,6 @@
-// pitch.test.ts: unit + invariant tests for the /pitch deck paging helpers and the
-// vendored QR encoder. Proves: wrapIndex always lands in-range; pageFromKey maps only
-// the intended keys; the QR encoder produces well-formed symbols with finder patterns
-// and a quiet-zone border, and is deterministic.
+// pitch.test.ts: unit + invariant tests for the /pitch paging helpers and the vendored QR encoder.
+// wrapIndex always lands in range, pageFromKey maps only the intended keys, and QR output is
+// deterministic, well-formed, with finder patterns and a quiet-zone border.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";

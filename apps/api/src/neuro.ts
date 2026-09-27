@@ -1,7 +1,6 @@
-// neuro.ts: minimal Neuro Agent API client for one verified attribute (e.g. age majority).
-// Zero-PII boundary: only { attribute, value:boolean } plus source/checkedAt may leave this
-// module. The token, request body, and raw response identity fields never get logged or returned.
-// Degrades via guard()/unavailable() — never throws the caller (same contract as relayer.ts).
+// neuro.ts: minimal Neuro Agent API client for one verified attribute and the liveness check.
+// Zero-PII boundary: only { attribute, value } / { verifiedPerson } leave this module; the token,
+// request body and raw response are never logged or returned. Degrades via guard(), never throws.
 
 import { guard, unavailable, type ExternalResult } from "@proof/core";
 import { env } from "./env.js";

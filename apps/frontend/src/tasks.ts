@@ -1,7 +1,6 @@
-// tasks.ts: presentation-only catalog that turns a stored taskId into reporter-facing
-// text (category, title, approximate area, what to capture). This is display metadata,
-// not protocol: the signed proof still carries only the raw taskId string. Distinct from
-// src/capture.ts (which produces the proof) and src/queue.ts (which stores it).
+// tasks.ts: presentation-only catalog turning a stored taskId into reporter-facing text (category,
+// title, approximate area, what to capture). Display metadata, not protocol: the signed proof still
+// carries only the raw taskId.
 
 export type Category = "Education" | "Water and sanitation" | "Health" | "Nutrition" | "Training";
 

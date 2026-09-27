@@ -1,6 +1,5 @@
-// help.tsx: compact icon-and-row help index. Each row is a soft tinted icon, a
-// short title, a one-line explanation, and a chevron. Details expand in place on
-// selection instead of stacking long FAQ cards. No crypto vocabulary.
+// help.tsx: compact icon-and-row help index — each row expands its detail in place instead of
+// stacking long FAQ cards. No crypto vocabulary.
 
 import { useRouter } from "expo-router";
 import { useState } from "react";

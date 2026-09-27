@@ -1,8 +1,6 @@
-// draft-store.test.ts: the durable one-open-draft store round-trips a draft (persist
-// -> load -> equal minus hydrated bytes), clear wipes it, the resume probe reports
-// photo/answer counts, and every function is guard-wrapped (never throws) when the
-// backend fails. Native expo-file-system is swapped for an in-memory backend, the way
-// the rest of the suite injects fakes rather than resolving native modules under Node.
+// draft-store.test.ts: the one-open-draft store round-trips (persist -> load), clears, reports resume
+// counts, and never throws when the backend fails. expo-file-system is swapped for an in-memory
+// backend, as the suite injects fakes rather than resolving native modules under Node.
 
 import { test, beforeEach } from "node:test";
 import assert from "node:assert/strict";

@@ -1,7 +1,6 @@
-// paywall.tsx: coordinator subscription screen. Reachable only from a coordinator surface
-// (programme/admin navigation) — never linked from the reporter capture flow. Shows the
-// two RevenueCat packages via src/purchases.ts (never imports the vendor SDK directly),
-// with an honest degraded state, legal recurring-price copy, and a Restore action.
+// paywall.tsx: coordinator subscription screen, reachable only from a coordinator surface — never
+// from the reporter capture flow. Shows the two RevenueCat packages via src/purchases.ts with an
+// honest degraded state, legal recurring-price copy and a Restore action.
 
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";

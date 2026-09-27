@@ -1,9 +1,6 @@
-// idempotency.test.ts: the portability guardrails "idempotency by proofHash" and "every provider
-// call uses an explicit timeout". /sync and /attest are unauthenticated and proof hashes are
-// public, so a submission must be skipped BEFORE the submitter runs when this relayer already
-// anchored the proof — otherwise every re-send or repeated /attest call pays for a new tx.
-//
-// Nothing here touches the chain.
+// idempotency.test.ts: guardrails "idempotency by proofHash" and "explicit timeout per provider call".
+// /sync and /attest are public, so a proof this relayer already anchored must be skipped BEFORE the
+// submitter runs, or every re-send pays for a new tx. Nothing here touches the chain.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -42,8 +39,6 @@ function spy(opts: { attester?: () => string | null; delayMs?: number } = {}): A
   if (opts.attester) s.attester = opts.attester;
   return s;
 }
-
-// --- attestOnce ------------------------------------------------------------------------------
 
 test("a proof this submitter already attested is not submitted again; the stored record is returned", async () => {
   const s = spy({ attester: () => A });
@@ -108,8 +103,7 @@ test("concurrent calls for different proofs do not block each other", async () =
   assert.equal(s.calls, 2);
 });
 
-// --- local-key names its attester without sending ---------------------------------------------
-
+// local-key names its attester without sending.
 test("local-key: no attester while unconfigured, the key's address once configured", () => {
   const saved = { RPC_URL: process.env.RPC_URL, RELAYER_PRIVATE_KEY: process.env.RELAYER_PRIVATE_KEY, EAS_SCHEMA_UID: process.env.EAS_SCHEMA_UID };
   try {
@@ -129,8 +123,6 @@ test("local-key: no attester while unconfigured, the key's address once configur
     }
   }
 });
-
-// --- the routes use it -------------------------------------------------------------------------
 
 const kp = generateKeyPair();
 const call = (path: string, body: unknown) =>
@@ -167,8 +159,7 @@ test("/attest on an already-anchored proof is a duplicate that sends nothing", a
   assert.equal(j.attestationCount, 1);
 });
 
-// --- channels: explicit timeout ----------------------------------------------------------------
-
+// Channels: every provider call has an explicit timeout.
 test("a hung delivery provider degrades within the channel budget on every channel, never throws", async () => {
   const saved = { ...process.env };
   const realFetch = globalThis.fetch;

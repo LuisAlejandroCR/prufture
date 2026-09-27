@@ -1,7 +1,6 @@
-// page.tsx: landing for judges, partners, and community organizations. Not the
-// reporter workflow. Plain-language proposition, offline-first, privacy, a three-step
-// process, links to a sample report and the dashboard, open-source and honest status.
-// Every claim stays true to what the code does: no ZK, TEE, or deployment claim.
+// page.tsx: landing for judges, partners and community organizations (not the reporter workflow).
+// Plain-language proposition, privacy, a three-step process and links to a sample report and the
+// dashboard. Every claim must stay true to the code: no ZK, TEE or deployment claim.
 
 import Link from "next/link";
 import { qrPath } from "./pitch/qr";

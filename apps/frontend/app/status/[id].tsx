@@ -1,9 +1,6 @@
-// status/[id].tsx: the lifecycle of one report in plain language. A four-stage
-// timeline where only completed stages are marked done. One report may hold
-// several per-photo proofs (grouped by the local reportId); the timeline shows
-// the combined progress and each proof reference is listed under Technical
-// details. No PII, no exact location, no secrets. Presentation over
-// src/queue + src/tasks.
+// status/[id].tsx: the lifecycle of one report in plain language — a four-stage timeline over all its
+// per-photo proofs (grouped by the local reportId), marking a stage done only when every proof reached
+// it. Proof references sit under Technical details. No PII, exact location or secrets.
 
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useState } from "react";

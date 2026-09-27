@@ -1,6 +1,5 @@
-// report/review.tsx: catch mistakes before saving. Short summary, safe thumbnails,
-// Finish report / Edit, and a plain privacy statement. Finish turns the draft into
-// signed queued proofs through the existing capture path (src/report-draft.saveDraft).
+// report/review.tsx: catch mistakes before saving — summary, safe thumbnails, Finish / Edit and a plain
+// privacy statement. Finish turns the draft into signed queued proofs via report-draft.saveDraft.
 
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";

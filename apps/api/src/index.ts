@@ -1,22 +1,6 @@
-// index.ts: HTTP surface for the relayer/backend.
-// POST /sync   - receive a signed proof, verify signature, attest on-chain (or degrade).
-// POST /attest - a second attester confirms the same proofHash ("more eyes").
-// POST /notify - re-send the public verifyUrl to the PROGRAMME's fixed recipient on a channel
-//   (url only, no payload; the caller cannot choose the recipient; one send per proof+channel
-//   per cooldown).
-// POST /verify-identity - attach a verified attribute (boolean) to a proof via the selected
-//   AttributePort, or degrade. Both assurance ports default OFF (see assurance.ts).
-// POST /liveness-result - attach the liveness verdict a server-signed ticket vouches for (write-once).
-// POST /precise-location - store an opaque encrypted precise-location blob against a proof (write-once).
-// POST /register-push - store an anonymous Expo push token (random device id, no identity).
-// GET  /proof/:hash - public verification data, zero PII (never the precise-location blob).
-// GET  /proofs      - aggregate list for the stakeholder dashboard.
-//
-// Coordinator surface (PAID, gated by requireCoordinator -> server-side RevenueCat check):
-// GET  /coordinator/reports    - review state per proof, still zero-PII.
-// POST /coordinator/review     - record a triage verdict (pending/accepted/rejected + note).
-// GET  /coordinator/export.csv - the same rows as CSV.
-
+// index.ts: the api's HTTP surface — public, unauthenticated proof routes (/sync, /attest, /notify,
+// assurance, /proof) plus the PAID /coordinator/* routes gated by a server-side RevenueCat check.
+// Every public route is zero-PII, and no request body can choose the status code or the recipient.
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
@@ -72,11 +56,9 @@ function programmeRecipient(channel: Channel): string {
 export const NOTIFY_COOLDOWN_MS = 10 * 60 * 1000;
 const lastManualNotify = new Map<string, number>();
 
-// readJsonObject: the one place a request body is parsed. Returns null for anything that is not
-// a JSON object — unparseable bytes, but also the literal `null`, a bare string or a number.
-// Guarding the parse alone is not enough: `JSON.parse("null")` succeeds, and the property access
-// that follows throws, which Hono reports as a 500. Every POST route here is unauthenticated,
-// so the body must never be able to choose the status code.
+// readJsonObject: the one place a request body is parsed. Returns null for anything that is not a
+// JSON object — `JSON.parse("null")` succeeds and the property access after it would throw a 500.
+// Every POST route is unauthenticated, so the body must never be able to choose the status code.
 async function readJsonObject(c: { req: { json: () => Promise<unknown> } }): Promise<Record<string, unknown> | null> {
   let parsed: unknown;
   try {
@@ -157,9 +139,7 @@ app.post("/sync", async (c) => {
 });
 
 app.post("/attest", async (c) => {
-  // Same guard every other POST route uses: a malformed body is the caller's error (400), not
-  // the server's (500). This route is unauthenticated, so the parse must never be the thing
-  // that decides the status code.
+  // A malformed body is the caller's error (400), never the server's (500).
   const body = await readJsonObject(c);
   if (!body) return c.json({ error: "invalid json" }, 400);
   const proofHash = typeof body.proofHash === "string" ? body.proofHash : "";
@@ -250,7 +230,7 @@ app.post("/verify-identity", async (c) => {
     return c.json({ ...verdict, ticket: issueTicket(verdict) }, 200);
   }
 
-  // Default mode: verified age attribute against an existing proof (unchanged).
+  // Default mode: verified age attribute against an existing proof.
   if (!body.proofHash || !getProof(body.proofHash)) {
     return c.json({ error: "unknown proofHash" }, 404);
   }
@@ -371,11 +351,9 @@ app.get("/proofs", (c) =>
   ),
 );
 
-// --- Coordinator surface -----------------------------------------------------------------
-// Everything below requires an active coordinator_pro entitlement, checked server-side on every
-// request. Reporters never reach these routes and never pay; see docs/pilot_engagement.md.
-// These routes add review state on top of the public data — they never add a reporter identity,
-// a precise location, a signature or a public key.
+// Coordinator surface: requires an active coordinator_pro entitlement, checked server-side on every
+// request (see docs/pilot_engagement.md). Adds review state only — never a reporter identity, a
+// precise location, a signature or a public key.
 
 app.use("/coordinator/*", requireCoordinator);
 

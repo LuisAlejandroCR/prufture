@@ -1,13 +1,6 @@
-// export-injection.test.ts: the dashboard's in-browser CSV download.
-//
-// This is the export a coordinator actually clicks. It is a SEPARATE code path from the api's
-// coordinator export, and hardening only the api side left this one injectable — quoting every
-// cell does not help, because a spreadsheet unquotes first and then evaluates.
-//
-// The activity column is activityLabel(taskId), which falls through to the raw taskId for any
-// unrecognised value, and taskId arrives from a reporter's signed payload. Anyone can generate
-// a key and sign a proof, so this is unauthenticated input reaching a programme officer's
-// spreadsheet.
+// export-injection.test.ts: the dashboard's in-browser CSV download — a separate path from the api
+// export that stayed injectable when only the api was hardened. taskId is self-signed (unauthenticated)
+// and falls through activityLabel verbatim, so no data cell may start with a formula character.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";

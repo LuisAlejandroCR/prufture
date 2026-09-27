@@ -1,6 +1,5 @@
 // nav.ts: pure paging helpers for the /pitch deck (index wrap + keyboard mapping).
-// No React and no DOM here so it can be unit-tested in isolation (test/pitch.test.ts).
-// Distinct from Deck.tsx, which is the client component that wires these to events.
+// No React or DOM, so it is unit-tested in isolation; Deck.tsx wires these to events.
 
 export function wrapIndex(n: number, len: number): number {
   if (len <= 0) return 0;

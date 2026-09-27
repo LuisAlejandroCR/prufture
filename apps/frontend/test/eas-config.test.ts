@@ -1,7 +1,6 @@
-// eas-config.test.ts: unit + fuzz + invariant checks for the EAS / app-store config
-// (apps/frontend/eas.json and apps/frontend/app.json) plus the store-readiness additions
-// (assets, permissions, notifications wiring). Guards the config against silent drift;
-// it does not exercise any runtime code.
+// eas-config.test.ts: unit + fuzz + invariant checks for eas.json and app.json plus store-readiness
+// wiring (assets, permissions, notifications). Guards the config against silent drift; it does not
+// exercise any runtime code.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -32,7 +31,6 @@ function resolved(name: string): Profile {
   };
 }
 
-// --- unit: files parse and carry the expected shape ---
 test("eas.json is valid JSON with a build section", () => {
   assert.equal(typeof eas, "object");
   assert.equal(typeof eas.build, "object");
@@ -77,7 +75,6 @@ test("app.json: EAS Update wiring matches the projectId (needed for channel:prev
   assert.equal(app.expo.updates.url, `https://u.expo.dev/${app.expo.extra.eas.projectId}`);
 });
 
-// --- invariants ---
 test("invariant: every real build profile uses a known distribution", () => {
   for (const [name, raw] of profiles()) {
     if (raw.extends === undefined && raw.distribution === undefined) continue; // shared base block
@@ -108,7 +105,7 @@ test("invariant: no secrets or absolute paths in the config files", () => {
   }
 });
 
-// --- store readiness: app.json is complete for a store submission ---
+// Store readiness: app.json is complete for a store submission.
 test("app.json: identity fields are store-complete", () => {
   const e = app.expo;
   assert.equal(e.name, "Prufture");
@@ -222,7 +219,7 @@ test("_layout.tsx calls registerForPush on mount", () => {
   assert.match(src, /registerForPush\(/);
 });
 
-// --- fuzz: the preview profile stays an installable-APK profile under key reordering ---
+// The preview profile stays an installable-APK profile under key reordering.
 test("fuzz: preview profile invariants hold regardless of key order", () => {
   const p = resolved("preview");
   for (let i = 0; i < 500; i += 1) {

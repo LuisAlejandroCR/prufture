@@ -35,7 +35,6 @@ function randString(maxLen: number): string {
 
 function randHash(): string {
   const hex = bytesToHex(randomBytes(32)).slice(2);
-  // half the time keep the 0x prefix, sometimes upper-case it
   const withPrefix = Math.random() < 0.5 ? `0x${hex}` : hex;
   return Math.random() < 0.3 ? withPrefix.toUpperCase().replace("0X", "0x") : withPrefix;
 }

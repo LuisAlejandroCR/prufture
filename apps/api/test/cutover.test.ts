@@ -1,9 +1,6 @@
-// cutover.test.ts: phase 4 of the provider portability plan. A boundary is switched only after
-// the incumbent and candidate agree over synthetic proofs, and the "synthetic only" rule is
-// enforced in code rather than left to an operator's discipline.
-//
-// The load-bearing test here is the refusal: a real-looking payload must be rejected BEFORE
-// either adapter is called, so evaluating a candidate provider can never leak a real report.
+// cutover.test.ts: a boundary is switched only after incumbent and candidate agree over synthetic proofs.
+// Load-bearing test: a real-looking payload is rejected BEFORE either adapter is called, so evaluating a
+// candidate provider can never leak a real report.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -46,8 +43,6 @@ function spy(available: boolean): AttestationSubmitter & { calls: number } {
     },
   };
 }
-
-// --- the synthetic-only guardrail ------------------------------------------------------------
 
 test("a generated payload is recognised as synthetic", () => {
   for (let i = 0; i < 5; i++) assert.equal(isSyntheticPayload(syntheticPayload(i)), true);
@@ -99,8 +94,7 @@ test("the synthetic hash is domain-separated and deterministic", () => {
   assert.match(a, /^[0-9a-f]{64}$/);
 });
 
-// --- the refusal happens before any adapter runs ----------------------------------------------
-
+// The refusal happens before any adapter runs.
 test("comparing a non-synthetic payload refuses WITHOUT calling either adapter", async () => {
   const incumbent = spy(true);
   const candidate = spy(true);
@@ -115,8 +109,6 @@ test("comparing a non-synthetic payload refuses WITHOUT calling either adapter",
   assert.equal(incumbent.calls, 0, "the incumbent must not see a real payload");
   assert.equal(candidate.calls, 0, "a candidate provider must never see a real payload");
 });
-
-// --- comparison outcomes ------------------------------------------------------------------------
 
 test("two agreeing adapters report agreement and deterministic calldata", async () => {
   const r = await compareSubmitters(spy(false), spy(false), syntheticPayload(1));
@@ -153,8 +145,6 @@ test("the real adapters can be compared and agree while unconfigured", async () 
   assert.equal(r.agrees, true, "both degrade with no credentials");
   assert.equal(r.outcome, "both-unavailable");
 });
-
-// --- the gate ----------------------------------------------------------------------------------
 
 test("cutoverReady requires every row to agree", () => {
   assert.equal(cutoverReady([row(), row()]), true);

@@ -1,10 +1,8 @@
 // @ts-nocheck -- vendored third-party encoder; kept close to the upstream source.
-// qr.ts: vendored QR Code encoder, trimmed from Project Nayuki's "QR Code generator
-// library" (MIT License, https://www.nayuki.io/page/qr-code-generator-library).
-// Only the encoder + an SVG-path helper are kept. No runtime dependency — the /pitch
-// deck needs QR codes that render server-side and work offline at the venue.
-// Distinct from Deck.tsx (paging) and Qr.tsx (the React wrapper around this).
-//
+// qr.ts: vendored QR Code encoder, trimmed from Project Nayuki's "QR Code generator library" (MIT,
+// https://www.nayuki.io/page/qr-code-generator-library) to the encoder + an SVG-path helper. No
+// runtime dependency, so the /pitch QR codes render server-side and work offline at the venue.
+
 // Copyright (c) Project Nayuki. (MIT License)
 // Permission is hereby granted, free of charge, to any person obtaining a copy of
 // this software and associated documentation files (the "Software"), to deal in
@@ -623,8 +621,6 @@ export class Mode {
     return this.numBitsCharCount[Math.floor((ver + 7) / 17)];
   }
 }
-
-// --- SVG helper -------------------------------------------------------------
 
 // Returns { size, path } where `size` is the module count including a `border`
 // quiet zone and `path` is an SVG path string of the dark modules, one unit per

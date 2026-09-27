@@ -1,10 +1,7 @@
 import "react-native-get-random-values";
-// _layout.tsx: root navigation stack for the Expo Router app.
-// The crypto shim above is a side-effect import and MUST stay the first statement:
-// it binds globalThis.crypto.getRandomValues before @proof/core (ed25519 via
-// @noble/curves) is first touched by the keystore on launch.
-// The bottom tab bar lives in app/(tabs)/_layout.tsx; the guided report flow and
-// the detail screens are plain stack screens with in-screen back controls.
+// _layout.tsx: root navigation stack for the Expo Router app (tabs live in app/(tabs)/_layout.tsx).
+// The crypto shim above MUST stay the first statement: it binds crypto.getRandomValues before
+// @proof/core's ed25519 is first touched by the keystore on launch.
 
 import { useEffect } from "react";
 import { Platform } from "react-native";

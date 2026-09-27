@@ -1,18 +1,6 @@
-// openzeppelin-relayer.ts: the second AttestationSubmitter adapter (provider portability plan,
-// phase 2). Key custody moves out of this process into a self-hosted OpenZeppelin Relayer: this
-// adapter hands it the already-allowlisted attest() calldata and the relayer signs and sends.
-// No private key is read, derived or held here.
-//
-// OZ Relayer is asynchronous: POST /transactions queues a transaction and the hash appears once
-// it is sent. So the adapter polls for the hash within a fixed budget, and remembers the queued
-// transaction id per proof. A retry after the budget runs out re-polls that transaction instead
-// of queueing a second one, so a slow relayer cannot make the programme pay for a proof twice.
-// That memory is per process; the store's idempotency (attestOnce) covers everything anchored.
-//
-// Fail closed, in order: assertAllowed() over the built request; the relayer's own record must
-// be an unpaused EVM relayer on the pinned network, reporting the pinned address; the queued
-// transaction must come back from that address, to the EAS contract, with zero value. Errors
-// name an HTTP status or a fixed reason — never the API key, the URL, or a vendor response body.
+// openzeppelin-relayer.ts: AttestationSubmitter adapter that hands allowlisted attest() calldata to a
+// self-hosted OpenZeppelin Relayer, which holds the key and sends — no private key is held here. Fails
+// closed on policy, relayer pinning and tx shape; errors never carry the API key, URL or vendor body.
 
 import { guard, type ExternalResult, type ProofPublicPayload } from "@proof/core";
 import { encodeFunctionData, getAddress, isAddress } from "viem";
@@ -82,7 +70,8 @@ export function createOzRelayerSubmitter(deps: OzRelayerDeps = {}): AttestationS
   const pollAttempts = deps.pollAttempts ?? OZ_POLL_ATTEMPTS;
   const pollIntervalMs = deps.pollIntervalMs ?? OZ_POLL_INTERVAL_MS;
 
-  // `${relayerId}:${proofHash}` -> the OZ transaction id already queued for that proof.
+  // `${relayerId}:${proofHash}` -> the OZ transaction id already queued for that proof. A retry re-polls
+  // that transaction instead of queueing a second one, so a slow relayer never makes a proof pay twice.
   const queued = new Map<string, string>();
 
   /** One API call: explicit timeout, status-only errors, and the { success, data } envelope. */
