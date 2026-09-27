@@ -62,6 +62,17 @@ function isHex32(v: string): boolean {
   return /^0x[0-9a-fA-F]{64}$/.test(v);
 }
 
+/**
+ * An adapter error made safe for a public response: first line only, any URL replaced, length
+ * capped. RPC and relayer URLs often carry the provider's API key, and /sync returns this text.
+ */
+export function publicError(e: unknown): string {
+  const raw =
+    e instanceof Error ? ((e as { shortMessage?: unknown }).shortMessage as string | undefined) ?? e.message : String(e);
+  const line = (typeof raw === "string" ? raw : "").split("\n")[0] ?? "";
+  return line.replace(/[a-z][a-z0-9+.-]*:\/\/\S+/gi, "[endpoint]").slice(0, 200) || "unavailable";
+}
+
 export function sameAddress(a: string, b: string): boolean {
   try {
     return getAddress(a) === getAddress(b);

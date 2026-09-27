@@ -34,6 +34,9 @@ services:
       # a configuration choice. Absent -> /sync degrades to "synced".
       - key: RPC_URL
         sync: false
+      # Extra endpoints, comma-separated, tried in order when RPC_URL fails.
+      - key: RPC_FALLBACK_URLS
+        sync: false
       # DEPRECATED fallback name, honoured only when RPC_URL is unset. Drop once migrated.
       - key: DWELLIR_RPC_URL
         sync: false
