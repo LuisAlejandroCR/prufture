@@ -1,8 +1,10 @@
-// Sidebar.tsx: persistent dashboard navigation; marks the current section with aria-current.
-// At narrow widths globals.css turns this into a horizontal scroller.
+// Sidebar.tsx: persistent dashboard navigation; marks the current section with aria-current and,
+// when staff sign-in is on, shows the signed-in account menu. At narrow widths globals.css turns
+// this into a horizontal scroller.
 
 "use client";
 
+import { UserButton } from "@clerk/nextjs";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -17,7 +19,7 @@ const LINKS: { href: string; label: string }[] = [
   { href: "/dashboard/settings", label: "Settings" },
 ];
 
-export function Sidebar() {
+export function Sidebar({ staffAuth }: { staffAuth: boolean }) {
   const pathname = usePathname();
 
   return (
@@ -35,6 +37,11 @@ export function Sidebar() {
           );
         })}
       </div>
+      {staffAuth ? (
+        <div className="dash-account">
+          <UserButton />
+        </div>
+      ) : null}
     </nav>
   );
 }

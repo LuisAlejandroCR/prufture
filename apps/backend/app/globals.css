@@ -509,3 +509,9 @@ body:has(.pitch-deck) { background: var(--bg); }
   .film-track, .film-track + .film-track { height: auto; margin-top: 0; }
   .scroll-film { position: relative; top: auto; margin-bottom: 22px; }
 }
+
+/* Staff sign-in (Clerk) — dashboard only */
+.dash-auth-banner { margin: 0 0 20px; padding: 12px 16px; border-radius: 12px; background: #fff4e0; color: #7a4a00; font-size: .9rem; }
+.dash-account { margin-top: auto; padding-top: 16px; }
+.staff-signin { min-height: 100vh; display: grid; place-items: center; align-content: center; gap: 20px; padding: 40px 16px; }
+.staff-signin-note { max-width: 420px; margin: 0; text-align: center; color: #6e6e73; }
