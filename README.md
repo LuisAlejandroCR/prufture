@@ -113,8 +113,8 @@ contacted, so no real report is ever sent to a provider under evaluation.
 - A second attestation over the same hash (deduped by attester).
 - Public `/verify/[hash]` and `/dashboard`, no login, coarse region only.
 - WhatsApp delivery of the verification link (Kapso); email degrades cleanly.
-- Automated tests: `packages/core` 22 · `apps/api` 288 · `apps/backend` 37 · `apps/frontend` 137
-  (484 total).
+- Automated tests: `packages/core` 22 · `apps/api` 292 · `apps/backend` 37 · `apps/frontend` 137
+  (488 total).
 
 **Scoped next, not implemented:** on-device zero-knowledge proof (a commitment stands in); hardware
 attestation / TEE signing; App/Play Store publication (config written, not run); selfie liveness
@@ -194,12 +194,29 @@ channel carry an explicit 5 s timeout.
 a self-hosted [OpenZeppelin Relayer](https://docs.openzeppelin.com/relayer/quickstart), which
 holds the key; `apps/api` then holds no private key at all. Before anything is queued, the
 relayer's own record must be an unpaused EVM relayer on `base-sepolia` whose signer is the pinned
-`OZ_RELAYER_ADDRESS`. The queued transaction must come back from that address, to the EAS
+`OZ_RELAYER_ADDRESS`, and whose own policy allows sending only to the EAS contract
+(`whitelist_receivers`). Our allowlist runs in this process; the relayer's policy is what still
+holds if its API key leaks. The queued transaction must come back from that address, to the EAS
 contract, with zero value. OZ Relayer confirms asynchronously, so the adapter polls for the hash
 within a fixed budget. If the budget runs out, the call returns a typed unavailable and the
 adapter remembers the queued transaction, so a retry re-polls it rather than paying for a second
-one. That memory lasts only as long as the process. Still open: one real attestation in an OZ
-Relayer sandbox, which needs a deployed relayer and its credentials.
+one. That memory lasts only as long as the process.
+
+**Sandbox run (2026-09-28).** `apps/api/sandbox/up.sh` starts an anvil fork of Base Sepolia, which
+has the real EAS contract and our registered schema but no real funds. It also starts the official
+`openzeppelin/openzeppelin-relayer` image, locked to EAS. `npm run submitter-sandbox --workspace
+apps/api -- <adapter>` then checks the exit criterion against it:
+
+- one real attestation, read back from EAS with the pinned attester, the allowlisted schema, and
+  exactly the four fields;
+- a repeat submission of the same proof leaves the signer's nonce unchanged;
+- a relayer reporting a different signer is refused before anything is sent;
+- the relayer itself refuses a transaction to any other address, and one that carries value;
+- an unreachable relayer returns a typed unavailable with no key and no URL in it.
+
+Both `openzeppelin-relayer` and `local-key` passed. Run on a clean start, the sandbox also caught a
+relayer that disabled itself because its RPC was not up yet: the adapter refused it, and
+`shadow-compare` held the cut-over.
 
 ### Phase 3 — split Neuro into two ports
 
@@ -300,10 +317,10 @@ behind it is finished.
 | Item | What it needs |
 |---|---|
 | Phase 1 exit criterion | Two endpoints and the failover drill pass. Remaining: the managed primary chosen below, and one real `attest()` per endpoint (`rpc-check --attest`, which needs the funded gas key) |
-| Phase 2 exit criterion | The `openzeppelin-relayer` adapter is in place and tested against a fake relayer (denied address, network, value and contract all fail closed). One real attestation through a deployed OZ Relayer on Base Sepolia is still needed, run as `npm run shadow-compare --workspace apps/api -- openzeppelin-relayer` |
+| Phase 2 on the live testnet | The sandbox run passed on a fork. Still needed: a deployed OZ Relayer on Base Sepolia with a funded signer, `whitelist_receivers` set to EAS, and one `submitter-sandbox` run against it |
 | Phase 3 `openid4vp` adapter | A two-step session port: a request (nonce, state) and a separate wallet response, so new routes. Shared with any future liveness vendor. Built only once the pilot states why assurance is needed |
 | Phase 3 sandbox check | One consented end-to-end check before any adapter is labelled verified |
-| Phase 4 observation window | Run on a real candidate once one exists |
+| Phase 4 observation window | `shadow-compare` of `local-key` against `openzeppelin-relayer` in the sandbox: READY over 5 synthetic proofs. The real window runs once the relayer is deployed; keep `local-key` configured through it |
 | CI runners | GitHub Actions jobs on the account stopped starting on 2026-09-26 (billing). Until they run again, `npm run verify` locally is the gate |
 | Scoped next | On-device ZK proof, hardware attestation / TEE signing, store publication, schema v2 with the sealed precise location |
 | Programme inputs | A baseline for the cost figure (reports per month, re-visit share, cost per trip) and the pilot legal preconditions — programme work, not code |

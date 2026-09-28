@@ -1,0 +1,50 @@
+{
+  "networks": [
+    {
+      "average_blocktime_ms": 2000,
+      "chain_id": 8453,
+      "explorer_urls": [
+        "https://api.basescan.org/api",
+        "https://basescan.org"
+      ],
+      "features": [
+        "eip1559"
+      ],
+      "is_testnet": false,
+      "network": "base",
+      "required_confirmations": 1,
+      "rpc_urls": [
+        "https://mainnet.base.org",
+        "https://base.drpc.org",
+        "https://1rpc.io/base",
+        "https://base-rpc.publicnode.com",
+        "https://base-public.nodies.app"
+      ],
+      "symbol": "ETH",
+      "tags": [
+        "rollup",
+        "optimism-based"
+      ],
+      "type": "evm"
+    },
+    {
+      "from": "base",
+      "type": "evm",
+      "network": "base-sepolia",
+      "chain_id": 84532,
+      "explorer_urls": [
+        "https://api-sepolia.basescan.org/api",
+        "https://sepolia.basescan.org"
+      ],
+      "is_testnet": true,
+      "rpc_urls": [
+        "http://127.0.0.1:8545"
+      ],
+      "tags": [
+        "deprecated",
+        "rollup",
+        "optimism-based"
+      ]
+    }
+  ]
+}

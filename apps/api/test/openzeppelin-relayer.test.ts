@@ -92,6 +92,7 @@ function fakeRelayer(o: FakeOptions = {}) {
         network: "base-sepolia",
         network_type: "evm",
         paused: false,
+        policies: { whitelist_receivers: [EAS] },
         system_disabled: false,
         address: PINNED,
         ...o.relayer,
@@ -261,6 +262,10 @@ for (const [label, relayer, reason] of [
   ["a non-EVM relayer", { network_type: "solana" }, /not an EVM relayer/],
   ["a paused relayer", { paused: true }, /paused/],
   ["a system-disabled relayer", { system_disabled: true }, /paused/],
+  ["a relayer with no receiver whitelist", { policies: {} }, /restricted to the EAS contract/],
+  ["a relayer with no policies at all", { policies: undefined }, /restricted to the EAS contract/],
+  ["a relayer whose whitelist is empty", { policies: { whitelist_receivers: [] } }, /restricted to the EAS contract/],
+  ["a relayer that may also send elsewhere", { policies: { whitelist_receivers: [EAS, OTHER] } }, /restricted to the EAS contract/],
 ] as const) {
   test(`fails closed before queueing anything: ${label}`, async () => {
     const fake = fakeRelayer({ relayer: relayer as Record<string, unknown> });

@@ -48,6 +48,7 @@ interface OzRelayer {
   network_type?: unknown;
   paused?: unknown;
   system_disabled?: unknown;
+  policies?: { whitelist_receivers?: unknown };
 }
 
 function isConfigured(): boolean {
@@ -122,6 +123,16 @@ export function createOzRelayerSubmitter(deps: OzRelayerDeps = {}): AttestationS
     if (r.paused === true || r.system_disabled === true) throw new Error("openzeppelin-relayer is paused");
     if (typeof r.address !== "string" || !sameAddress(r.address, env.ozRelayerAddress)) {
       throw new Error("openzeppelin-relayer address is not the pinned OZ_RELAYER_ADDRESS");
+    }
+    // Our allowlist runs in this process; the relayer's own policy is what still holds if its API
+    // key leaks. Refuse a relayer that would send to anything but the EAS contract.
+    const receivers = r.policies?.whitelist_receivers;
+    if (
+      !Array.isArray(receivers) ||
+      receivers.length === 0 ||
+      !receivers.every((a) => typeof a === "string" && sameAddress(a, env.easContract))
+    ) {
+      throw new Error("openzeppelin-relayer is not restricted to the EAS contract (policies.whitelist_receivers)");
     }
   }
 
