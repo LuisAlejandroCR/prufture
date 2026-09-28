@@ -59,6 +59,24 @@ test("production profile is present and documented as store / app-bundle, not ru
   assert.equal(p.autoIncrement, true);
 });
 
+test("production store build carries the same public config as preview, and no placeholder values", () => {
+  // A missing verify URL shipped a status screen linking to prufture.example; a missing programme
+  // key silently skipped sealing the precise point; a "<<...>>" key was baked into the bundle.
+  const env = resolved("production").env as Record<string, string>;
+  const preview = resolved("preview").env as Record<string, string>;
+  for (const key of ["EXPO_PUBLIC_API_URL", "EXPO_PUBLIC_VERIFY_URL", "EXPO_PUBLIC_PROGRAMME_PUBKEY"]) {
+    assert.ok(env[key], `${key} missing from the production profile`);
+    assert.equal(env[key], preview[key], `${key} differs between preview and production`);
+  }
+  assert.match(env.EXPO_PUBLIC_VERIFY_URL!, /^https:\/\/.+\/verify$/);
+  assert.match(env.EXPO_PUBLIC_PROGRAMME_PUBKEY!, /^[0-9a-f]{64}$/);
+  assert.equal(env.EXPO_PUBLIC_IDENTITY_STEP, "off");
+  for (const [key, value] of Object.entries(env)) {
+    assert.ok(!/<<|>>|human fills/i.test(value), `${key} still holds a placeholder`);
+  }
+  assert.ok(!("EXPO_PUBLIC_REVENUECAT_TEST_KEY" in env), "a Test Store key must never reach a store build");
+});
+
 test("app.json: android.package + versionCode set, eas.projectId is a real UUID", () => {
   assert.equal(app.expo.android.package, "ai.proofatcapture.app");
   assert.equal(typeof app.expo.android.versionCode, "number");

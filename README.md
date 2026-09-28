@@ -113,8 +113,8 @@ contacted, so no real report is ever sent to a provider under evaluation.
 - A second attestation over the same hash (deduped by attester).
 - Public `/verify/[hash]` and `/dashboard`, no login, coarse region only.
 - WhatsApp delivery of the verification link (Kapso); email degrades cleanly.
-- Automated tests: `packages/core` 22 · `apps/api` 292 · `apps/backend` 37 · `apps/frontend` 137
-  (488 total).
+- Automated tests: `packages/core` 22 · `apps/api` 292 · `apps/backend` 37 · `apps/frontend` 138
+  (489 total).
 
 **Scoped next, not implemented:** on-device zero-knowledge proof (a commitment stands in); hardware
 attestation / TEE signing; App/Play Store publication (config written, not run); selfie liveness
@@ -409,7 +409,7 @@ synthetic-only comparison, and no reporter data sent to it during evaluation.
 
 ```bash
 npm install
-npm run verify   # typecheck + every workspace's tests — the same gate CI runs
+npm run verify   # typecheck, every workspace's tests, and the production web build
 ```
 
 Run the three services, each in its own terminal:
