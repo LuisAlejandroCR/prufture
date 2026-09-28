@@ -6,7 +6,6 @@ import { Tabs, useRouter } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Icon, type IconName } from "../../src/components/icons/Icon";
-import { recommendedTask } from "../../src/tasks";
 import { color, navSelectedTint, radius, shadow, space, target, type } from "../../src/theme";
 
 const ITEMS: { name: string; label: string; icon: IconName }[] = [
@@ -58,10 +57,10 @@ function TabBar({ state, navigation }: TabBarShape) {
       {left.map(renderItem)}
 
       <Pressable
-        onPress={() => router.push({ pathname: "/report/intro", params: { id: recommendedTask().id } })}
+        onPress={() => router.push("/report/pick")}
         accessibilityRole="button"
         accessibilityLabel="Start a report"
-        accessibilityHint="Opens the guided report for your recommended task"
+        accessibilityHint="Choose what you are reporting, then follow the guided steps"
         style={({ pressed }) => [styles.report, pressed && styles.reportPressed]}
       >
         <Icon name="report" size={28} filled color={color.onPrimary} />

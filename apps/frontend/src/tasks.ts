@@ -1,29 +1,22 @@
-// tasks.ts: presentation-only catalog turning a stored taskId into reporter-facing text (category,
-// title, approximate area, what to capture). Display metadata, not protocol: the signed proof still
-// carries only the raw taskId.
+// tasks.ts: turns a stored taskId into reporter-facing text. A task is either a programme assignment
+// (an item at a named place with an approximate 5-char cell) or a self-started `item:<itemId>` report
+// located by the phone. Display metadata only: the signed proof still carries just the raw taskId.
 
-export type Category = "Education" | "Water and sanitation" | "Health" | "Nutrition" | "Training";
+import { decodeGeohashBounds } from "./geohash";
+import { getItem, type CaptureStep, type Category, type ItemDef, type Question } from "./items";
 
-export interface CaptureStep {
-  /** Short instruction shown above the camera. */
-  prompt: string;
-  /** One-line privacy or framing hint. */
-  hint?: string;
-}
-
-export interface Question {
-  id: string;
-  text: string;
-  options: string[];
-  required: boolean;
-}
+export type { CaptureStep, Category, Question } from "./items";
 
 export interface TaskDef {
   id: string;
+  /** Catalog item this task verifies. */
+  itemId: string;
   category: Category;
   title: string;
   /** Approximate area name. Never an address or coordinates. */
   area: string;
+  /** 5-char approximate cell for assignments; empty for self-started reports. */
+  cell: string;
   /** One sentence: why this report matters. */
   purpose: string;
   /** Photos the reporter should take, in order. */
@@ -37,116 +30,161 @@ export interface TaskDef {
   progressLabel?: string;
   /** True when people, faces, or documents may appear and a warning is needed. */
   peopleRisk: boolean;
+  /** True for a report the reporter started from the item catalog. */
+  selfStarted: boolean;
 }
 
-const CATALOG: TaskDef[] = [
+export const ITEM_TASK_PREFIX = "item:";
+export const SELF_STARTED_AREA = "Near you";
+
+interface Assignment {
+  id: string;
+  itemId: string;
+  title: string;
+  area: string;
+  cell: string;
+  progressLabel?: string;
+}
+
+// Example programme assignments. In a pilot these come from the programme team; ids are stable
+// because reports already saved on phones reference them.
+const ASSIGNMENTS: Assignment[] = [
   {
     id: "solar-panel-install",
-    category: "Education",
+    itemId: "school-solar",
     title: "Check solar panels at Kalama Primary School",
-    area: "Kalama District",
-    purpose: "Confirm the school now has power for classroom lighting.",
-    photos: [
-      { prompt: "Wide photo showing all installed panels", hint: "Stand back so every panel fits in the frame." },
-      { prompt: "Close photo of the equipment label", hint: "Keep it readable. Avoid any names or ID numbers." },
-      { prompt: "Photo showing powered classroom lights", hint: "No faces. Point at the lights, not the people." },
-    ],
-    questions: [
-      {
-        id: "all-panels",
-        text: "Were all 24 panels installed?",
-        options: ["Yes", "No", "I could not confirm"],
-        required: true,
-      },
-      {
-        id: "lights-work",
-        text: "Do the classroom lights turn on?",
-        options: ["Yes", "No", "Not tested"],
-        required: true,
-      },
-    ],
-    minutes: 3,
-    offlineOk: true,
+    area: "Kalama, Machakos",
+    cell: "kzdwb",
     progressLabel: "2 more reports needed",
-    peopleRisk: true,
   },
   {
     id: "water-pump-repair",
-    category: "Water and sanitation",
+    itemId: "water-point",
     title: "Confirm the repaired hand pump is working",
-    area: "Turkana West",
-    purpose: "Confirm the community water point is back in service.",
-    photos: [
-      { prompt: "Wide photo of the pump and surroundings", hint: "Show the whole pump stand." },
-      { prompt: "Photo of water flowing from the spout", hint: "No faces in the frame." },
-    ],
-    questions: [
-      {
-        id: "water-flows",
-        text: "Does water flow when the handle is pumped?",
-        options: ["Yes, steady", "Only a little", "No"],
-        required: true,
-      },
-    ],
-    minutes: 2,
-    offlineOk: true,
+    area: "Kakuma, Turkana West",
+    cell: "sb8v1",
     progressLabel: "1 more report needed",
-    peopleRisk: false,
   },
   {
     id: "latrine-construction",
-    category: "Water and sanitation",
+    itemId: "toilets",
     title: "Check newly built latrines at the health post",
     area: "Garissa County",
-    purpose: "Confirm safe sanitation is available at the health post.",
-    photos: [
-      { prompt: "Wide photo of all latrine blocks", hint: "Fit every block in one frame if you can." },
-      { prompt: "Photo of a handwashing point", hint: "Show the tap or water container." },
-    ],
-    questions: [
-      {
-        id: "usable",
-        text: "Are the latrines finished and usable?",
-        options: ["Yes", "Almost", "No"],
-        required: true,
-      },
-    ],
-    minutes: 2,
-    offlineOk: true,
-    peopleRisk: false,
+    cell: "kzujq",
+  },
+  {
+    id: "cold-chain-bogota",
+    itemId: "vaccine-fridge",
+    title: "Check the new vaccine fridge at the health centre",
+    area: "Ciudad Bolívar, Bogotá",
+    cell: "d2g38",
+    progressLabel: "1 more report needed",
+  },
+  {
+    id: "handwashing-lima",
+    itemId: "handwashing",
+    title: "Check handwashing stations at the school",
+    area: "San Juan de Lurigancho, Lima",
+    cell: "6mc5z",
   },
 ];
 
-const DEFAULT: TaskDef = {
+const FALLBACK_ITEM: ItemDef = {
   id: "unknown",
-  category: "Training",
-  title: "Field report",
-  area: "Approximate area",
+  category: "Education",
+  name: "Field activity",
+  action: "Field report",
   purpose: "Document what was completed at this activity.",
   photos: [{ prompt: "Photo of the completed work" }],
   questions: [],
   minutes: 2,
-  offlineOk: true,
   peopleRisk: true,
 };
 
+function fromItem(item: ItemDef, id: string): TaskDef {
+  return {
+    id,
+    itemId: item.id,
+    category: item.category,
+    title: item.action,
+    area: SELF_STARTED_AREA,
+    cell: "",
+    purpose: item.purpose,
+    photos: item.photos,
+    questions: item.questions,
+    minutes: item.minutes,
+    offlineOk: true,
+    peopleRisk: item.peopleRisk,
+    selfStarted: true,
+  };
+}
+
+function fromAssignment(a: Assignment): TaskDef {
+  const item = getItem(a.itemId) ?? FALLBACK_ITEM;
+  return { ...fromItem(item, a.id), title: a.title, area: a.area, cell: a.cell, progressLabel: a.progressLabel, selfStarted: false };
+}
+
+/** taskId for a report the reporter starts from the catalog. */
+export function itemTaskId(itemId: string): string {
+  return `${ITEM_TASK_PREFIX}${itemId}`;
+}
+
 export function listTasks(): TaskDef[] {
-  return CATALOG;
+  return ASSIGNMENTS.map(fromAssignment);
 }
 
 export function getTask(id: string): TaskDef {
-  return CATALOG.find((t) => t.id === id) ?? { ...DEFAULT, id: id || "unknown" };
+  if (id.startsWith(ITEM_TASK_PREFIX)) {
+    const item = getItem(id.slice(ITEM_TASK_PREFIX.length));
+    if (item) return fromItem(item, id);
+  }
+  const a = ASSIGNMENTS.find((t) => t.id === id);
+  if (a) return fromAssignment(a);
+  return { ...fromItem(FALLBACK_ITEM, id || "unknown"), area: "Approximate area" };
 }
 
-/** The task Home recommends first. */
-export function recommendedTask(): TaskDef {
-  return CATALOG[0] ?? { ...DEFAULT };
+/** Centre of a geohash cell. */
+export function cellCentre(cell: string): { latitude: number; longitude: number } {
+  const b = decodeGeohashBounds(cell);
+  return { latitude: (b.latMin + b.latMax) / 2, longitude: (b.lngMin + b.lngMax) / 2 };
 }
 
-export const categoryAccent: Record<Category, "education" | "water" | "health" | "nutrition" | "training"> = {
+/** Great-circle distance in km between two cell centres. */
+export function cellDistanceKm(a: string, b: string): number {
+  const p = cellCentre(a);
+  const q = cellCentre(b);
+  const rad = Math.PI / 180;
+  const dLat = (q.latitude - p.latitude) * rad;
+  const dLng = (q.longitude - p.longitude) * rad;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(p.latitude * rad) * Math.cos(q.latitude * rad) * Math.sin(dLng / 2) ** 2;
+  return 2 * 6371 * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+
+/** Tasks nearest the reporter's cell first; unchanged order when the cell is unknown. */
+export function sortByDistance(tasks: TaskDef[], myCell: string | null): TaskDef[] {
+  if (!myCell) return tasks;
+  return [...tasks].sort((a, b) => cellDistanceKm(myCell, a.cell) - cellDistanceKm(myCell, b.cell));
+}
+
+/** Friendly distance: "Nearby", "12 km away", or "Far from you" past 200 km. */
+export function distanceLabel(myCell: string | null, task: TaskDef): string | null {
+  if (!myCell || !task.cell) return null;
+  const km = cellDistanceKm(myCell, task.cell);
+  if (km < 5) return "Nearby";
+  if (km <= 200) return `${Math.round(km)} km away`;
+  return "Far from you";
+}
+
+/** The task Home recommends first: nearest assignment when the cell is known. */
+export function recommendedTask(myCell: string | null = null): TaskDef {
+  return sortByDistance(listTasks(), myCell)[0] ?? fromItem(FALLBACK_ITEM, "unknown");
+}
+
+export const categoryAccent: Record<Category, "education" | "water" | "health" | "nutrition" | "protection" | "climate"> = {
   Education: "education",
   "Water and sanitation": "water",
   Health: "health",
   Nutrition: "nutrition",
-  Training: "training",
+  "Child protection": "protection",
+  Climate: "climate",
 };

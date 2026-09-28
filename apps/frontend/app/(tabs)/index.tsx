@@ -23,15 +23,18 @@ import {
 } from "../../src/report-draft";
 import { listProofs } from "../../src/queue";
 import { runPendingSync } from "../../src/useAutoSync";
-import { categoryAccent, getTask, recommendedTask } from "../../src/tasks";
+import { categoryAccent, distanceLabel, getTask, recommendedTask } from "../../src/tasks";
 import { color, radius, space, type } from "../../src/theme";
+import { useApproxArea } from "../../src/useApproxArea";
 
 export default function HomeScreen() {
   const router = useRouter();
   const [pending, setPending] = useState(0);
   const [reachError, setReachError] = useState(false);
   const [unfinished, setUnfinished] = useState<{ taskId: string; photos: number; answers: number } | null>(null);
-  const task = recommendedTask();
+  const area = useApproxArea();
+  const task = recommendedTask(area.cell);
+  const distance = distanceLabel(area.cell, task);
 
   useFocusEffect(
     useCallback(() => {
@@ -83,7 +86,7 @@ export default function HomeScreen() {
     <Screen
       footer={
         <>
-          <PrimaryButton label="Start report" onPress={start} />
+          <PrimaryButton label="Report something" onPress={() => router.push("/report/pick")} />
           <Text style={styles.footNote}>Your report stays private. We only ask for what is needed to confirm this activity.</Text>
         </>
       }
@@ -91,7 +94,7 @@ export default function HomeScreen() {
       <View style={styles.head}>
         <View>
           <Text style={styles.hello}>Hello</Text>
-          <Text style={styles.sub}>Ready when you are.</Text>
+          <Text style={styles.sub}>{area.name ? `Near ${area.name}` : "Ready when you are."}</Text>
         </View>
         <Pressable
           onPress={() => router.push("/me")}
@@ -164,7 +167,7 @@ export default function HomeScreen() {
           <Text style={styles.taskTitle}>{task.title}</Text>
           <View style={styles.metaRow}>
             <Icon name="location" size={15} color={color.faint} />
-            <Text style={styles.meta}>{task.area}</Text>
+            <Text style={styles.meta}>{distance ? `${task.area} · ${distance}` : task.area}</Text>
           </View>
           <Text style={styles.need}>
             Take {task.photos.length} photos and answer {task.questions.length}{" "}

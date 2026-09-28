@@ -13,7 +13,8 @@ import { getTask } from "../../src/tasks";
 import { runPendingSync } from "../../src/useAutoSync";
 import { color, friendlyStatus, radius, space, type } from "../../src/theme";
 
-const VERIFY_BASE = process.env.EXPO_PUBLIC_VERIFY_URL ?? "https://prufture.example/verify";
+// `||`, not `??`: an empty EXPO_PUBLIC_VERIFY_URL (as in .env.example) must also fall back.
+const VERIFY_BASE = process.env.EXPO_PUBLIC_VERIFY_URL || "https://prufture.vercel.app/verify";
 
 type Stage = { label: string; done: boolean; current: boolean };
 
