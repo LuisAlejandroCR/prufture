@@ -1,210 +1,121 @@
-// assurance.test.ts: liveness and verified attributes are separate ports, BOTH DEFAULT OFF.
-// The contract block at the bottom runs the same assertions against every adapter, so adding one
-// cannot widen what escapes the boundary.
+// assurance.test.ts: the liveness port is DEFAULT OFF with only a `none` adapter, and no provider name
+// can enable a vendor. The contract block runs a hostile adapter through the port, so a future vendor
+// cannot widen what escapes the minimal { verifiedPerson } verdict or throw into the reporter's flow.
 
 import { test, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { signPayload, generateKeyPair } from "@proof/core";
+import type { ExternalResult } from "@proof/core";
 import {
   checkLivenessVerdict,
-  fetchVerifiedAttribute,
-  neuroAttribute,
-  neuroLiveness,
-  noneAttribute,
   noneLiveness,
-  selectedAttributePort,
   selectedLivenessPort,
-  type AttributePort,
   type LivenessPort,
+  type LivenessVerdict,
 } from "../src/assurance.js";
 import { app } from "../src/index.js";
 
-const PROVIDER_KEYS = ["LIVENESS_PROVIDER", "ATTRIBUTE_PROVIDER"];
-const realFetch = globalThis.fetch;
-const realNeuroUrl = process.env.NEURO_AGENT_API_URL;
-const realNeuroToken = process.env.NEURO_AGENT_API_TOKEN;
-
-// env.* are live getters over process.env, so configuration is varied at the source.
-function setEnv(key: string, value: string | undefined): void {
-  if (value === undefined) delete process.env[key];
-  else process.env[key] = value;
-}
-
-function credentials(on: boolean): void {
-  setEnv("NEURO_AGENT_API_URL", on ? "https://neuro.example/agent" : "");
-  setEnv("NEURO_AGENT_API_TOKEN", on ? "secret-token-value" : "");
-}
-
 afterEach(() => {
-  globalThis.fetch = realFetch;
-  for (const k of PROVIDER_KEYS) delete process.env[k];
-  setEnv("NEURO_AGENT_API_URL", realNeuroUrl);
-  setEnv("NEURO_AGENT_API_TOKEN", realNeuroToken);
+  delete process.env.LIVENESS_PROVIDER;
 });
 
 const FRAMES = { frames: ["ZnJhbWUx", "ZnJhbWUy"], nonceHex: "a".repeat(32), challenges: ["blink", "left"] };
 
-// Both ports default off.
-test("with no configuration at all, both ports are none", () => {
+function fakePort(check: LivenessPort["check"], configured: () => boolean = () => true): LivenessPort {
+  return { name: "fake", isConfigured: configured, check };
+}
+
+test("with no configuration, liveness is none", () => {
   assert.equal(selectedLivenessPort().name, "none");
-  assert.equal(selectedAttributePort().name, "none");
 });
 
-test("setting only the vendor credentials does NOT enable either port", () => {
-  credentials(true);
-  assert.equal(selectedLivenessPort().name, "none", "credentials alone must not switch liveness on");
-  assert.equal(selectedAttributePort().name, "none", "credentials alone must not switch attributes on");
-});
-
-test("an unknown provider name fails closed to none", () => {
-  for (const name of ["rekognition", "openid4vp", "mosip", "garbage", "NEURO"]) {
+test("every provider name resolves to none, including the removed neuro", () => {
+  for (const name of ["neuro", "rekognition", "iproov", "openid4vp", "mosip", "garbage", "NONE"]) {
     process.env.LIVENESS_PROVIDER = name;
-    process.env.ATTRIBUTE_PROVIDER = name;
     assert.equal(selectedLivenessPort().name, "none", `${name} must not enable liveness`);
-    assert.equal(selectedAttributePort().name, "none", `${name} must not enable attributes`);
   }
 });
 
-test("the ports are selected independently", () => {
-  process.env.LIVENESS_PROVIDER = "neuro";
-  assert.equal(selectedLivenessPort().name, "neuro");
-  assert.equal(selectedAttributePort().name, "none", "a liveness vendor is not an attribute issuer");
+test("the none adapter degrades typed and names the off switch", async () => {
+  const r = await checkLivenessVerdict(FRAMES);
+  assert.equal(r.available, false);
+  assert.equal(r.source, "liveness");
+  assert.match(r.error ?? "", /LIVENESS_PROVIDER=none/);
+  assert.equal(noneLiveness.isConfigured(), false);
 });
 
-test("selecting neuro without credentials still degrades typed, never throws", async () => {
-  process.env.LIVENESS_PROVIDER = "neuro";
-  process.env.ATTRIBUTE_PROVIDER = "neuro";
-  const l = await checkLivenessVerdict(FRAMES);
-  const a = await fetchVerifiedAttribute({ attribute: "age_majority" });
-  assert.equal(l.available, false);
-  assert.equal(a.available, false);
-  assert.match(l.error ?? "", /not configured/);
-  assert.match(a.error ?? "", /not configured/);
-});
-
-// Unavailable assurance never blocks the report.
-test("a disabled liveness port still lets /verify-identity answer 200, degraded", async () => {
+test("liveness off still lets /verify-identity answer 200, degraded, with a ticket", async () => {
   const res = await app.request("/verify-identity", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(FRAMES),
   });
   assert.equal(res.status, 200);
-  const body = (await res.json()) as { verifiedPerson: boolean; degraded: boolean };
+  const body = (await res.json()) as { verifiedPerson: boolean; degraded: boolean; ticket: string };
   assert.equal(body.verifiedPerson, false);
   assert.equal(body.degraded, true);
+  assert.ok(body.ticket.length > 0);
 });
 
-test("a disabled attribute port leaves the proof intact and answers 200 degraded", async () => {
-  const kp = generateKeyPair();
-  const payload = {
-    // distinct from the hashes liveness.test.ts uses: the store is shared across the suite
-    proofHash: "7e".repeat(32),
-    taskId: "solar-panel-installation",
-    geohash: "9q8yy",
-    capturedAt: "2026-09-06T14:32:00.000Z",
-  };
-  // signPayload returns the whole signed body (payload + publicKey + signature), not a signature.
-  const sync = await app.request("/sync", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(signPayload(payload, kp.privateKey)),
-  });
-  assert.equal(sync.status, 200, "capture path is unaffected by assurance being off");
-
+test("the removed verified-attribute mode answers 400 and records nothing", async () => {
   const res = await app.request("/verify-identity", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ proofHash: payload.proofHash, attribute: "age_majority" }),
+    body: JSON.stringify({ proofHash: "7e".repeat(32), attribute: "age_majority", subjectRef: "x" }),
   });
-  assert.equal(res.status, 200);
-  const body = (await res.json()) as { status: string; verifiedAttribute: unknown };
-  assert.equal(body.status, "degraded");
-  assert.equal(body.verifiedAttribute, null);
+  assert.equal(res.status, 400);
+  const body = (await res.json()) as Record<string, unknown>;
+  assert.equal(body.error, "liveness frames required");
+  assert.ok(!("verifiedAttribute" in body));
 });
 
-// Contract tests: identical for EVERY adapter.
-const LIVENESS_ADAPTERS: LivenessPort[] = [noneLiveness, neuroLiveness];
-const ATTRIBUTE_ADAPTERS: AttributePort[] = [noneAttribute, neuroAttribute];
+// Contract: what any future adapter must not be able to do through the port.
 
-for (const port of LIVENESS_ADAPTERS) {
-  test(`contract [liveness/${port.name}]: a hostile response cannot escape the minimal verdict`, async () => {
-    credentials(true);
-    globalThis.fetch = (async () =>
-      new Response(
-        JSON.stringify({
-          live: true,
-          score: 0.98,
-          sessionId: "sess-abc-123",
-          faceEmbedding: [0.1, 0.2],
-          nationalId: "12345678",
-          frames: ["leaked"],
-        }),
-        { status: 200, headers: { "content-type": "application/json" } },
-      )) as typeof fetch;
+test("contract: a hostile response cannot escape the minimal verdict", async () => {
+  const hostile = fakePort(async () =>
+    ({
+      available: true,
+      source: "liveness",
+      checkedAt: "now",
+      error: null,
+      data: { verifiedPerson: true, score: 0.98, sessionId: "sess-abc-123", nationalId: "12345678", frames: ["leaked"] },
+    }) as unknown as ExternalResult<LivenessVerdict>,
+  );
+  const r = await checkLivenessVerdict(FRAMES, hostile);
+  assert.equal(r.available, true);
+  assert.deepEqual(r.data, { verifiedPerson: true }, "exactly one key may survive");
+  const blob = JSON.stringify(r);
+  for (const leak of ["sess-abc-123", "nationalId", "12345678", "0.98", "leaked"]) {
+    assert.ok(!blob.includes(leak), `${leak} escaped the liveness boundary`);
+  }
+});
 
-    const r = await port.check(FRAMES);
-    if (!r.available) {
-      assert.equal(r.data, null);
-      // Guard against this contract test going vacuous: only the off adapter may degrade here.
-      assert.equal(port.name, "none", "a configured adapter must reach the real response path");
-      return;
-    }
-    assert.deepEqual(Object.keys(r.data), ["verifiedPerson"], "exactly one key may survive");
-    assert.equal(typeof r.data.verifiedPerson, "boolean");
-    const blob = JSON.stringify(r);
-    for (const leak of ["sess-abc-123", "faceEmbedding", "nationalId", "12345678", "0.98", "leaked"]) {
-      assert.ok(!blob.includes(leak), `${leak} escaped the ${port.name} liveness boundary`);
-    }
+test("contract: a truthy non-boolean verdict is not a pass", async () => {
+  const sloppy = fakePort(async () =>
+    ({ available: true, source: "liveness", checkedAt: "now", error: null, data: { verifiedPerson: "yes" } }) as never,
+  );
+  const r = await checkLivenessVerdict(FRAMES, sloppy);
+  assert.deepEqual(r.data, { verifiedPerson: false });
+});
+
+test("contract: a throwing adapter or configuration check degrades, never throws", async () => {
+  const throwing = fakePort(async () => {
+    throw new Error("network exploded");
   });
+  const r = await checkLivenessVerdict(FRAMES, throwing);
+  assert.equal(r.available, false);
+  assert.equal(typeof r.checkedAt, "string");
 
-  test(`contract [liveness/${port.name}]: never throws, always a typed envelope`, async () => {
-    globalThis.fetch = (async () => {
-      throw new Error("network exploded");
-    }) as typeof fetch;
-    const r = await port.check(FRAMES);
-    assert.equal(typeof r.available, "boolean");
-    assert.equal(typeof r.source, "string");
-    assert.equal(typeof r.checkedAt, "string");
+  const brokenConfig = fakePort(async () => ({ available: true }) as never, () => {
+    throw new Error("config exploded");
   });
-}
+  const c = await checkLivenessVerdict(FRAMES, brokenConfig);
+  assert.equal(c.available, false);
+  assert.match(c.error ?? "", /fake not configured/);
+});
 
-for (const port of ATTRIBUTE_ADAPTERS) {
-  test(`contract [attribute/${port.name}]: only { attribute, value } escapes`, async () => {
-    credentials(true);
-    globalThis.fetch = (async () =>
-      new Response(
-        JSON.stringify({
-          verified: true,
-          dateOfBirth: "1990-04-01",
-          fullName: "A Real Person",
-          documentNumber: "X9988776",
-        }),
-        { status: 200, headers: { "content-type": "application/json" } },
-      )) as typeof fetch;
-
-    const r = await port.get({ attribute: "age_majority" });
-    if (!r.available) {
-      assert.equal(r.data, null);
-      // Guard against this contract test going vacuous: only the off adapter may degrade here.
-      assert.equal(port.name, "none", "a configured adapter must reach the real response path");
-      return;
-    }
-    assert.deepEqual(Object.keys(r.data).sort(), ["attribute", "value"]);
-    assert.equal(typeof r.data.value, "boolean");
-    const blob = JSON.stringify(r);
-    for (const leak of ["1990-04-01", "A Real Person", "X9988776"]) {
-      assert.ok(!blob.includes(leak), `${leak} escaped the ${port.name} attribute boundary`);
-    }
-  });
-
-  test(`contract [attribute/${port.name}]: never throws, always a typed envelope`, async () => {
-    globalThis.fetch = (async () => {
-      throw new Error("network exploded");
-    }) as typeof fetch;
-    const r = await port.get({ attribute: "age_majority" });
-    assert.equal(typeof r.available, "boolean");
-    assert.equal(typeof r.source, "string");
-    assert.equal(typeof r.checkedAt, "string");
-  });
-}
+test("contract: a non-conforming result degrades instead of reaching the caller", async () => {
+  const junk = fakePort(async () => ({ live: true }) as never);
+  const r = await checkLivenessVerdict(FRAMES, junk);
+  assert.equal(r.available, false);
+  assert.match(r.error ?? "", /non-conforming/);
+});

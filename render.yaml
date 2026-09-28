@@ -61,15 +61,8 @@ services:
         value: "0x4200000000000000000000000000000000000021"
       - key: BASE_SEPOLIA_CHAIN_ID
         value: "84532"
-      # Identity (Neuro). Absent -> /verify-identity degrades.
-      # Assurance ports default OFF; credentials alone do not enable them.
+      # Selfie liveness: OFF ("none" is the only adapter). /verify-identity still answers, degraded.
       - key: LIVENESS_PROVIDER
-        sync: false
-      - key: ATTRIBUTE_PROVIDER
-        sync: false
-      - key: NEURO_AGENT_API_URL
-        sync: false
-      - key: NEURO_AGENT_API_TOKEN
         sync: false
       # Delivery channels. Absent -> each channel degrades, /notify returns sent:false.
       - key: KAPSO_API_KEY

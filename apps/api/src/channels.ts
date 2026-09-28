@@ -14,7 +14,7 @@ export interface ChannelSendResult {
 
 const env = (k: string): string => process.env[k] ?? "";
 
-// Explicit budget per provider call, matching neuro.ts and entitlement.ts. /sync awaits the
+// Explicit budget per provider call, matching entitlement.ts. /sync awaits the
 // programme notification, so without this a hung provider held the reporter's sync open.
 export const CHANNEL_TIMEOUT_MS = 5000;
 

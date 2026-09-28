@@ -52,15 +52,6 @@ export const env = {
   get ozRelayerNetwork(): string {
     return process.env.OZ_RELAYER_NETWORK || "base-sepolia";
   },
-  get neuroUrl(): string {
-    return process.env.NEURO_AGENT_API_URL ?? "";
-  },
-  get neuroToken(): string {
-    return process.env.NEURO_AGENT_API_TOKEN ?? "";
-  },
-  get neuroLivenessPath(): string {
-    return process.env.NEURO_LIVENESS_PATH ?? "/liveness";
-  },
 
   // Auto-notify sends the public verifyUrl to the fixed PROGRAMME recipients, never the reporter.
   // Off unless enabled; no phone or email is ever stored against a reporter.
