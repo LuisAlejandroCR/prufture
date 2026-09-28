@@ -93,9 +93,12 @@ keyed by the local reportId, shown on `status/[id]` as "Your private note"). It 
 ## Contribution (Pilot 1)
 
 No reward, points, gift, token, cash, or leaderboard wording anywhere (grep-verified: 0 hits).
-The Me screen shows a **private contribution summary** ("Your contribution — N reports confirmed
-· M programme activities supported"), visible only to the reporter and never linked to a public
-report. Full model in `docs/pilot_engagement.md`.
+My reports opens with a **private contribution card** (growth scene, "N reports confirmed", "No
+ranking. Every useful report counts."), and Me repeats the summary. N counts reports, not photos,
+and only once every photo of a report is confirmed (`confirmedReportCount`). Visible only to the
+reporter and never linked to a public report. The status timeline (`status/[id]`) shows Saved on
+this phone / Sent to programme / Community reviewed / Confirmed, each with a one-line
+description. Full model in `docs/pilot_engagement.md`.
 
 ## Feedback and celebration
 
@@ -108,8 +111,11 @@ report (`bump`).
 Two guided moments, both on mount, both gated by `celebrationsAllowed()` (false when the reporter
 turned celebrations off OR the OS reduce-motion setting is on):
 
-- `report/saved` — 2.0s (`MOMENT_SAVED_MS`). `success()` haptic, the card eases up, a small lock
-  icon settles over the check, then the actions fade in. Calm, not a party.
+- `report/saved` — 2.0s (`MOMENT_SAVED_MS`). `success()` haptic, "Report saved safely" eases up
+  under the sun-and-sprout scene (`Illustration scene="saved"`, inline SVG, no image assets), then
+  View status / Done fade in. Assignments also show **Community progress** ("2 of 3
+  confirmations", segmented bar) from structured `confirmations` data in `src/tasks.ts`; the
+  label is derived (`src/progress.ts`), never hand-written. Calm, not a party.
 - `report/sent` — 2.5s (`MOMENT_SENT_MS`). `success()` then `thud()` at 150ms, a top-center
   confetti burst (`react-native-confetti-cannon`, Animated-based, Expo Go safe), and a
   congratulations block that names what the reporter helped document. When celebrations are not

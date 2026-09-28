@@ -64,6 +64,18 @@ export const categorySoft = {
   climate: "#EEF4E8",
 } as const;
 
+// Illustration palette (Illustration.tsx only): warm sun, sage hills, leaf greens, soil.
+export const illustration = {
+  sun: "#F2C27B",
+  sunSoft: "#FBE7C6",
+  hillFar: "#CFE0C8",
+  hillNear: "#A9C79B",
+  leaf: "#5E9C63",
+  stem: "#4A7D4F",
+  soil: "#E4D3BC",
+  soilDark: "#D2BC9E",
+} as const;
+
 // Selected bottom-navigation background tint.
 export const navSelectedTint = color.primarySoft;
 

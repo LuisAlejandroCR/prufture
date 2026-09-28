@@ -1,4 +1,5 @@
-// (tabs)/updates.tsx: "My reports" — what happened after each report was sent — one card per report (per-photo
+// (tabs)/updates.tsx: "My reports" — a private contribution card (confirmed reports, no ranking),
+// then what happened after each report was sent — one card per report (per-photo
 // proofs grouped by the local reportId), friendly status and relative time, plus a manual
 // "check now". No hashes, no error traces.
 
@@ -6,6 +7,8 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Icon } from "../../src/components/icons/Icon";
+import { Illustration } from "../../src/components/Illustration";
+import { confirmedReportCount } from "../../src/home";
 import { Notice, Screen, ScreenTitle, StatusPill } from "../../src/components/ui";
 import { listProofs } from "../../src/queue";
 import type { LocalProof } from "../../src/queue-row";
@@ -79,6 +82,20 @@ export default function UpdatesScreen() {
   };
 
   const groups = groupReports(rows);
+  const confirmed = confirmedReportCount(rows);
+
+  const contribution = (
+    <View style={styles.contribution} accessibilityRole="summary">
+      <Illustration scene="growth" height={96} />
+      <View style={styles.contributionBody}>
+        <Text style={styles.contributionTitle}>Your contribution</Text>
+        <Text style={styles.contributionCount}>
+          {confirmed} {confirmed === 1 ? "report" : "reports"} confirmed
+        </Text>
+        <Text style={styles.contributionNote}>No ranking. Every useful report counts. Only you see this.</Text>
+      </View>
+    </View>
+  );
 
   return (
     <Screen scroll={false}>
@@ -92,6 +109,7 @@ export default function UpdatesScreen() {
 
       {groups.length === 0 ? (
         <View style={styles.empty}>
+          {contribution}
           <Icon name="review" size={32} color={color.faint} />
           <Text style={styles.emptyTitle}>No reports yet</Text>
           <Text style={styles.emptyBody}>
@@ -104,6 +122,7 @@ export default function UpdatesScreen() {
           contentContainerStyle={{ gap: space.sm, paddingBottom: space.xl }}
           refreshControl={<RefreshControl refreshing={checking} onRefresh={checkNow} tintColor={color.primary} />}
         >
+          {contribution}
           {groups.map((g) => {
             const newest = g.rows[0];
             if (!newest) return null;
@@ -163,4 +182,17 @@ const styles = StyleSheet.create({
   rowMeta: { ...type.meta, color: color.muted, marginTop: 2 },
   pillRow: { marginTop: space.sm },
   count: { ...type.meta, color: color.faint, marginTop: space.xs },
+  contribution: {
+    alignSelf: "stretch",
+    borderRadius: radius.md,
+    overflow: "hidden",
+    backgroundColor: color.surface,
+    borderWidth: 1,
+    borderColor: color.border,
+    marginBottom: space.sm,
+  },
+  contributionBody: { padding: space.md, gap: 2 },
+  contributionTitle: { ...type.meta, color: color.muted, fontWeight: "700" },
+  contributionCount: { ...type.title, color: color.success },
+  contributionNote: { ...type.meta, color: color.muted },
 });

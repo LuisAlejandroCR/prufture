@@ -4,7 +4,6 @@
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import { StyleSheet, Switch, Text, View } from "react-native";
-import type { QueuedProof } from "@proof/core";
 import { Icon, type IconName } from "../../src/components/icons/Icon";
 import { Row, Screen, ScreenTitle, SectionLabel } from "../../src/components/ui";
 import {
@@ -14,6 +13,7 @@ import {
   setCelebrationsEnabled,
   setHapticsEnabled,
 } from "../../src/feedback";
+import { confirmedReportCount } from "../../src/home";
 import { listProofs } from "../../src/queue";
 import { color, radius, space, target, type } from "../../src/theme";
 
@@ -32,11 +32,9 @@ export default function MeScreen() {
         setCelebrations(isCelebrationsEnabled());
       });
       listProofs()
-        .then((rows: QueuedProof[]) => {
+        .then((rows) => {
           setPending(rows.filter((r) => r.status === "pending_sync").length);
-          setConfirmed(
-            rows.filter((r) => r.status === "attested" || r.attestationCount > 0).length,
-          );
+          setConfirmed(confirmedReportCount(rows));
           setActivities(new Set(rows.map((r) => r.taskId)).size);
         })
         .catch(() => {
