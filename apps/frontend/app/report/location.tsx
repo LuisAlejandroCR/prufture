@@ -1,8 +1,6 @@
-// report/location.tsx: confirm where the activity happened. Location is mandatory —
-// there is no "continue without" path. No latitude or longitude in the UI. Two tiers
-// are produced: a coarse 5-char cell (plaintext, this is what the app signs) shown
-// back to the reporter, and a 9-char precise cell encrypted on-device to the
-// programme team's key (src/location-seal.ts) — never signed, never on-chain.
+// report/location.tsx: confirm where the activity happened; mandatory, no lat/lng in the UI. Produces
+// a coarse 5-char cell (plaintext, signed, shown back) and a 9-char precise cell sealed on-device to
+// the programme key (src/location-seal.ts) — never signed, never on-chain.
 
 import * as Location from "expo-location";
 import { useLocalSearchParams, useRouter } from "expo-router";

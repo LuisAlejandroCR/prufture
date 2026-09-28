@@ -1,10 +1,6 @@
 // env-live.test.ts: every env.* field is read at call time, not snapshot at import.
-//
-// This used to be mixed: rpcUrl and the RevenueCat/notify fields were getters, while
-// relayerPrivateKey, easSchemaUid, neuroUrl and friends were captured once when the module
-// loaded. That split caused two concrete problems — a "configured" check could disagree with
-// what the call would actually do, and a test had to spawn a child process just to vary
-// configuration. These assertions stop the snapshot form creeping back in.
+// A snapshot let a "configured" check disagree with what the call would actually do, and forced tests
+// to spawn child processes to vary config; these assertions stop that form creeping back in.
 
 import { test, afterEach } from "node:test";
 import assert from "node:assert/strict";
@@ -17,10 +13,10 @@ const FIELDS: [string, keyof typeof env, string, unknown][] = [
   ["EAS_CONTRACT_ADDRESS", "easContract", "0xfeed", "0xfeed"],
   ["EAS_SCHEMA_UID", "easSchemaUid", "0xbeef", "0xbeef"],
   ["BASE_SEPOLIA_CHAIN_ID", "chainId", "1234", 1234],
-  ["NEURO_AGENT_API_URL", "neuroUrl", "https://probe.example", "https://probe.example"],
-  ["NEURO_AGENT_API_TOKEN", "neuroToken", "probe-token", "probe-token"],
-  ["NEURO_LIVENESS_PATH", "neuroLivenessPath", "/probe", "/probe"],
   ["RPC_URL", "rpcUrl", "https://probe.example/rpc", "https://probe.example/rpc"],
+  ["RPC_FALLBACK_URLS", "rpcUrls", "https://a.example,https://b.example", ["https://a.example", "https://b.example"]],
+  ["OZ_RELAYER_URL", "ozRelayerUrl", "https://oz.example", "https://oz.example"],
+  ["OZ_RELAYER_NETWORK", "ozRelayerNetwork", "probe-net", "probe-net"],
   ["PROGRAMME_WHATSAPP", "programmeWhatsapp", "+100", "+100"],
   ["PROGRAMME_EMAIL", "programmeEmail", "p@example.org", "p@example.org"],
   ["REVENUECAT_SECRET_KEY", "revenuecatSecretKey", "sk_probe", "sk_probe"],
@@ -62,8 +58,8 @@ test("no env field is a snapshot: every one is an accessor on the object", () =>
 });
 
 test("a field with a default falls back when the variable is cleared", () => {
-  setProbe("NEURO_LIVENESS_PATH", "/probe");
-  assert.equal(env.neuroLivenessPath, "/probe");
-  delete process.env.NEURO_LIVENESS_PATH;
-  assert.equal(env.neuroLivenessPath, "/liveness", "the documented default must come back");
+  setProbe("OZ_RELAYER_NETWORK", "probe-net");
+  assert.equal(env.ozRelayerNetwork, "probe-net");
+  delete process.env.OZ_RELAYER_NETWORK;
+  assert.equal(env.ozRelayerNetwork, "base-sepolia", "the documented default must come back");
 });

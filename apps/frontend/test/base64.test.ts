@@ -1,4 +1,5 @@
 // base64.test.ts: unit + fuzz round-trip for the camera base64 decoder.
+// Decoding must be exact for any byte sequence, since the decoded bytes are what gets hashed.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";

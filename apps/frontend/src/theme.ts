@@ -1,7 +1,6 @@
-// theme.ts: single source of design tokens for the Prufture reporter app.
-// One warm humanitarian palette (ivory ground, white surfaces, terracotta primary,
-// muted brown text, sage / amber / blue / pink status). Screens import these tokens
-// and never inline raw hex or px. Distinct from src/capture.ts and src/queue.ts (logic).
+// theme.ts: single source of design tokens for the Prufture reporter app — one warm humanitarian
+// palette (ivory ground, terracotta primary, sage / amber / blue / pink status). Screens import these
+// tokens and never inline raw hex or px.
 
 // DESIGN_VARIANCE 4 / MOTION_INTENSITY 2 / VISUAL_DENSITY 3 (mobile). Calm and guided:
 // one primary action per screen, generous spacing, large targets, no gradients.

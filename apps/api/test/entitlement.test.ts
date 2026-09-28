@@ -1,7 +1,6 @@
 // entitlement.test.ts: server-side RevenueCat entitlement check (src/entitlement.ts).
-// Core guarantee under test: degrades (never throws) when unconfigured or when the endpoint
-// hangs, reads exactly one boolean out of a stubbed response, and the secret key never
-// appears in the returned result or a thrown message (same contract as neuro.test.ts).
+// Degrades (never throws) when unconfigured or hung, reads exactly one boolean from the response,
+// and the secret key never appears in the returned result or a thrown message.
 
 import { test, afterEach } from "node:test";
 import assert from "node:assert/strict";

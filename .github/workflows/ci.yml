@@ -1,0 +1,60 @@
+# ci.yml: typecheck and test every workspace on each push and pull request.
+#
+# The repo is an npm workspaces monorepo (packages/core, apps/api, apps/backend, apps/frontend).
+# The root `typecheck` and `test` scripts fan out with `--workspaces --if-present`, so this
+# workflow stays correct as workspaces are added — there is nothing per-package to maintain here.
+#
+# Node 20 is the floor declared in package.json `engines`; 22 is what current contributors run.
+# Both are tested because the test runner (`node --test`) and `--import tsx` are the parts most
+# likely to drift between majors.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A new push to a pull request makes the in-flight run obsolete; cancel it rather than pay for it.
+# `main` is not cancelled: each commit there should have its own recorded result.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: typecheck & test (node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    strategy:
+      # Run both majors to completion: knowing a failure is version-specific is the point.
+      fail-fast: false
+      matrix:
+        node: ["20", "22"]
+
+    steps:
+      # v5 of both actions runs on the Node 24 runtime. v4 targeted Node 20, which GitHub
+      # deprecated — the runner was already forcing those steps onto 24 and warning on every run.
+      # This is the runtime the actions themselves execute on, not the matrix above: the project's
+      # own Node 20 support is unaffected and still tested.
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      # `npm ci` over `npm install`: it installs exactly the lockfile and fails if the lockfile
+      # and package.json have drifted apart, which is a defect worth failing on in CI.
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test

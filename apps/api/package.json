@@ -8,8 +8,10 @@
     "start": "tsx src/index.ts",
     "typecheck": "tsc --noEmit",
     "shadow-compare": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/shadow-compare.ts",
+    "rpc-check": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/rpc-check.ts",
+    "submitter-sandbox": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/submitter-sandbox.ts",
     "register-schema": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/register-schema.ts",
-    "test": "node --import tsx --test --test-concurrency=1 \"test/**/*.test.ts\""
+    "test": "node --import tsx --test --test-concurrency=1 $(find test -name \"*.test.ts\")"
   },
   "dependencies": {
     "@proof/core": "*",

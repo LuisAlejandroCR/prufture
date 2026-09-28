@@ -1,4 +1,5 @@
 // geohash.test.ts: unit vectors, fuzz, and invariants for the coarse geohash encoder.
+// The encoder must always yield a well-formed coarse cell that contains the real point.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -6,7 +7,7 @@ import { decodeGeohashBounds, encodeGeohash } from "../src/geohash.js";
 
 const BASE32 = "0123456789bcdefghjkmnpqrstuvwxyz";
 
-// --- unit vectors (locked against this implementation) ---
+// Unit vectors, locked against this implementation.
 test("known coordinates encode to expected cells", () => {
   assert.equal(encodeGeohash(59.3326, 18.0649, 5), "u6sce"); // Stockholm
   assert.equal(encodeGeohash(0, 0, 5), "s0000");
@@ -22,7 +23,6 @@ test("precision controls length and is prefix-stable", () => {
   }
 });
 
-// --- fuzz ---
 test("fuzz: output is always well-formed and contains the point", () => {
   for (let i = 0; i < 5000; i += 1) {
     const lat = Math.random() * 180 - 90;
@@ -39,7 +39,6 @@ test("fuzz: output is always well-formed and contains the point", () => {
   }
 });
 
-// --- invariants ---
 test("invariant: 5-char cell is coarse (never pinpoints the volunteer)", () => {
   for (let i = 0; i < 1000; i += 1) {
     const lat = Math.random() * 180 - 90;

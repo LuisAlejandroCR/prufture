@@ -1,7 +1,6 @@
-// register-schema.ts: one-off — registers the Proof-at-Capture EAS schema on Base Sepolia.
-// Run once with a funded RELAYER_PRIVATE_KEY + RPC_URL, copy the printed UID into
-// EAS_SCHEMA_UID in apps/api/.env (never commit it). Steps live in docs/verification.md.
-// Least privilege note: this touches the SchemaRegistry, not the relayer's attest-only path.
+// register-schema.ts: one-off — registers the Proof-at-Capture EAS schema on Base Sepolia and prints
+// the UID for EAS_SCHEMA_UID in apps/api/.env (never commit it; steps in docs/verification.md).
+// Touches the SchemaRegistry only, not the relayer's attest-only path.
 
 import { createWalletClient, http, parseEventLogs, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";

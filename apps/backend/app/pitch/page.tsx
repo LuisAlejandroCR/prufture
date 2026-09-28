@@ -1,9 +1,6 @@
-// page.tsx: the public /pitch route — a 6-slide pitch deck on the same Vercel domain as
-// /dashboard and /verify. Server component: it builds the slide content and hands it to
-// Deck.tsx for paging. Slides 4-6 carry QR codes so judges can open the app, the
-// dashboard, a real proof, and the repo from their phones. Content is refreshed against
-// reality (docs/verification.md, docs/location_privacy.md, docs/video_script.md).
-// No login, no product logic. Unknowns render as visible "TBD:" chips / QR placeholders.
+// page.tsx: the public /pitch route — a 6-slide deck built server-side and paged by Deck.tsx. Slides
+// 4-6 carry QR codes to the app, dashboard, a real proof and the repo. Content tracks docs/verification.md
+// and docs/location_privacy.md; unknowns render as visible "TBD:" chips or QR placeholders.
 
 import { Fragment } from "react";
 import Deck from "./Deck";
@@ -45,8 +42,11 @@ const slideBodies: React.ReactNode[] = [
     </p>
     <ul>
       <li>
-        U-Report runs where coverage doesn&rsquo;t &mdash;{" "}
+        Field programmes run where coverage doesn&rsquo;t &mdash;{" "}
         <span className="m">volunteers verify field tasks with no signal at the moment it matters</span>.
+      </li>
+      <li className="m">
+        U-Report is the first channel; the engine fits any field-verification programme.
       </li>
       <li className="m">Luis Alejandro C&aacute;rdenas &mdash; solo founder / builder</li>
     </ul>

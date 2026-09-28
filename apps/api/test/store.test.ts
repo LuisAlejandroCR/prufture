@@ -25,10 +25,7 @@ test("data is back after a reload pointed at the same file", () => {
   store.__setStorePathForTests(p);
   store.upsertProof(payload(H("a")));
   store.addAttestation(H("a"), { attester: "0xAAA", txHash: "0x1", attestedAt: "t0" });
-  assert.equal(
-    store.setVerifiedAttribute(H("a"), { attribute: "age_majority", value: true, checkedAt: "t1" }),
-    true,
-  );
+  assert.equal(store.setVerifiedPerson(H("a"), true, false), true);
   store.__flushForTests();
 
   store.__setStorePathForTests(p); // simulate an api restart: reload from disk
@@ -37,7 +34,28 @@ test("data is back after a reload pointed at the same file", () => {
   assert.deepEqual(e.payload, payload(H("a")));
   assert.equal(e.attestations.length, 1);
   assert.equal(e.attestations[0]?.attester, "0xAAA");
-  assert.deepEqual(e.verifiedAttribute, { attribute: "age_majority", value: true, checkedAt: "t1" });
+  assert.equal(e.verifiedPerson, true);
+});
+
+test("a verifiedAttribute left by the removed attribute mode is dropped on load, not served", () => {
+  const p = freshPath();
+  writeFileSync(
+    p,
+    JSON.stringify({
+      [H("d")]: {
+        payload: payload(H("d")),
+        attestations: [],
+        verifiedAttribute: { attribute: "age_majority", value: true, checkedAt: "t" },
+      },
+    }),
+  );
+  store.__setStorePathForTests(p);
+  const e = store.getProof(H("d"));
+  assert.ok(e);
+  assert.ok(!("verifiedAttribute" in e));
+  store.upsertProof(payload(H("e")));
+  store.__flushForTests();
+  assert.ok(!readFileSync(p, "utf8").includes("age_majority"), "the next write must not carry it forward");
 });
 
 test("persisted JSON carries no PII: payload has exactly the 4 public keys, no identity field anywhere", () => {
@@ -45,7 +63,7 @@ test("persisted JSON carries no PII: payload has exactly the 4 public keys, no i
   store.__setStorePathForTests(p);
   store.upsertProof(payload(H("b")));
   store.addAttestation(H("b"), { attester: "0xBBB", txHash: "0x9", attestedAt: "t" });
-  store.setVerifiedAttribute(H("b"), { attribute: "age_majority", value: true, checkedAt: "t" });
+  store.setVerifiedPerson(H("b"), true, false);
   store.__flushForTests();
 
   const raw = readFileSync(p, "utf8");

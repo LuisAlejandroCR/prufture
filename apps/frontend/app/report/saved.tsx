@@ -1,7 +1,5 @@
-// report/saved.tsx: offline-saved is a success, never a failure. A calm 2s moment
-// (success haptic, the card settles up, a lock icon eases in) then two actions.
-// If the phone already has signal, move straight to the Sending screen.
-// Presentation over @react-native-community/netinfo + src/feedback.
+// report/saved.tsx: offline-saved is a success, never a failure — a calm 2s moment (haptic, card
+// settles, lock icon) then two actions. If the phone already has signal, move straight to Sending.
 
 import NetInfo from "@react-native-community/netinfo";
 import { useLocalSearchParams, useRouter } from "expo-router";

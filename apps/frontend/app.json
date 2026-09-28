@@ -21,7 +21,7 @@
       ["expo-notifications", { "icon": "./assets/notification-icon.png", "color": "#C8533A" }]
     ],
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "ai.proofatcapture.app",
       "buildNumber": "1",
       "infoPlist": {
@@ -61,8 +61,8 @@
     "extra": {
       "eas": { "projectId": "ff9cdaeb-a7be-4a1c-a76f-7594b2b51aef" },
       "router": {},
-      "privacyPolicyUrl": "https://prufture-app.vercel.app/privacy",
-      "supportUrl": "https://prufture-app.vercel.app/support"
+      "privacyPolicyUrl": "https://prufture.vercel.app/privacy",
+      "supportUrl": "https://prufture.vercel.app/support"
     }
   }
 }

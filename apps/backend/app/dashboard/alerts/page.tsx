@@ -1,6 +1,5 @@
-// alerts/page.tsx: actionable problems only. Each alert states what happened, why it
-// matters, the recommended next action, and a rough time. No secrets, no raw webhook
-// data, no stack traces.
+// alerts/page.tsx: actionable problems only — what happened, why it matters, the next action and a
+// rough time. No secrets, no raw webhook data, no stack traces.
 
 import { fetchProofs } from "../../../lib/api";
 import { alerts } from "../../../lib/dashboard";

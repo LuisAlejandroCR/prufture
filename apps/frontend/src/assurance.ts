@@ -1,7 +1,6 @@
-// assurance.ts: the explicit personhood-assurance states shown back to a reporter, and how
-// they map onto the server's /proof/:hash fields (verifiedPerson, verifiedPersonDegraded).
-// Kept as one pure module so every screen renders the same wording from the same mapping —
-// no screen should ever compare verifiedPerson === false directly.
+// assurance.ts: the explicit personhood-assurance states shown to a reporter, mapped from the
+// server's verifiedPerson / verifiedPersonDegraded. One pure module so every screen uses the same
+// wording — no screen should ever compare verifiedPerson === false directly.
 
 export type Assurance = "verified" | "invalid" | "reused" | "unavailable" | "not_enrolled";
 
@@ -21,7 +20,7 @@ export function assuranceLabel(a: Assurance): string {
  * Map the server's /proof/:hash liveness fields onto an Assurance.
  * - `verifiedPerson === null` (no verdict was ever attached): "not_enrolled" when the identity
  *   step is off (the default journey never runs a check), else "unavailable" (the step ran but
- *   Neuro never returned a verdict onto this proof).
+ *   the provider never returned a verdict onto this proof).
  * - `verifiedPerson === true`: "verified".
  * - `verifiedPerson === false` with `verifiedPersonDegraded === true`: "unavailable" — the
  *   provider was down, this is NOT a failed check. Must never collapse into "invalid".

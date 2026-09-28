@@ -1,7 +1,6 @@
-// notify.test.ts: the programme auto-notification on /sync (and /attest).
-// Proves: off by default; exactly one send per reportId (deduped across proofs); trigger gating;
-// a down channel keeps /sync at 200 and does NOT lock the dedup key; the wire body is url-only
-// with no PII; and reportId / notifiedKey never appear on a public route.
+// notify.test.ts: the programme auto-notification on /sync (and /attest). Off by default, one send per
+// reportId, trigger-gated; a down channel keeps /sync at 200 without locking the dedup key; the wire
+// body is url-only, and reportId / notifiedKey never appear on a public route.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -58,7 +57,7 @@ test("enabled + notifyOn:sync: one send per reportId, second proof of same repor
   clearNotifyEnv();
   process.env.NOTIFY_ENABLED = "true";
   process.env.NOTIFY_ON = "sync";
-  process.env.PROGRAMME_EMAIL = "programme@unicef.example";
+  process.env.PROGRAMME_EMAIL = "programme@example.org";
   process.env.EMAIL_API_KEY = "e";
   process.env.EMAIL_FROM = "bot@prufture.test";
   const cap: { url: string; body: string }[] = [];
@@ -79,7 +78,7 @@ test("enabled + notifyOn:sync: one send per reportId, second proof of same repor
 test("notifyOn:sync -> /attest does not notify; notifyOn:both -> it does", async () => {
   clearNotifyEnv();
   process.env.NOTIFY_ENABLED = "true";
-  process.env.PROGRAMME_EMAIL = "programme@unicef.example";
+  process.env.PROGRAMME_EMAIL = "programme@example.org";
   process.env.EMAIL_API_KEY = "e";
   process.env.EMAIL_FROM = "bot@prufture.test";
   const cap: { url: string; body: string }[] = [];
@@ -112,7 +111,7 @@ test("channel down: /sync still 200 and the dedup key is NOT locked (retries nex
   clearNotifyEnv();
   process.env.NOTIFY_ENABLED = "true";
   process.env.NOTIFY_ON = "sync";
-  process.env.PROGRAMME_EMAIL = "programme@unicef.example";
+  process.env.PROGRAMME_EMAIL = "programme@example.org";
   process.env.EMAIL_API_KEY = "e";
   process.env.EMAIL_FROM = "bot@prufture.test";
   const cap: { url: string; body: string }[] = [];
@@ -134,7 +133,7 @@ test("wire body is url-only; reportId / notifiedKey never appear on a public rou
   clearNotifyEnv();
   process.env.NOTIFY_ENABLED = "true";
   process.env.NOTIFY_ON = "sync";
-  process.env.PROGRAMME_EMAIL = "programme@unicef.example";
+  process.env.PROGRAMME_EMAIL = "programme@example.org";
   process.env.EMAIL_API_KEY = "e";
   process.env.EMAIL_FROM = "bot@prufture.test";
   const cap: { url: string; body: string }[] = [];
@@ -168,7 +167,7 @@ test("no reportId: dedup falls back to the lone proofHash", async () => {
   clearNotifyEnv();
   process.env.NOTIFY_ENABLED = "true";
   process.env.NOTIFY_ON = "sync";
-  process.env.PROGRAMME_EMAIL = "programme@unicef.example";
+  process.env.PROGRAMME_EMAIL = "programme@example.org";
   process.env.EMAIL_API_KEY = "e";
   process.env.EMAIL_FROM = "bot@prufture.test";
   const cap: { url: string; body: string }[] = [];

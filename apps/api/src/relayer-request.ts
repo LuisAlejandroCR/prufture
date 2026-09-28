@@ -1,9 +1,6 @@
-// relayer-request.ts: the PURE EAS request builder. No key, no transport, no network — it turns
-// a zero-PII payload into the one contract call this relayer is permitted to make. Kept separate
-// from submission (see submitter.ts) so transaction policy can be asserted over its output and
-// every submitter adapter shares the same builder.
-// Least privilege: it always targets env.easContract, always calls attest(), and always sends
-// recipient=0x0 / value=0 / refUID=0x0 — no funds move, no other method is reachable.
+// relayer-request.ts: the PURE EAS request builder — no key, transport or network. Least privilege:
+// always env.easContract, always attest(), always recipient=0x0 / value=0 / refUID=0x0, so no funds
+// move and no other method is reachable. Shared by every submitter adapter so policy is testable.
 
 import type { ProofPublicPayload } from "@proof/core";
 import { encodeAbiParameters, parseAbiParameters, type Hex } from "viem";

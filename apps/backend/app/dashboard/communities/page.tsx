@@ -1,6 +1,5 @@
-// communities/page.tsx: geographic coverage using coarse regions only. Never a
-// household, school, or beneficiary coordinate. Region list with aggregate counts
-// and the regions that still need a second community report.
+// communities/page.tsx: geographic coverage by coarse region, with aggregate counts and the regions
+// that still need a second community report. Never a household, school or beneficiary coordinate.
 
 import { fetchProofs } from "../../../lib/api";
 import { areas } from "../../../lib/dashboard";

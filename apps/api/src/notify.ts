@@ -1,7 +1,6 @@
 // notify.ts: best-effort "a report arrived" ping to the PROGRAMME team (never the reporter).
-// On /sync (and optionally /attest) send ONLY the public verifyUrl to fixed, env-configured
-// recipients. One message per report (dedup by reportId, else proofHash). A down channel never
-// fails the sync — the proof is already stored; the notification is best-effort and never throws.
+// Sends ONLY the public verifyUrl to env-configured recipients, once per report (reportId, else
+// proofHash). Never throws and never fails the sync — the proof is already stored.
 
 import { env, notifyOnTrigger } from "./env.js";
 import { sendVerifyUrl, type Channel } from "./channels.js";

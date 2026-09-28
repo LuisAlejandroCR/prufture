@@ -1,6 +1,6 @@
-// page.tsx: cinematic public landing page for judges, partners, and communities.
-// It borrows the editorial product-theater rhythm of the supplied reference video,
-// using only first-party copy and CSS-built visuals over an iOS-inspired palette.
+// page.tsx: cinematic public landing for judges, partners and community organizations
+// (not the reporter workflow), in an editorial product-theater rhythm with scroll films.
+// Every claim must stay true to the code: no ZK, TEE or deployment claim.
 
 import Link from "next/link";
 import { qrPath } from "./pitch/qr";

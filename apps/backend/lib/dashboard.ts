@@ -1,7 +1,6 @@
-// dashboard.ts: pure aggregation helpers over the coarse proof list for the
-// stakeholder dashboard. Input is already region-level (geohash prefix only): these
-// helpers never see a full geohash, GPS point, or reporter identity and cannot add
-// one. Distinct from lib/api.ts (the fetch layer).
+// dashboard.ts: pure aggregation helpers over the coarse proof list for the stakeholder dashboard.
+// Input is region-level only (geohash prefix); these helpers never see a full geohash, GPS point or
+// reporter identity and cannot add one.
 
 import type { ProofSummary } from "./api";
 
@@ -186,8 +185,6 @@ export function alerts(proofs: ProofSummary[], apiDegraded: boolean): Alert[] {
 
   return out;
 }
-
-// --- Coverage map (additive; keep at end of file — another branch also appends here) ---
 
 import { decodeGeohashBounds, type GeohashBounds } from "./geohash";
 

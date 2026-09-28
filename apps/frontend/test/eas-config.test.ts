@@ -1,7 +1,6 @@
-// eas-config.test.ts: unit + fuzz + invariant checks for the EAS / app-store config
-// (apps/frontend/eas.json and apps/frontend/app.json) plus the store-readiness additions
-// (assets, permissions, notifications wiring). Guards the config against silent drift;
-// it does not exercise any runtime code.
+// eas-config.test.ts: unit + fuzz + invariant checks for eas.json and app.json plus store-readiness
+// wiring (assets, permissions, notifications). Guards the config against silent drift; it does not
+// exercise any runtime code.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -32,7 +31,6 @@ function resolved(name: string): Profile {
   };
 }
 
-// --- unit: files parse and carry the expected shape ---
 test("eas.json is valid JSON with a build section", () => {
   assert.equal(typeof eas, "object");
   assert.equal(typeof eas.build, "object");
@@ -61,6 +59,28 @@ test("production profile is present and documented as store / app-bundle, not ru
   assert.equal(p.autoIncrement, true);
 });
 
+test("app.json: iPhone only, so App Store Connect asks for no iPad screenshots", () => {
+  assert.equal(app.expo.ios.supportsTablet, false);
+});
+
+test("production store build carries the same public config as preview, and no placeholder values", () => {
+  // A missing verify URL shipped a status screen linking to prufture.example; a missing programme
+  // key silently skipped sealing the precise point; a "<<...>>" key was baked into the bundle.
+  const env = resolved("production").env as Record<string, string>;
+  const preview = resolved("preview").env as Record<string, string>;
+  for (const key of ["EXPO_PUBLIC_API_URL", "EXPO_PUBLIC_VERIFY_URL", "EXPO_PUBLIC_PROGRAMME_PUBKEY"]) {
+    assert.ok(env[key], `${key} missing from the production profile`);
+    assert.equal(env[key], preview[key], `${key} differs between preview and production`);
+  }
+  assert.match(env.EXPO_PUBLIC_VERIFY_URL!, /^https:\/\/.+\/verify$/);
+  assert.match(env.EXPO_PUBLIC_PROGRAMME_PUBKEY!, /^[0-9a-f]{64}$/);
+  assert.equal(env.EXPO_PUBLIC_IDENTITY_STEP, "off");
+  for (const [key, value] of Object.entries(env)) {
+    assert.ok(!/<<|>>|human fills/i.test(value), `${key} still holds a placeholder`);
+  }
+  assert.ok(!("EXPO_PUBLIC_REVENUECAT_TEST_KEY" in env), "a Test Store key must never reach a store build");
+});
+
 test("app.json: android.package + versionCode set, eas.projectId is a real UUID", () => {
   assert.equal(app.expo.android.package, "ai.proofatcapture.app");
   assert.equal(typeof app.expo.android.versionCode, "number");
@@ -77,7 +97,6 @@ test("app.json: EAS Update wiring matches the projectId (needed for channel:prev
   assert.equal(app.expo.updates.url, `https://u.expo.dev/${app.expo.extra.eas.projectId}`);
 });
 
-// --- invariants ---
 test("invariant: every real build profile uses a known distribution", () => {
   for (const [name, raw] of profiles()) {
     if (raw.extends === undefined && raw.distribution === undefined) continue; // shared base block
@@ -108,7 +127,7 @@ test("invariant: no secrets or absolute paths in the config files", () => {
   }
 });
 
-// --- store readiness: app.json is complete for a store submission ---
+// Store readiness: app.json is complete for a store submission.
 test("app.json: identity fields are store-complete", () => {
   const e = app.expo;
   assert.equal(e.name, "Prufture");
@@ -222,7 +241,7 @@ test("_layout.tsx calls registerForPush on mount", () => {
   assert.match(src, /registerForPush\(/);
 });
 
-// --- fuzz: the preview profile stays an installable-APK profile under key reordering ---
+// The preview profile stays an installable-APK profile under key reordering.
 test("fuzz: preview profile invariants hold regardless of key order", () => {
   const p = resolved("preview");
   for (let i = 0; i < 500; i += 1) {

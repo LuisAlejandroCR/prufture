@@ -1,8 +1,6 @@
-// geohash.ts: standard base-32 geohash DECODE only, ported from apps/frontend/src/geohash.ts
-// (algorithm copied, not imported across apps). Turns a 1-5 char coarse cell into its
-// bounding box / centre so the coverage map can draw one rectangle per region. Never
-// encodes and never sees a precise point. Distinct from lib/api.ts (fetch) and
-// lib/dashboard.ts (aggregation): this is cell geometry only.
+// geohash.ts: base-32 geohash DECODE only (algorithm copied from apps/frontend/src/geohash.ts, not
+// imported across apps). Turns a 1-5 char coarse cell into its bounding box / centre for the coverage
+// map; never encodes and never sees a precise point.
 
 const BASE32 = "0123456789bcdefghjkmnpqrstuvwxyz";
 

@@ -10,7 +10,7 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx --test src/**/*.test.ts"
+    "test": "node --import tsx --test $(find src -name \"*.test.ts\")"
   },
   "dependencies": {
     "@noble/curves": "^1.6.0",

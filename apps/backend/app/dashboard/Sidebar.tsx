@@ -1,5 +1,5 @@
-// Sidebar.tsx: persistent dashboard navigation. Marks the current section with
-// aria-current. At narrow widths globals.css turns this into a horizontal scroller.
+// Sidebar.tsx: persistent dashboard navigation; marks the current section with aria-current.
+// At narrow widths globals.css turns this into a horizontal scroller.
 
 "use client";
 

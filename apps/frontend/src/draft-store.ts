@@ -1,8 +1,6 @@
-// draft-store.ts: durable, offline, network-free persistence for the ONE report the
-// reporter is building right now. Every function guard-wrapped and never throws
-// (same contract as src/queue.ts). Photos + answers are copied into the app's private
-// document directory only — nothing here changes what leaves the device. Distinct from
-// src/report-draft.ts (in-memory fast-path state) and src/queue.ts (the durable proof queue).
+// draft-store.ts: durable, offline, network-free persistence for the ONE report being built, in the
+// app's private document directory. Every function is guard-wrapped and never throws, and nothing
+// here changes what leaves the device. report-draft.ts holds the in-memory fast path.
 
 import type { ReportDraft } from "./report-draft";
 
@@ -24,6 +22,7 @@ interface PersistedDraft {
   livenessChecked: boolean;
   livenessVerified: boolean;
   livenessDegraded: boolean;
+  livenessTicket: string;
   startedAt: number;
   photos: PersistedPhoto[];
 }
@@ -33,11 +32,9 @@ interface PersistedDraft {
  * in-memory one. Any method may reject — every caller below guards.
  */
 export interface DraftStoreBackend {
-  /** Create the draft dir if missing. */
   ensureDir(): Promise<void>;
   /** Read the draft JSON, or null when it does not exist. */
   readDraft(): Promise<string | null>;
-  /** Write the draft JSON. */
   writeDraft(text: string): Promise<void>;
   /** Remove the whole draft dir and its contents. */
   removeDir(): Promise<void>;
@@ -116,6 +113,7 @@ function toPersisted(d: ReportDraft, photos: PersistedPhoto[]): PersistedDraft {
     livenessChecked: d.livenessChecked,
     livenessVerified: d.livenessVerified,
     livenessDegraded: d.livenessDegraded,
+    livenessTicket: d.livenessTicket,
     startedAt: d.startedAt,
     photos,
   };
@@ -172,6 +170,7 @@ export async function loadPersistedDraft(): Promise<ReportDraft | null> {
       livenessChecked: Boolean(p.livenessChecked),
       livenessVerified: Boolean(p.livenessVerified),
       livenessDegraded: Boolean(p.livenessDegraded),
+      livenessTicket: typeof p.livenessTicket === "string" ? p.livenessTicket : "",
       startedAt: typeof p.startedAt === "number" ? p.startedAt : Date.now(),
       photos: p.photos
         .filter((ph): ph is PersistedPhoto => !!ph && typeof ph.uri === "string")

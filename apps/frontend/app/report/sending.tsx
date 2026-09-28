@@ -1,7 +1,5 @@
-// report/sending.tsx: progress without implying the reporter must wait here.
-// Runs the existing sync once, then reads the queue for this report. On success it
-// moves to the Sent screen; with no signal it shows a calm "safe on this phone"
-// state. No transaction or chain language. Presentation over src/useAutoSync + src/queue.
+// report/sending.tsx: progress without implying the reporter must wait here. Runs the sync once, then
+// moves to Sent on success or shows a calm "safe on this phone" state offline. No chain language.
 
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";

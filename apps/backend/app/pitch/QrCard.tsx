@@ -1,9 +1,6 @@
-// QrCard.tsx: renders a scannable QR code as inline SVG for the /pitch deck, or a labelled
-// "TBD" placeholder when the target URL has not been filled in yet. Server component,
-// no client JS. The QR sits on the warm ivory ground (palette token --bg #FBF6EF) with
-// warm near-black modules (--text #1C1208) — ~13:1 contrast, scans fine, stays on-palette.
-// Encoder lives in qr.ts (vendored, no dependency). Named QrCard, not Qr, to avoid a
-// case-only filename clash with qr.ts on case-insensitive filesystems.
+// QrCard.tsx: server-rendered inline-SVG QR code for the /pitch deck, or a labelled "TBD" placeholder
+// when the URL is unset. Warm near-black on ivory (~13:1) scans fine and stays on-palette. Named
+// QrCard, not Qr, to avoid a case-only filename clash with qr.ts on case-insensitive filesystems.
 
 import { qrPath } from "./qr";
 

@@ -1,7 +1,6 @@
-// (tabs)/updates.tsx: what happened after each report was sent. One card per
-// report (its per-photo proofs are grouped by the local reportId), friendly
-// status, relative time. No hashes, no error traces. Presentation over
-// src/queue + src/sync (manual "check now").
+// (tabs)/updates.tsx: what happened after each report was sent — one card per report (per-photo
+// proofs grouped by the local reportId), friendly status and relative time, plus a manual
+// "check now". No hashes, no error traces.
 
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";

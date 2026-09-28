@@ -1,7 +1,6 @@
-// coordinator.test.ts: the paid surface. Two guarantees under test — the gate FAILS CLOSED
-// (no header, degraded check and not-entitled are all refused, and a degraded check is never
-// reported as "not entitled"), and the coordinator view adds review state WITHOUT adding a
-// reporter identity, a precise location, a signature or a public key.
+// coordinator.test.ts: the paid surface. The gate FAILS CLOSED (a degraded check is never reported as
+// "not entitled"), and the coordinator view adds review state WITHOUT a reporter identity, precise
+// location, signature or public key.
 
 import { test, afterEach } from "node:test";
 import assert from "node:assert/strict";

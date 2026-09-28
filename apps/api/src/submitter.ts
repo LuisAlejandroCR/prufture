@@ -1,11 +1,6 @@
-// submitter.ts: phase 2 of the provider portability plan — transaction submission sits behind
-// an AttestationSubmitter port so key custody can be replaced without touching transaction
-// policy. relayer.ts keeps the pure request builder; this module decides who signs and sends.
-//
-// The allowlist below is the policy, and it is enforced here rather than in an adapter so that
-// EVERY present and future adapter inherits it. It fails closed: anything that is not the exact
-// EAS attest() call this relayer is permitted to make throws before a key is ever touched, and
-// guard() in the adapter turns that into a typed unavailable.
+// submitter.ts: the AttestationSubmitter port — adapters own key custody and transport, never policy.
+// assertAllowed() is the fail-closed allowlist every adapter inherits: anything but the exact EAS
+// attest() call throws before a key is touched, and the adapter's guard() makes that a typed unavailable.
 
 import type { ExternalResult, ProofPublicPayload } from "@proof/core";
 import { getAddress, toFunctionSelector, type Hex } from "viem";
@@ -34,6 +29,14 @@ export interface AttestationSubmitter {
   readonly name: string;
   /** True when this adapter has everything it needs to send. */
   isConfigured(): boolean;
+  /** Names the settings isConfigured() needs, for the "not configured" message. Never a value. */
+  readonly configHint?: string;
+  /**
+   * The address this adapter attests from, when it can say so without sending anything. Used to
+   * skip a submission this adapter already made. Optional: an adapter that cannot tell is treated
+   * as having attested any proof that already carries an attestation, so it never pays twice.
+   */
+  attester?(): string | null;
   submit(payload: ProofPublicPayload): Promise<ExternalResult<AttestResult>>;
 }
 
@@ -54,7 +57,18 @@ function isHex32(v: string): boolean {
   return /^0x[0-9a-fA-F]{64}$/.test(v);
 }
 
-function sameAddress(a: string, b: string): boolean {
+/**
+ * An adapter error made safe for a public response: first line only, any URL replaced, length
+ * capped. RPC and relayer URLs often carry the provider's API key, and /sync returns this text.
+ */
+export function publicError(e: unknown): string {
+  const raw =
+    e instanceof Error ? ((e as { shortMessage?: unknown }).shortMessage as string | undefined) ?? e.message : String(e);
+  const line = (typeof raw === "string" ? raw : "").split("\n")[0] ?? "";
+  return line.replace(/[a-z][a-z0-9+.-]*:\/\/\S+/gi, "[endpoint]").slice(0, 200) || "unavailable";
+}
+
+export function sameAddress(a: string, b: string): boolean {
   try {
     return getAddress(a) === getAddress(b);
   } catch {

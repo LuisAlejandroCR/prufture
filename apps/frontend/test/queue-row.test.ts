@@ -1,4 +1,5 @@
 // queue-row.test.ts: invariants for the SignedProof <-> SQLite row mapping.
+// A row carries only the fixed zero-PII columns and round-trips with its signature still valid.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";

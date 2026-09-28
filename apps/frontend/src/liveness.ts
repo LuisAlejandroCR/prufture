@@ -1,8 +1,6 @@
-// liveness.ts: run a short selfie liveness challenge and send it once to the api.
-// NO commitment is computed here and nothing is signed: the frames + nonce leave
-// the device exactly once (POST /verify-identity) and are never written to storage.
-// The api turns them into a single boolean (verifiedPerson) recorded server-side
-// against the proofHash. Distinct from src/capture.ts (the signed proof payload).
+// liveness.ts: runs a short selfie liveness challenge and sends it once to the api (POST
+// /verify-identity). Nothing is signed or committed; frames + nonce leave the device exactly once and
+// are never stored — the api turns them into one verifiedPerson boolean against the proofHash.
 
 export type Gesture = "center" | "left" | "right" | "blink";
 
@@ -22,7 +20,15 @@ export interface LivenessResult {
 export interface LivenessVerdict {
   verifiedPerson: boolean;
   degraded: boolean;
+  /**
+   * The api's signed receipt for this verdict: two booleans, an issue time and a MAC — no frame,
+   * nonce or identity. /liveness-result records only what a ticket says, so without one there is
+   * nothing to attach. "" when the api could not be reached.
+   */
+  ticket: string;
 }
+
+const MAX_TICKET_LEN = 256;
 
 const GESTURES: Gesture[] = ["center", "left", "right", "blink"];
 const STEPS = 3;
@@ -93,24 +99,24 @@ export async function submitLiveness(
     { frames: input.frames, nonceHex: input.nonceHex, challenges: input.sequence },
     fetchImpl,
   );
-  if (!res || !res.ok) return { verifiedPerson: false, degraded: true };
+  if (!res || !res.ok) return { verifiedPerson: false, degraded: true, ticket: "" };
   try {
-    const data = (await res.json()) as { verifiedPerson?: unknown; degraded?: unknown };
+    const data = (await res.json()) as { verifiedPerson?: unknown; degraded?: unknown; ticket?: unknown };
     return {
       verifiedPerson: data.verifiedPerson === true,
       degraded: data.degraded === true,
+      ticket: typeof data.ticket === "string" && data.ticket.length <= MAX_TICKET_LEN ? data.ticket : "",
     };
   } catch {
-    return { verifiedPerson: false, degraded: true };
+    return { verifiedPerson: false, degraded: true, ticket: "" };
   }
 }
 
-// --- attach the verdict to a proof, with an offline retry buffer ---------------
+// Attach the verdict to a proof, with an offline retry buffer.
 
 interface PendingAttach {
   proofHash: string;
-  verifiedPerson: boolean;
-  degraded: boolean;
+  ticket: string;
 }
 
 /** In-memory only. A missed attach just leaves verifiedPerson null on /verify — acceptable. */
@@ -122,22 +128,25 @@ async function tryAttach(
   fetchImpl: typeof fetch = fetch,
 ): Promise<boolean> {
   const res = await post(apiUrl, "/liveness-result", item, fetchImpl);
-  // 404 = proof not on the api yet; keep it pending for the next sync pass.
-  return Boolean(res && res.ok);
+  if (!res) return false; // offline: keep it pending
+  // 404 = proof not on the api yet; keep it pending for the next sync pass. A 400 (ticket
+  // refused, e.g. expired) or 409 (a verdict is already recorded) will never succeed on retry.
+  return res.ok || res.status === 400 || res.status === 409;
 }
 
 /**
- * Record `verifiedPerson` against `proofHash`. Fire-and-forget: on any failure the
- * item is buffered and retried by flushPendingLiveness() on the next sync pass.
+ * Attach the verdict a ticket vouches for to `proofHash`. Fire-and-forget: on any failure the
+ * item is buffered and retried by flushPendingLiveness() on the next sync pass. Without a
+ * ticket there is nothing the api would accept, so nothing is sent.
  */
 export async function attachLiveness(
   apiUrl: string,
   proofHash: string,
-  verifiedPerson: boolean,
-  degraded = false,
+  ticket: string,
   fetchImpl: typeof fetch = fetch,
 ): Promise<void> {
-  const item = { proofHash, verifiedPerson, degraded };
+  if (!ticket) return;
+  const item = { proofHash, ticket };
   const done = await tryAttach(apiUrl, item, fetchImpl);
   if (!done && !pending.some((p) => p.proofHash === proofHash)) pending.push(item);
 }

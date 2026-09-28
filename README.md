@@ -1,10 +1,11 @@
 <!-- README.md: public overview of the Prufture project for FIRSTBLOCK-ATHON.
-     Leads with the UNICEF / U-Report impact case, then the minimum requirements to run it.
+     Leads with the impact case for community-reporting programmes generally — U-Report is the
+     worked example, not the only fit — then the minimum requirements to run it.
      It contains no private agent instructions or credentials: those stay out of the public repo. -->
 
 # Prufture
 
-Prufture (formerly Proof-at-Capture) lets a U-Report volunteer photograph a completed field
+Prufture (formerly Proof-at-Capture) lets a community volunteer photograph a completed field
 activity — a solar panel installed, a water pump repaired — and turn it into an independent,
 privacy-preserving record: signed on the phone, queued offline, and anchored on a public chain as
 nothing but a hash and three non-identifying fields. Anyone can verify the activity happened, when,
@@ -13,13 +14,22 @@ signal at the moment of capture.
 
 ---
 
-## Why this matters to UNICEF
+## Why this matters
 
-U-Report runs on community members reporting from places with intermittent or no coverage. Today the
-proof of their work is a photo in a chat app. That photo is only as trustable as the sender, it
-carries the sender's identity, and it can lose context, arrive late, or be sent twice. So the
-programme either takes the report on faith or asks the volunteer for identifying data that puts them
-at risk. Prufture removes that trade-off, and with it a set of recurring costs.
+Any programme that depends on people reporting from places with intermittent or no coverage has the
+same problem. Today the proof of their work is a photo in a chat app. That photo is only as
+trustable as the sender, it carries the sender's identity, and it can lose context, arrive late, or
+be sent twice. So the programme either takes the report on faith or asks the reporter for
+identifying data that puts them at risk. Prufture removes that trade-off, and with it a set of
+recurring costs.
+
+U-Report is the worked example throughout this README, because the project was built in response to
+a UNICEF hackathon challenge and that is the channel the first pilot targets. Nothing in the design
+is specific to it: the same engine fits any field-verification workload where evidence is captured
+away from connectivity and the reporter's identity is a liability rather than an asset — community
+health reporting, humanitarian cash and in-kind distribution, infrastructure and repair
+verification, environmental monitoring, grant and subsidy milestone checks. Read "programme" below
+as whichever of those you are.
 
 ### Manual verification work removed
 
@@ -49,15 +59,16 @@ at risk. Prufture removes that trade-off, and with it a set of recurring costs.
 
 - No wallet, no account, no ID document for the volunteer in the first pilot — nothing for a support
   desk to reset or verify.
-- One capture-sign-queue-anchor engine serves any NGO field-proof use case, with U-Report as the
-  first channel and UNICEF RapidPro as the institutional path — it is not a single-programme build.
+- One capture-sign-queue-anchor engine serves any field-proof use case. U-Report is the first
+  channel and UNICEF RapidPro the institutional path for the pilot, but neither is wired into the
+  engine: a different programme changes the task list and the delivery channel, not the core.
 
 ### On the numbers
 
 Prufture is built to remove the manual verification, re-collection, and PII-handling work described
 above. Putting a currency figure on that saving needs a programme baseline — reports per month, share
-that currently trigger a re-visit, staff cost per verification trip — which is a UNICEF data input,
-not something this repository can assert. The pilot's first job is to measure it.
+that currently trigger a re-visit, staff cost per verification trip — which is a programme data
+input, not something this repository can assert. The pilot's first job is to measure it.
 
 ---
 
@@ -73,7 +84,7 @@ not something this repository can assert. The pilot's first job is to measure it
    view by coarse region. A second person can attest the same hash for community verification.
 5. The verification link is delivered to the programme team by WhatsApp, with email as a fallback.
 
-Every external call (relayer, RPC, Neuro, WhatsApp, email) returns a typed result and never
+Every external call (relayer, RPC, WhatsApp, email) returns a typed result and never
 breaks the offline capture flow.
 
 ## Privacy posture
@@ -83,7 +94,8 @@ chain, and the on-chain decode of the live attestation confirms it carries nothi
 **not** claimed as GDPR-compliant, anonymous, ZK, TEE-backed, hardware-attested, or
 "deepfake-proof". The selfie liveness check keeps a server-side boolean only — nothing about the
 person is signed or put on-chain. Pilot legal pre-conditions (named controller, lawful basis,
-biometric consent, retention policy) are a UNICEF/legal workstream.
+biometric consent, retention policy) are a programme/legal workstream, not a claim this
+repository makes.
 
 Evaluating a replacement provider does not widen this posture: a side-by-side comparison run
 accepts only provably synthetic proofs and refuses anything else before a candidate provider is
@@ -101,12 +113,12 @@ contacted, so no real report is ever sent to a provider under evaluation.
 - A second attestation over the same hash (deduped by attester).
 - Public `/verify/[hash]` and `/dashboard`, no login, coarse region only.
 - WhatsApp delivery of the verification link (Kapso); email degrades cleanly.
-- Automated tests: `packages/core` 8 · `apps/api` 147 · `apps/backend` 29 · `apps/frontend` 135
-  (319 total).
+- Automated tests: `packages/core` 22 · `apps/api` 292 · `apps/backend` 37 · `apps/frontend` 139
+  (490 total).
 
 **Scoped next, not implemented:** on-device zero-knowledge proof (a commitment stands in); hardware
-attestation / TEE signing; App/Play Store publication (config written, not run); live Neuro
-verified-attribute POST (integrated with typed degradation, pending event credentials); binding the
+attestation / TEE signing; App/Play Store publication (config written, not run); selfie liveness
+and verified attributes through a chosen vendor (see *Replacing Dwellir and Neuro*); binding the
 sealed precise location and a personhood commitment into a schema v2.
 
 ---
@@ -141,6 +153,21 @@ data residency, and cost rather than brand alone.
 **Exit criterion:** the same integration suite passes against Dwellir and one second RPC endpoint,
 and removing either endpoint still leaves offline capture working.
 
+**Implemented:** `RPC_FALLBACK_URLS` adds endpoints that are tried in order when `RPC_URL` is down
+or hung. Each endpoint has a 5 s timeout, and the whole list is retried once. The suite runs with
+`npm run rpc-check --workspace apps/api -- <endpoint> ...`. It checks the chain id, that the
+latest block is fresh, and that the live attestation reads back as exactly four fields. It then
+checks that every endpoint reads that record identically, and drills failover past a local hung
+endpoint and a refused port. `--attest` adds one real synthetic `attest()` per endpoint. Reports
+show an endpoint's host only, never its path, because providers put the API key there.
+
+The suite ran live on 2026-09-27 against `sepolia.base.org` and `base-sepolia-rpc.publicnode.com`,
+and both passed. PublicNode prunes old transaction receipts, so the receipt check only warns. The
+failover call answered in 5.1 s past the dead endpoints, and a list of only dead endpoints failed
+in 10.2 s, within its 22 s budget. Running the suite also exposed a leak, now fixed: `/sync`
+returned the RPC error verbatim, including the endpoint URL. Adapter errors are now reduced to
+one line with no URL, and the port enforces that for every adapter.
+
 ### Phase 2 — separate transaction policy from key custody
 
 Keep the existing pure EAS request builder, then place transaction submission behind an
@@ -155,7 +182,51 @@ OpenZeppelin Relayer is the current self-hosted successor.
 on the same proof, a denied method/value test fails closed, and loss of the provider returns a typed
 unavailable result without exposing key material.
 
+**Implemented:** the `AttestationSubmitter` port with `local-key` and `none` adapters, the
+fail-closed allowlist in `apps/api/src/submitter.ts`, and idempotency by `proofHash` in
+`attestOnce()` (`apps/api/src/relayer.ts`). `/sync` and `/attest` check the store *before* the
+submitter runs: a proof this relayer already anchored returns its stored record and sends nothing,
+and concurrent calls for one proof share a single submission. The RPC transport and every delivery
+channel carry an explicit 5 s timeout.
+
+**Implemented (second adapter):** `ATTESTATION_SUBMITTER=openzeppelin-relayer`
+(`apps/api/src/submitters/openzeppelin-relayer.ts`) hands the allowlisted `attest()` calldata to
+a self-hosted [OpenZeppelin Relayer](https://docs.openzeppelin.com/relayer/quickstart), which
+holds the key; `apps/api` then holds no private key at all. Before anything is queued, the
+relayer's own record must be an unpaused EVM relayer on `base-sepolia` whose signer is the pinned
+`OZ_RELAYER_ADDRESS`, and whose own policy allows sending only to the EAS contract
+(`whitelist_receivers`). Our allowlist runs in this process; the relayer's policy is what still
+holds if its API key leaks. The queued transaction must come back from that address, to the EAS
+contract, with zero value. OZ Relayer confirms asynchronously, so the adapter polls for the hash
+within a fixed budget. If the budget runs out, the call returns a typed unavailable and the
+adapter remembers the queued transaction, so a retry re-polls it rather than paying for a second
+one. That memory lasts only as long as the process.
+
+**Sandbox run (2026-09-28).** `apps/api/sandbox/up.sh` starts an anvil fork of Base Sepolia, which
+has the real EAS contract and our registered schema but no real funds. It also starts the official
+`openzeppelin/openzeppelin-relayer` image, locked to EAS. `npm run submitter-sandbox --workspace
+apps/api -- <adapter>` then checks the exit criterion against it:
+
+- one real attestation, read back from EAS with the pinned attester, the allowlisted schema, and
+  exactly the four fields;
+- a repeat submission of the same proof leaves the signer's nonce unchanged;
+- a relayer reporting a different signer is refused before anything is sent;
+- the relayer itself refuses a transaction to any other address, and one that carries value;
+- an unreachable relayer returns a typed unavailable with no key and no URL in it.
+
+Both `openzeppelin-relayer` and `local-key` passed. Run on a clean start, the sandbox also caught a
+relayer that disabled itself because its RPC was not up yet: the adapter refused it, and
+`shadow-compare` held the cut-over.
+
 ### Phase 3 — split Neuro into two ports
+
+**Update (2026-09-28): Neuro is removed.** It never went live, and both ports stayed off. The
+liveness port keeps only its `none` adapter, so `/verify-identity` still answers, degraded, and
+the app's identity step works unchanged. The verified-attribute mode of `/verify-identity` and
+the `AttributePort` are gone. That mode's attribute was not bound to the proof's reporter and
+could be re-attached, so `/proof` no longer serves `verifiedAttribute`, and a stored value is
+dropped on load. The attribute path returns through the `openid4vp` design below. The original
+plan is kept for context:
 
 Create separate `LivenessPort` and `AttributePort` interfaces with `none` and current-Neuro adapters.
 Keep both defaulted off until the pilot defines why assurance is needed. Only then evaluate concrete
@@ -222,6 +293,110 @@ and MOSIP's statement that the platform
 
 ---
 
+## Plan status
+
+As of 2026-09-28. "Done" means the code is merged and covered by tests. An exit criterion that needs
+live credentials, a provider sandbox, or a programme decision is listed as open, even when the code
+behind it is finished.
+
+### Done
+
+| Area | What is in place |
+|---|---|
+| Core pipeline | Offline capture → sha256 + ed25519 → SQLite queue → auto-sync; a live EAS attestation on Base Sepolia; public `/verify` and `/dashboard`; WhatsApp delivery (see *What runs today*) |
+| Phase 1 — RPC | `RPC_URL`, with `DWELLIR_RPC_URL` kept as a deprecated fallback; switching provider is a configuration change; `RPC_FALLBACK_URLS` failover; the `rpc-check` suite, passed live against two independent public endpoints |
+| Phase 2 — submission | `AttestationSubmitter` port with `local-key`, `openzeppelin-relayer` and `none` adapters; fail-closed allowlist (chain, contract, `attest()` selector, schema, zero value); idempotency by `proofHash` checked before any transaction; explicit RPC timeout |
+| Phase 3 — assurance | Neuro removed. `LivenessPort` with a `none` adapter only, off; the minimal verdict and a throwing or non-conforming adapter are contract-tested at the port; the re-attachable verified-attribute mode is gone |
+| Phase 4 — cutover | Synthetic-only side-by-side comparison enforced in code; `shadow-compare` holds a cutover on any divergence or empty run |
+| Hardening | Caps on signed field sizes at `/sync`; CSV formula injection neutralised in both exporters; store extras cannot reach `/proof`; explicit timeouts on every delivery channel; malformed bodies answer 400, never 500; a body-size cap on every route; no adapter error can carry an endpoint URL |
+| Public write routes | `/notify` sends only to the fixed programme recipient, with a per-proof cooldown; `/liveness-result` records only a verdict signed by the server at `/verify-identity`, never one claimed by the caller; the liveness verdict and the sealed precise location are write-once |
+| CI | Typecheck and tests on Node 20 and 22 for every push and pull request |
+
+### Open
+
+| Item | What it needs |
+|---|---|
+| Phase 1 exit criterion | Two endpoints and the failover drill pass. Remaining: the managed primary chosen below, and one real `attest()` per endpoint (`rpc-check --attest`, which needs the funded gas key) |
+| Phase 2 on the live testnet | The sandbox run passed on a fork. Still needed: a deployed OZ Relayer on Base Sepolia with a funded signer, `whitelist_receivers` set to EAS, and one `submitter-sandbox` run against it |
+| Phase 3 `openid4vp` adapter | A two-step session port: a request (nonce, state) and a separate wallet response, so new routes. Shared with any future liveness vendor. Built only once the pilot states why assurance is needed |
+| Phase 3 sandbox check | One consented end-to-end check before any adapter is labelled verified |
+| Phase 4 observation window | `shadow-compare` of `local-key` against `openzeppelin-relayer` in the sandbox: READY over 5 synthetic proofs. The real window runs once the relayer is deployed; keep `local-key` configured through it |
+| CI runners | GitHub Actions jobs on the account stopped starting on 2026-09-26 (billing). Until they run again, `npm run verify` locally is the gate |
+| Scoped next | On-device ZK proof, hardware attestation / TEE signing, store publication, schema v2 with the sealed precise location |
+| Programme inputs | A baseline for the cost figure (reports per month, re-visit share, cost per trip) and the pilot legal preconditions — programme work, not code |
+
+### Replacing Dwellir and Neuro: vendor findings
+
+Researched on 2026-09-27 from each vendor's own documentation. Nothing below is integrated or
+contracted yet. Choosing a vendor, signing up, and giving biometric consent are programme decisions.
+
+**RPC, replacing Dwellir.** This is a configuration change only; the code is ready.
+
+| Candidate | Base Sepolia | Terms (vendor docs) | Role |
+|---|---|---|---|
+| [CDP Node](https://docs.cdp.coinbase.com/data/node/overview) (Coinbase, the operator of Base) | Yes | 10 M billing units free per month, then $0.50 per million; about 50 requests/s per project; a payment method is required from January 2026 | Recommended `RPC_URL`. The client key sits in the URL path, and the redaction above keeps it out of responses and reports |
+| `https://sepolia.base.org` | Yes | Public, no key, no SLA | `RPC_FALLBACK_URLS`, first entry; passed `rpc-check` live |
+| `https://base-sepolia-rpc.publicnode.com` | Yes | Public, no key, prunes old receipts | `RPC_FALLBACK_URLS`, second entry; passed `rpc-check` live |
+
+Others on Base's [node provider list](https://docs.base.org/base-chain/tools/node-providers)
+(Alchemy, QuickNode, Chainstack, Ankr, dRPC, OnFinality) can take the same slot after they pass
+`rpc-check`. Cut-over: set `RPC_URL` to the CDP endpoint and `RPC_FALLBACK_URLS` to the two public
+endpoints, run `rpc-check --attest`, then delete `DWELLIR_RPC_URL`.
+
+**Liveness, replacing Neuro's liveness.** Neither vendor fits the current port. `LivenessPort.check(frames)`
+sends frames the app captured itself, but both vendors run their own capture on the device.
+Both use a server-created session, a native capture step on the phone, and then a server-side
+result. That means a two-step port (start a session, then complete it) and an Expo dev build, not
+Expo Go.
+
+| Candidate | Client fit | What the backend receives | Notes |
+|---|---|---|---|
+| [AWS Rekognition Face Liveness](https://docs.aws.amazon.com/rekognition/latest/dg/face-liveness.html) | Amplify `FaceLivenessDetector` for React, iOS and Android; no official React Native SDK, so a native module is needed | A 0–100 confidence score, a reference image, and 0–4 audit images | A session [expires 3 minutes](https://docs.aws.amazon.com/rekognition/latest/APIReference/API_CreateFaceLivenessSession.html) after creation. Set `AuditImagesLimit` to 0 and no S3 output; the adapter reduces the score to `verifiedPerson` and discards the reference image. The client streams video to AWS, so it needs temporary AWS credentials |
+| [iProov](https://github.com/iProov/react-native) | Official `@iproov/react-native` SDK | A pass or fail verdict via a server token (REST API v2) | Commercial terms through sales; Liveness Assurance vs Genuine Presence Assurance |
+| Azure AI Face liveness | Native iOS and Android only; [Limited Access](https://learn.microsoft.com/en-us/azure/ai-services/face/concept-face-liveness-detection) approval required | — | Not recommended: gated, and no React Native path |
+
+**Verified attributes, replacing Neuro's attribute call.** Use the planned `openid4vp` adapter, built
+on [Inji Verify](https://docs.inji.io/inji-verify/technical-overview/integration-guides/openid4vp-vp-verification-integration-guide).
+`inji-verify-service` is the OpenID4VP backend, and it supports both a cross-device QR flow and a
+same-device flow. Its guide documents `ldp_vc` credentials (Ed25519Signature2020). The relying party
+gets a transaction id and a verification status, which the adapter reduces to the allowlisted
+boolean. This also needs the two-step port.
+
+**Proposed order:** (1) the RPC cut-over, which needs only a CDP project; (2) a two-step session
+port shared by liveness and attributes, with `none` adapters, behind the existing
+off-by-default switch; (3) one liveness adapter and the `openid4vp` adapter, each passing a
+consented sandbox check before it is labelled verified. Step (4), removing `neuro.ts`, is done.
+
+### Evaluated, not integrated: Cavos
+
+[Cavos](https://cavos.xyz/) provides embedded, self-custodial wallets: keys are held on the device,
+there is a paymaster for gas, and there are React and React Native SDKs
+([`cavos-labs/kit`](https://github.com/cavos-labs/kit)). We evaluated it on 2026-09-26 from its
+public repositories and did not integrate it, because it conflicts with guardrails that do not
+change:
+
+- **Chain.** Cavos implements Starknet, Solana and Stellar. Prufture anchors EAS attestations on
+  Base Sepolia (EVM), and the plan explicitly excludes switching to a different anchoring protocol.
+  Its gas sponsorship is Starknet-only.
+- **Identity.** A Cavos wallet is created from a stable `userId`, resolved through Google, Apple, or
+  email sign-in, or through a custom auth provider. Prufture's reporter has no wallet, no account and no
+  identity by design, and nothing about the reporter is signed. Adding a login to capture would
+  undo the privacy posture.
+- **Custody model.** Cavos signs on the user's device; the relayer here signs server-side and pays
+  gas so the reporter never holds funds. Cavos would not be a drop-in `AttestationSubmitter` adapter.
+
+Revisit Cavos if one of these becomes true:
+
+1. It supports an EVM chain where EAS is deployed.
+2. The programme decides to give its *staff* (coordinators, who are already identified) their own
+   signing key for a second attestation. That would be a separate, opt-in path that never touches
+   the reporter.
+
+In either case, Cavos would enter through the same process as any other adapter: the Phase 4
+synthetic-only comparison, and no reporter data sent to it during evaluation.
+
+---
+
 ## Minimum requirements to run
 
 - **Node.js 20 or newer** and npm (this is an npm-workspaces monorepo).
@@ -234,8 +409,7 @@ and MOSIP's statement that the platform
 
 ```bash
 npm install
-npm run typecheck
-npm run test
+npm run verify   # typecheck, every workspace's tests, and the production web build
 ```
 
 Run the three services, each in its own terminal:

@@ -1,7 +1,6 @@
 // channels.ts: post-proof delivery behind one interface — sendVerifyUrl(channel, to, url).
-// Every channel sends ONLY the public verifyUrl. It never sends the media, the signed payload,
-// a volunteer identifier, or an exact location. Every channel degrades via guard(): a missing
-// key or a dead provider returns a typed ExternalUnavailable and never throws the caller.
+// Every channel sends ONLY the public verifyUrl (never media, payload, identity or exact location)
+// and degrades via guard(): a missing key or dead provider is a typed unavailable, never a throw.
 
 import { guard, type ExternalResult } from "@proof/core";
 
@@ -14,6 +13,21 @@ export interface ChannelSendResult {
 }
 
 const env = (k: string): string => process.env[k] ?? "";
+
+// Explicit budget per provider call, matching entitlement.ts. /sync awaits the
+// programme notification, so without this a hung provider held the reporter's sync open.
+export const CHANNEL_TIMEOUT_MS = 5000;
+
+/** fetch() with an abort after CHANNEL_TIMEOUT_MS, covering both headers and body. */
+async function timedFetch<T>(url: string, init: RequestInit, read: (res: Response) => Promise<T>): Promise<T> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), CHANNEL_TIMEOUT_MS);
+  try {
+    return await read(await fetch(url, { ...init, signal: controller.signal }));
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 function unconfigured(channel: Channel, missing: string): ExternalUnavailableLike {
   return {
@@ -46,7 +60,6 @@ export async function sendVerifyUrl(
   }
 }
 
-// --- Kapso / WhatsApp -------------------------------------------------------
 // Kapso is used as a thin wrapper over the WhatsApp Cloud API. Text message, URL only.
 async function sendWhatsApp(to: string, url: string): Promise<ExternalResult<ChannelSendResult>> {
   const key = env("KAPSO_API_KEY");
@@ -56,18 +69,20 @@ async function sendWhatsApp(to: string, url: string): Promise<ExternalResult<Cha
   const base = env("KAPSO_API_BASE") || "https://app.kapso.ai/api/v1";
 
   return guard("channel/whatsapp", async () => {
-    const res = await fetch(`${base}/whatsapp/phone_numbers/${phoneId}/messages`, {
+    const init = {
       method: "POST",
       headers: { "content-type": "application/json", "X-API-Key": key },
       body: JSON.stringify({ to, type: "text", text: { body: url } }),
+    };
+    return timedFetch(`${base}/whatsapp/phone_numbers/${phoneId}/messages`, init, async (res) => {
+      const body = (await res.json().catch(() => ({}))) as { id?: string; message?: { id?: string }; error?: unknown };
+      if (!res.ok) throw new Error(`kapso ${res.status}: ${JSON.stringify(body)}`);
+      return { channel: "whatsapp" as const, providerId: body.id ?? body.message?.id ?? "" };
     });
-    const body = (await res.json().catch(() => ({}))) as { id?: string; message?: { id?: string }; error?: unknown };
-    if (!res.ok) throw new Error(`kapso ${res.status}: ${JSON.stringify(body)}`);
-    return { channel: "whatsapp" as const, providerId: body.id ?? body.message?.id ?? "" };
   });
 }
 
-// --- Email (Resend-compatible) --------------------------------------------
+// Resend-compatible email API.
 async function sendEmail(to: string, url: string): Promise<ExternalResult<ChannelSendResult>> {
   const key = env("EMAIL_API_KEY");
   const from = env("EMAIL_FROM");
@@ -76,7 +91,7 @@ async function sendEmail(to: string, url: string): Promise<ExternalResult<Channe
   const base = env("EMAIL_API_BASE") || "https://api.resend.com";
 
   return guard("channel/email", async () => {
-    const res = await fetch(`${base}/emails`, {
+    const init = {
       method: "POST",
       headers: { "content-type": "application/json", authorization: `Bearer ${key}` },
       body: JSON.stringify({
@@ -85,26 +100,29 @@ async function sendEmail(to: string, url: string): Promise<ExternalResult<Channe
         subject: "Prufture proof verification",
         text: `Verify this field proof:\n${url}\n\nNo volunteer identity or media is included.`,
       }),
+    };
+    return timedFetch(`${base}/emails`, init, async (res) => {
+      const body = (await res.json().catch(() => ({}))) as { id?: string; message?: string };
+      if (!res.ok) throw new Error(`email ${res.status}: ${JSON.stringify(body)}`);
+      return { channel: "email" as const, providerId: body.id ?? "" };
     });
-    const body = (await res.json().catch(() => ({}))) as { id?: string; message?: string };
-    if (!res.ok) throw new Error(`email ${res.status}: ${JSON.stringify(body)}`);
-    return { channel: "email" as const, providerId: body.id ?? "" };
   });
 }
 
-// --- Telegram (optional) --------------------------------------------------
 async function sendTelegram(to: string, url: string): Promise<ExternalResult<ChannelSendResult>> {
   const token = env("TELEGRAM_BOT_TOKEN");
   if (!token) return unconfigured("telegram", "TELEGRAM_BOT_TOKEN");
 
   return guard("channel/telegram", async () => {
-    const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+    const init = {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ chat_id: to, text: url, disable_web_page_preview: false }),
+    };
+    return timedFetch(`https://api.telegram.org/bot${token}/sendMessage`, init, async (res) => {
+      const body = (await res.json().catch(() => ({}))) as { ok?: boolean; result?: { message_id?: number }; description?: string };
+      if (!res.ok || !body.ok) throw new Error(`telegram ${res.status}: ${body.description ?? "send failed"}`);
+      return { channel: "telegram" as const, providerId: String(body.result?.message_id ?? "") };
     });
-    const body = (await res.json().catch(() => ({}))) as { ok?: boolean; result?: { message_id?: number }; description?: string };
-    if (!res.ok || !body.ok) throw new Error(`telegram ${res.status}: ${body.description ?? "send failed"}`);
-    return { channel: "telegram" as const, providerId: String(body.result?.message_id ?? "") };
   });
 }

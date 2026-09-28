@@ -1,8 +1,6 @@
-// CoverageMapInner.tsx: the actual Leaflet map, loaded only in the browser (ssr:false
-// from ../CoverageMap). Draws ONE terracotta rectangle per distinct 5-char geohash cell
-// (~2.4 km), shaded by report count — a choropleth of the coarse grid, not a blurred
-// point cloud (a blur would imply a precision we do not have). There is no reporter
-// coordinate anywhere in this component; the only points are cell centres and bounds.
+// CoverageMapInner.tsx: the browser-only Leaflet map. Draws ONE rectangle per distinct 5-char geohash
+// cell shaded by report count — a choropleth, not a blurred point cloud, which would imply precision
+// we do not have. The only points here are cell centres and bounds, never a reporter coordinate.
 
 "use client";
 

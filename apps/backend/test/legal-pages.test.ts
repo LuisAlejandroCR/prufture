@@ -1,8 +1,6 @@
 // legal-pages.test.ts: static guards on /privacy and /support — the two URLs app review checks.
-// These pages are prose, so the test protects the properties that prose silently loses: the
-// project's banned claims must never appear, and the disclosures that are legally material
-// (blockchain permanence, selfie default-off, free reporting) must stay present.
-// Distinct from api.test.ts (data layer) and pitch.test.ts (deck helpers).
+// Prose silently loses properties, so this pins them: banned claims never appear, and the legally
+// material disclosures (blockchain permanence, selfie default-off, free reporting) stay present.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
