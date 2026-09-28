@@ -16,6 +16,7 @@ interface PersistedDraft {
   taskId: string;
   reportId: string;
   answers: Record<string, string>;
+  note: string;
   geohash: string;
   areaLabel: string;
   preciseLocationCipher: string;
@@ -107,6 +108,7 @@ function toPersisted(d: ReportDraft, photos: PersistedPhoto[]): PersistedDraft {
     taskId: d.taskId,
     reportId: d.reportId,
     answers: d.answers,
+    note: d.note,
     geohash: d.geohash,
     areaLabel: d.areaLabel,
     preciseLocationCipher: d.preciseLocationCipher,
@@ -164,6 +166,7 @@ export async function loadPersistedDraft(): Promise<ReportDraft | null> {
       taskId: p.taskId,
       reportId: typeof p.reportId === "string" ? p.reportId : "",
       answers: p.answers ?? {},
+      note: typeof p.note === "string" ? p.note : "",
       geohash: p.geohash ?? "",
       areaLabel: p.areaLabel ?? "",
       preciseLocationCipher: p.preciseLocationCipher ?? "",

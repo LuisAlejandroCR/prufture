@@ -1,6 +1,7 @@
 // status/[id].tsx: the lifecycle of one report in plain language — a four-stage timeline over all its
 // per-photo proofs (grouped by the local reportId), marking a stage done only when every proof reached
-// it. Proof references sit under Technical details. No PII, exact location or secrets.
+// it. The reporter's private note (local only) shows under the timeline. Proof references sit under
+// Technical details. No PII, exact location or secrets.
 
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
@@ -9,6 +10,7 @@ import { Icon } from "../../src/components/icons/Icon";
 import { BackLink, Notice, Screen, SecondaryButton, StatusPill } from "../../src/components/ui";
 import { listProofs } from "../../src/queue";
 import type { LocalProof } from "../../src/queue-row";
+import { getLocalNote } from "../../src/report-note";
 import { getTask } from "../../src/tasks";
 import { runPendingSync } from "../../src/useAutoSync";
 import { color, friendlyStatus, radius, space, type } from "../../src/theme";
@@ -46,10 +48,16 @@ export default function ReportStatusScreen() {
   const [group, setGroup] = useState<LocalProof[]>([]);
   const [showTech, setShowTech] = useState(false);
   const [checking, setChecking] = useState(false);
+  const [note, setNote] = useState<string | null>(null);
 
   const load = useCallback(() => {
     listProofs()
-      .then((rows) => setGroup(resolveReport(rows, id ?? "")))
+      .then((rows) => {
+        const report = resolveReport(rows, id ?? "");
+        setGroup(report);
+        const reportId = report[0]?.reportId ?? "";
+        getLocalNote(reportId).then(setNote).catch(() => setNote(null));
+      })
       .catch(() => setGroup([]));
   }, [id]);
 
@@ -121,6 +129,14 @@ export default function ReportStatusScreen() {
           </View>
         ))}
       </View>
+
+      {note ? (
+        <View style={styles.note}>
+          <Text style={styles.noteLabel}>Your private note</Text>
+          <Text style={styles.noteText}>{note}</Text>
+          <Text style={styles.noteHint}>Only on this phone. Not part of the report.</Text>
+        </View>
+      ) : null}
 
       {!anyPending ? (
         <SecondaryButton label="Check for updates" icon="retry" onPress={checkNow} disabled={checking} />
@@ -205,6 +221,10 @@ const styles = StyleSheet.create({
   connectorDone: { backgroundColor: color.success },
   stageLabel: { ...type.subtitle, color: color.text, paddingBottom: space.lg, flex: 1 },
   stageUpcoming: { color: color.faint },
+  note: { gap: space.xs, padding: space.md, borderRadius: radius.md, backgroundColor: color.surfaceSoft },
+  noteLabel: { ...type.meta, color: color.muted, fontWeight: "700" },
+  noteText: { ...type.body, color: color.text },
+  noteHint: { ...type.meta, color: color.muted },
   techToggle: { flexDirection: "row", alignItems: "center", gap: space.sm, minHeight: 44 },
   techToggleText: { ...type.subtitle, color: color.muted, flex: 1 },
   tech: { gap: space.sm, padding: space.md, borderRadius: radius.md, backgroundColor: color.surfaceSoft },

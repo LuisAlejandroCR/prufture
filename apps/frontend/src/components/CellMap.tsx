@@ -50,9 +50,12 @@ export function CellMap({
   cells,
   height = 220,
   offlineLabel,
+  caption,
 }: {
   cells: MapCell[];
   height?: number;
+  /** Small chip over the map's top-right corner, e.g. the approximate-area disclaimer. */
+  caption?: string;
   /** Text shown instead of the map with no signal. */
   offlineLabel: string;
 }) {
@@ -101,6 +104,12 @@ export function CellMap({
           );
         })}
       </MapView>
+      {caption ? (
+        <View style={styles.caption} pointerEvents="none">
+          <Icon name="info" size={14} color={color.text} />
+          <Text style={styles.captionText}>{caption}</Text>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -119,4 +128,18 @@ const styles = StyleSheet.create({
     borderColor: color.border,
   },
   offlineText: { ...type.body, color: color.muted, flex: 1 },
+  caption: {
+    position: "absolute",
+    top: space.sm,
+    right: space.sm,
+    maxWidth: "62%",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.xs,
+    paddingVertical: space.xs,
+    paddingHorizontal: space.sm,
+    borderRadius: radius.sm,
+    backgroundColor: color.surface,
+  },
+  captionText: { ...type.meta, fontSize: 11, lineHeight: 14, color: color.text, flexShrink: 1 },
 });

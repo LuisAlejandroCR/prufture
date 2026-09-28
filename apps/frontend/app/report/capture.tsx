@@ -1,6 +1,7 @@
 // report/capture.tsx: one required photo at a time — instruction, progress, camera, preview with
 // Use photo / Take again, and designed permission-denied and camera-error states.
-// Wired to expo-camera and src/report-draft; nothing uploads here.
+// Wired to expo-camera and src/report-draft; nothing uploads here. `retake=1` (from Review) replaces
+// one photo and returns to Review instead of walking the remaining steps.
 
 import { CameraView, useCameraPermissions } from "expo-camera";
 import * as FileSystem from "expo-file-system";
@@ -19,7 +20,7 @@ import { color, radius, space, target, type } from "../../src/theme";
 type Shot = { uri: string; bytes: Uint8Array };
 
 export default function ReportCaptureScreen() {
-  const { id, step } = useLocalSearchParams<{ id: string; step: string }>();
+  const { id, step, retake } = useLocalSearchParams<{ id: string; step: string; retake?: string }>();
   const router = useRouter();
   const task = getTask(id ?? "");
   const stepIndex = Math.max(0, Math.min(task.photos.length - 1, Number(step ?? "0") || 0));
@@ -38,7 +39,9 @@ export default function ReportCaptureScreen() {
   ensureDraft(task.id);
 
   const next = () => {
-    if (stepIndex + 1 < total) {
+    if (retake === "1") {
+      router.replace({ pathname: "/report/review", params: { id: task.id } });
+    } else if (stepIndex + 1 < total) {
       router.replace({ pathname: "/report/capture", params: { id: task.id, step: String(stepIndex + 1) } });
     } else if (task.questions.length > 0) {
       router.replace({ pathname: "/report/questions", params: { id: task.id } });

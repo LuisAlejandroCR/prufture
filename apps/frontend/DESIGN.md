@@ -78,8 +78,17 @@ endpoint or sync-retry change. The auto-sync loop drains the queue exactly as be
 The flow is presented as four steps via `ReportProgress` ("Step X of 4 · label"): 1 Instructions
 (`report/intro`), 2 Capture (`report/capture`), 3 Questions (`report/questions`), 4 Review
 (`report/location` area confirm, then `report/review`). Questions are large Yes / No / "I could
-not confirm" controls, one at a time, no free text, no PII. Review shows only photo count, answer
-count, approximate area, and capture time.
+not confirm" controls, one at a time, no free text, no PII.
+
+Review is the evidence sheet (Alternative C, screen 2): `CategoryBadge` + task title, the
+approximate area on a `CellMap` with the chip "Showing an approximate area (not exact location)",
+numbered round photo slots (tap one to retake just that photo: `capture?retake=1` returns to
+Review), the chosen answers under "Current condition" (tap to change), and **one optional note**.
+The note is capped at 280 characters with a counter from 200, sanitised in `src/report-note.ts`,
+persisted with the draft, and after saving kept on this phone only (`report-notes/notes.json`,
+keyed by the local reportId, shown on `status/[id]` as "Your private note"). It is never passed to
+`captureProof`, so it never reaches the signed payload, the api or the chain. The only action is
+"Save report".
 
 ## Contribution (Pilot 1)
 
