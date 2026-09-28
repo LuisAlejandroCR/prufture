@@ -1,27 +1,25 @@
-// (tabs)/tasks.tsx: find a task without scanning a portal — count, compact category filter and task
-// cards; search appears only when the list is long. Works from the cached catalog when offline.
+// (tabs)/tasks.tsx: find a task without scanning a portal — nearest assignments first, category
+// filter, List/Map toggle (cells, never exact points) and a way into the full item catalog.
+// Works from the cached catalog when offline; the map falls back to text without signal.
 
 import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { Icon } from "../../src/components/icons/Icon";
+import { CellMap, type MapCell } from "../../src/components/CellMap";
 import { Card, Screen, ScreenTitle } from "../../src/components/ui";
-import { categoryAccent, listTasks, type Category } from "../../src/tasks";
+import { CATEGORIES } from "../../src/items";
+import { categoryAccent, distanceLabel, listTasks, sortByDistance, type Category } from "../../src/tasks";
 import { color, radius, space, target, type } from "../../src/theme";
-
-const CATEGORIES: Category[] = [
-  "Education",
-  "Water and sanitation",
-  "Health",
-  "Nutrition",
-  "Training",
-];
+import { useApproxArea } from "../../src/useApproxArea";
 
 export default function TasksScreen() {
   const router = useRouter();
-  const all = listTasks();
+  const { cell, name } = useApproxArea();
+  const all = useMemo(() => sortByDistance(listTasks(), cell), [cell]);
   const [category, setCategory] = useState<Category | null>(null);
   const [query, setQuery] = useState("");
+  const [view, setView] = useState<"list" | "map">("list");
 
   const showSearch = all.length >= 6;
 
@@ -34,11 +32,42 @@ export default function TasksScreen() {
     );
   }, [all, category, query]);
 
+  const open = (id: string) => router.push({ pathname: "/task/[id]", params: { id } });
+  const mapCells: MapCell[] = [
+    ...(cell ? [{ key: "me", cell, tone: "self" as const }] : []),
+    ...tasks.map((t) => ({
+      key: t.id,
+      cell: t.cell,
+      title: t.title,
+      subtitle: t.area,
+      tone: "task" as const,
+      onPress: () => open(t.id),
+    })),
+  ];
+
   return (
     <Screen>
-      <ScreenTitle hint={`${tasks.length} ${tasks.length === 1 ? "task" : "tasks"} available near you`}>
+      <ScreenTitle
+        hint={`${tasks.length} ${tasks.length === 1 ? "task" : "tasks"} assigned${name ? ` · you are near ${name}` : ""}`}
+      >
         Tasks
       </ScreenTitle>
+
+      <View style={styles.toggle} accessibilityRole="tablist">
+        {(["list", "map"] as const).map((v) => (
+          <Pressable
+            key={v}
+            onPress={() => setView(v)}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: view === v }}
+            style={[styles.toggleItem, view === v && styles.toggleItemActive]}
+          >
+            <Text style={[styles.toggleText, view === v && styles.toggleTextActive]}>
+              {v === "list" ? "List" : "Map"}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
 
       {showSearch ? (
         <View style={styles.search}>
@@ -65,6 +94,23 @@ export default function TasksScreen() {
         ))}
       </ScrollView>
 
+      {view === "map" ? (
+        <CellMap
+          cells={mapCells}
+          height={320}
+          offlineLabel="The map needs signal. Your tasks are still listed below and work offline."
+        />
+      ) : null}
+
+      <Card onPress={() => router.push("/report/pick")} accessibilityLabel="Report something else. Choose from water points, schools, clinics and more.">
+        <View style={styles.tag}>
+          <Icon name="report" size={16} color={color.primary} />
+          <Text style={[styles.tagText, { color: color.primary }]}>Not on the list?</Text>
+        </View>
+        <Text style={styles.title}>Report something else near you</Text>
+        <Text style={styles.need}>Water points, toilets, classrooms, vaccine fridges and more.</Text>
+      </Card>
+
       {tasks.length === 0 ? (
         <View style={styles.empty}>
           <Icon name="tasks" size={32} color={color.faint} />
@@ -75,7 +121,7 @@ export default function TasksScreen() {
         tasks.map((t) => (
           <Card
             key={t.id}
-            onPress={() => router.push({ pathname: "/task/[id]", params: { id: t.id } })}
+            onPress={() => open(t.id)}
             accessibilityLabel={`${t.category}. ${t.title}. ${t.area}. ${t.progressLabel ?? ""}`}
           >
             <View style={styles.tag}>
@@ -85,7 +131,9 @@ export default function TasksScreen() {
             <Text style={styles.title}>{t.title}</Text>
             <View style={styles.metaRow}>
               <Icon name="location" size={15} color={color.faint} />
-              <Text style={styles.meta}>{t.area}</Text>
+              <Text style={styles.meta}>
+                {distanceLabel(cell, t) ? `${t.area} · ${distanceLabel(cell, t)}` : t.area}
+              </Text>
               <Icon name="clock" size={15} color={color.faint} />
               <Text style={styles.meta}>About {t.minutes} min</Text>
             </View>
@@ -124,6 +172,23 @@ function FilterChip({
 }
 
 const styles = StyleSheet.create({
+  toggle: {
+    flexDirection: "row",
+    padding: space.xs,
+    gap: space.xs,
+    borderRadius: radius.pill,
+    backgroundColor: color.surfaceSoft,
+  },
+  toggleItem: {
+    flex: 1,
+    minHeight: target.min - space.sm,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: radius.pill,
+  },
+  toggleItemActive: { backgroundColor: color.surface },
+  toggleText: { ...type.meta, color: color.muted, fontWeight: "600" },
+  toggleTextActive: { color: color.text, fontWeight: "700" },
   search: {
     flexDirection: "row",
     alignItems: "center",

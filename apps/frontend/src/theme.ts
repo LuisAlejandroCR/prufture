@@ -50,6 +50,8 @@ export const color = {
   health: "#C04B7A",
   nutrition: "#C88720",
   training: "#806F5C",
+  protection: "#6B5CA5",
+  climate: "#4E7D2F",
 } as const;
 
 // Selected bottom-navigation background tint.

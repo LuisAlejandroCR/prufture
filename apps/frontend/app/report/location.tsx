@@ -6,6 +6,7 @@ import * as Location from "expo-location";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
+import { CellMap } from "../../src/components/CellMap";
 import { Icon } from "../../src/components/icons/Icon";
 import { BackLink, Notice, PrimaryButton, ReportProgress, Screen, SecondaryButton } from "../../src/components/ui";
 import { identityStepEnabled } from "../../src/flags";
@@ -14,6 +15,7 @@ import { sealPrecise } from "../../src/location-seal";
 import { ensureDraft, setArea, setPreciseLocation } from "../../src/report-draft";
 import { getTask } from "../../src/tasks";
 import { color, radius, space, type } from "../../src/theme";
+import { areaNameForCell } from "../../src/useApproxArea";
 
 type State = "checking" | "ready" | "denied" | "error";
 
@@ -41,6 +43,7 @@ export default function ReportLocationScreen() {
 
   const [state, setState] = useState<State>("checking");
   const [cell, setCell] = useState("");
+  const [areaName, setAreaName] = useState<string | null>(null);
 
   const detect = useCallback(async () => {
     setState("checking");
@@ -60,7 +63,11 @@ export default function ReportLocationScreen() {
       const { latitude, longitude } = pos.coords;
       const coarse = encodeGeohash(latitude, longitude, 5);
       setCell(coarse);
-      setArea(coarse, task.area);
+      // Name the cell centre (never the precise point); offline this stays null and the
+      // assignment's area — or "Near you" for a self-started report — is kept instead.
+      const name = await areaNameForCell(coarse);
+      setAreaName(name);
+      setArea(coarse, name ?? task.area);
       setPreciseLocation(sealPrecisePoint(latitude, longitude, Math.floor(pos.timestamp ?? Date.now())));
       setState("ready");
     } catch {
@@ -105,11 +112,15 @@ export default function ReportLocationScreen() {
 
       {state === "ready" ? (
         <View style={styles.card}>
-          <Icon name="location" size={28} color={color.success} />
-          <Text style={styles.title}>Approximate area detected</Text>
-          <Text style={styles.area}>{`Approximate area: ${cell}`}</Text>
+          <CellMap
+            cells={[{ key: "me", cell, tone: "self" }]}
+            height={200}
+            offlineLabel="Map unavailable without signal. Your area is still saved with the report."
+          />
+          <Text style={styles.title}>Approximate area</Text>
+          <Text style={styles.area}>{areaName ?? task.area}</Text>
           <Text style={styles.fine}>
-            This rough area is what the public record shows. Your precise location is encrypted on
+            The shaded square is about 5 km across. This rough area is what the public record shows. Your precise location is encrypted on
             this phone for the programme team and is never published.
           </Text>
         </View>
@@ -135,6 +146,7 @@ const styles = StyleSheet.create({
   center: { alignItems: "center", gap: space.md, paddingVertical: space.xxl },
   body: { ...type.body, color: color.muted },
   card: {
+    alignSelf: "stretch",
     alignItems: "center",
     gap: space.sm,
     padding: space.xl,
