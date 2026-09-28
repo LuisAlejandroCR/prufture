@@ -84,7 +84,7 @@ input, not something this repository can assert. The pilot's first job is to mea
    view by coarse region. A second person can attest the same hash for community verification.
 5. The verification link is delivered to the programme team by WhatsApp, with email as a fallback.
 
-Every external call (relayer, RPC, Neuro, WhatsApp, email) returns a typed result and never
+Every external call (relayer, RPC, WhatsApp, email) returns a typed result and never
 breaks the offline capture flow.
 
 ## Privacy posture
@@ -113,12 +113,12 @@ contacted, so no real report is ever sent to a provider under evaluation.
 - A second attestation over the same hash (deduped by attester).
 - Public `/verify/[hash]` and `/dashboard`, no login, coarse region only.
 - WhatsApp delivery of the verification link (Kapso); email degrades cleanly.
-- Automated tests: `packages/core` 22 · `apps/api` 303 · `apps/backend` 37 · `apps/frontend` 137
-  (499 total).
+- Automated tests: `packages/core` 22 · `apps/api` 288 · `apps/backend` 37 · `apps/frontend` 137
+  (484 total).
 
 **Scoped next, not implemented:** on-device zero-knowledge proof (a commitment stands in); hardware
-attestation / TEE signing; App/Play Store publication (config written, not run); live Neuro
-verified-attribute POST (integrated with typed degradation, pending event credentials); binding the
+attestation / TEE signing; App/Play Store publication (config written, not run); selfie liveness
+and verified attributes through a chosen vendor (see *Replacing Dwellir and Neuro*); binding the
 sealed precise location and a personhood commitment into a schema v2.
 
 ---
@@ -203,6 +203,14 @@ Relayer sandbox, which needs a deployed relayer and its credentials.
 
 ### Phase 3 — split Neuro into two ports
 
+**Update (2026-09-28): Neuro is removed.** It never went live, and both ports stayed off. The
+liveness port keeps only its `none` adapter, so `/verify-identity` still answers, degraded, and
+the app's identity step works unchanged. The verified-attribute mode of `/verify-identity` and
+the `AttributePort` are gone. That mode's attribute was not bound to the proof's reporter and
+could be re-attached, so `/proof` no longer serves `verifiedAttribute`, and a stored value is
+dropped on load. The attribute path returns through the `openid4vp` design below. The original
+plan is kept for context:
+
 Create separate `LivenessPort` and `AttributePort` interfaces with `none` and current-Neuro adapters.
 Keep both defaulted off until the pilot defines why assurance is needed. Only then evaluate concrete
 adapters: liveness products must be assessed for Expo/native SDK fit, informed consent, accessibility,
@@ -270,7 +278,7 @@ and MOSIP's statement that the platform
 
 ## Plan status
 
-As of 2026-09-27. "Done" means the code is merged and covered by tests. An exit criterion that needs
+As of 2026-09-28. "Done" means the code is merged and covered by tests. An exit criterion that needs
 live credentials, a provider sandbox, or a programme decision is listed as open, even when the code
 behind it is finished.
 
@@ -281,7 +289,7 @@ behind it is finished.
 | Core pipeline | Offline capture → sha256 + ed25519 → SQLite queue → auto-sync; a live EAS attestation on Base Sepolia; public `/verify` and `/dashboard`; WhatsApp delivery (see *What runs today*) |
 | Phase 1 — RPC | `RPC_URL`, with `DWELLIR_RPC_URL` kept as a deprecated fallback; switching provider is a configuration change; `RPC_FALLBACK_URLS` failover; the `rpc-check` suite, passed live against two independent public endpoints |
 | Phase 2 — submission | `AttestationSubmitter` port with `local-key`, `openzeppelin-relayer` and `none` adapters; fail-closed allowlist (chain, contract, `attest()` selector, schema, zero value); idempotency by `proofHash` checked before any transaction; explicit RPC timeout |
-| Phase 3 — assurance | Separate `LivenessPort` and `AttributePort`, with `none` and `neuro` adapters, both off by default; the minimal verdict is enforced at the port; a misbehaving adapter degrades instead of throwing |
+| Phase 3 — assurance | Neuro removed. `LivenessPort` with a `none` adapter only, off; the minimal verdict and a throwing or non-conforming adapter are contract-tested at the port; the re-attachable verified-attribute mode is gone |
 | Phase 4 — cutover | Synthetic-only side-by-side comparison enforced in code; `shadow-compare` holds a cutover on any divergence or empty run |
 | Hardening | Caps on signed field sizes at `/sync`; CSV formula injection neutralised in both exporters; store extras cannot reach `/proof`; explicit timeouts on every delivery channel; malformed bodies answer 400, never 500; a body-size cap on every route; no adapter error can carry an endpoint URL |
 | Public write routes | `/notify` sends only to the fixed programme recipient, with a per-proof cooldown; `/liveness-result` records only a verdict signed by the server at `/verify-identity`, never one claimed by the caller; the liveness verdict and the sealed precise location are write-once |
@@ -293,12 +301,11 @@ behind it is finished.
 |---|---|
 | Phase 1 exit criterion | Two endpoints and the failover drill pass. Remaining: the managed primary chosen below, and one real `attest()` per endpoint (`rpc-check --attest`, which needs the funded gas key) |
 | Phase 2 exit criterion | The `openzeppelin-relayer` adapter is in place and tested against a fake relayer (denied address, network, value and contract all fail closed). One real attestation through a deployed OZ Relayer on Base Sepolia is still needed, run as `npm run shadow-compare --workspace apps/api -- openzeppelin-relayer` |
-| Phase 3 `openid4vp` adapter | The current `AttributePort` is a single synchronous pull. A wallet presentation needs a request (nonce, state) and a separate wallet response, so this means new routes — an architecture decision. The plan also keeps assurance off until the pilot states why it is needed |
+| Phase 3 `openid4vp` adapter | A two-step session port: a request (nonce, state) and a separate wallet response, so new routes. Shared with any future liveness vendor. Built only once the pilot states why assurance is needed |
 | Phase 3 sandbox check | One consented end-to-end check before any adapter is labelled verified |
 | Phase 4 observation window | Run on a real candidate once one exists |
-| `/verify-identity` attribute mode | The attribute is not bound to the proof's reporter and can be re-attached. Off by default; it is superseded by the `openid4vp` design above |
 | CI runners | GitHub Actions jobs on the account stopped starting on 2026-09-26 (billing). Until they run again, `npm run verify` locally is the gate |
-| Scoped next | On-device ZK proof, hardware attestation / TEE signing, store publication, live Neuro verified-attribute POST, schema v2 with the sealed precise location |
+| Scoped next | On-device ZK proof, hardware attestation / TEE signing, store publication, schema v2 with the sealed precise location |
 | Programme inputs | A baseline for the cost figure (reports per month, re-visit share, cost per trip) and the pilot legal preconditions — programme work, not code |
 
 ### Replacing Dwellir and Neuro: vendor findings
@@ -341,7 +348,7 @@ boolean. This also needs the two-step port.
 **Proposed order:** (1) the RPC cut-over, which needs only a CDP project; (2) a two-step session
 port shared by liveness and attributes, with `none` adapters, behind the existing
 off-by-default switch; (3) one liveness adapter and the `openid4vp` adapter, each passing a
-consented sandbox check before it is labelled verified; (4) remove `neuro.ts`.
+consented sandbox check before it is labelled verified. Step (4), removing `neuro.ts`, is done.
 
 ### Evaluated, not integrated: Cavos
 

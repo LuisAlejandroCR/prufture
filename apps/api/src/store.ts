@@ -25,18 +25,10 @@ export interface ReviewRecord {
   reviewedAt: string;
 }
 
-/** A verified attribute recorded against a proof. Boolean only — zero PII by construction. */
-export interface VerifiedAttributeRecord {
-  attribute: string;
-  value: boolean;
-  checkedAt: string;
-}
-
 export interface Entry {
   payload: ProofPublicPayload;
   attestations: AttestationRecord[];
-  verifiedAttribute?: VerifiedAttributeRecord;
-  /** Selfie liveness verdict. Boolean only, set by /liveness-result. Separate from verifiedAttribute. */
+  /** Selfie liveness verdict. Boolean only, set by /liveness-result. */
   verifiedPerson?: boolean;
   /** True when the liveness verdict above was recorded while the provider was degraded (not a real fail). */
   verifiedPersonDegraded?: boolean;
@@ -133,7 +125,6 @@ function load(): void {
           byHash.set(hash, {
             payload: v.payload,
             attestations: sanitizeAttestations(v.attestations),
-            verifiedAttribute: v.verifiedAttribute,
             verifiedPerson: typeof v.verifiedPerson === "boolean" ? v.verifiedPerson : undefined,
             verifiedPersonDegraded:
               typeof v.verifiedPersonDegraded === "boolean" ? v.verifiedPersonDegraded : undefined,
@@ -227,15 +218,6 @@ export function addAttestation(proofHash: string, rec: AttestationRecord): void 
     entry.attestations.push(rec);
     scheduleFlush();
   }
-}
-
-/** Record a verified attribute against a proof. Only the boolean + name + timestamp are kept. */
-export function setVerifiedAttribute(proofHash: string, rec: VerifiedAttributeRecord): boolean {
-  const entry = byHash.get(proofHash);
-  if (!entry) return false;
-  entry.verifiedAttribute = { attribute: rec.attribute, value: rec.value, checkedAt: rec.checkedAt };
-  scheduleFlush();
-  return true;
 }
 
 /**

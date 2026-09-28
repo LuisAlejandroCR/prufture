@@ -99,35 +99,9 @@ test("invariant: /proof and /proofs expose only a coarse region, never the full 
   assert.ok(!JSON.stringify(list).includes(full));
 });
 
-test("/verify-identity: unknown proofHash => 404", async () => {
-  assert.equal((await call("/verify-identity", { proofHash: "b".repeat(64) })).status, 404);
-});
-
-test("/verify-identity: Neuro unconfigured => 200 degraded, proof unchanged, no verifiedAttribute", async () => {
+test("/proof no longer carries a verifiedAttribute field", async () => {
   const hash = "7".repeat(64);
   await call("/sync", signPayload(payload(hash), kp.privateKey));
-  const res = await call("/verify-identity", { proofHash: hash, attribute: "age_majority" });
-  assert.equal(res.status, 200);
-  const j = (await res.json()) as { status: string; verifiedAttribute: unknown; result: { available: boolean } };
-  assert.equal(j.status, "degraded");
-  assert.equal(j.verifiedAttribute, null);
-  assert.equal(j.result.available, false);
-
-  const proof = (await (await app.request("/proof/" + hash)).json()) as { verifiedAttribute: unknown };
-  assert.equal(proof.verifiedAttribute, null);
-});
-
-test("invariant: /proof never serializes an identity field even after a verified attribute is set", async () => {
-  const hash = "8".repeat(64);
-  await call("/sync", signPayload(payload(hash), kp.privateKey));
-  // Simulate an available result by writing straight to the store (Neuro stays BLOCKED in CI).
-  const { setVerifiedAttribute } = await import("../src/store.js");
-  setVerifiedAttribute(hash, { attribute: "age_majority", value: true, checkedAt: new Date().toISOString() });
-
   const proof = (await (await app.request("/proof/" + hash)).json()) as Record<string, unknown>;
-  assert.deepEqual(proof.verifiedAttribute, { attribute: "age_majority", value: true });
-  const s = JSON.stringify(proof);
-  for (const bad of ["ssn", "dateOfBirth", "fullName", "passport", "email", "checkedAt", "subjectRef"]) {
-    assert.equal(s.toLowerCase().includes(bad.toLowerCase()), false, `leaked ${bad}`);
-  }
+  assert.ok(!("verifiedAttribute" in proof));
 });

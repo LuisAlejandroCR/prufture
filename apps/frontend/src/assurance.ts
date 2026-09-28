@@ -20,7 +20,7 @@ export function assuranceLabel(a: Assurance): string {
  * Map the server's /proof/:hash liveness fields onto an Assurance.
  * - `verifiedPerson === null` (no verdict was ever attached): "not_enrolled" when the identity
  *   step is off (the default journey never runs a check), else "unavailable" (the step ran but
- *   Neuro never returned a verdict onto this proof).
+ *   the provider never returned a verdict onto this proof).
  * - `verifiedPerson === true`: "verified".
  * - `verifiedPerson === false` with `verifiedPersonDegraded === true`: "unavailable" — the
  *   provider was down, this is NOT a failed check. Must never collapse into "invalid".

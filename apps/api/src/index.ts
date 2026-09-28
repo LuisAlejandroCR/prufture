@@ -20,13 +20,12 @@ import {
   getProof,
   setReview,
   setPreciseLocationCipher,
-  setVerifiedAttribute,
   setVerifiedPerson,
   upsertProof,
 } from "./store.js";
 import { pushRegistrationCount, registerPushToken } from "./push-store.js";
 import { attestOnce } from "./relayer.js";
-import { checkLivenessVerdict, fetchVerifiedAttribute } from "./assurance.js";
+import { checkLivenessVerdict } from "./assurance.js";
 import { sendVerifyUrl, type Channel } from "./channels.js";
 import { issueTicket, readTicket } from "./liveness-ticket.js";
 import { maybeNotify } from "./notify.js";
@@ -206,53 +205,23 @@ app.post("/notify", async (c) => {
 app.post("/verify-identity", async (c) => {
   const raw = await readJsonObject(c);
   if (!raw) return c.json({ error: "invalid json" }, 400);
-  const body = raw as {
-    proofHash?: string;
-    attribute?: string;
-    subjectRef?: string;
-    frames?: unknown;
-    nonceHex?: string;
-    challenges?: unknown;
-  };
+  const body = raw as { frames?: unknown; nonceHex?: unknown; challenges?: unknown };
 
-  // Liveness mode: selfie frames, no proofHash yet. The verdict is attached later via
-  // /liveness-result. Only a boolean is returned; frames are never stored or logged.
-  if (Array.isArray(body.frames)) {
-    const result = await checkLivenessVerdict({
-      frames: body.frames as string[],
-      nonceHex: String(body.nonceHex ?? ""),
-      challenges: Array.isArray(body.challenges) ? (body.challenges as string[]).map(String) : [],
-    });
-    // The ticket is what /liveness-result records; the booleans are for the app's own screen.
-    const verdict = result.available
-      ? { verifiedPerson: result.data.verifiedPerson, degraded: false }
-      : { verifiedPerson: false, degraded: true };
-    return c.json({ ...verdict, ticket: issueTicket(verdict) }, 200);
-  }
+  // Liveness only. The verified-attribute mode was removed: its attribute was not bound to the
+  // proof's reporter and could be re-attached. Its replacement is the planned openid4vp flow.
+  if (!Array.isArray(body.frames)) return c.json({ error: "liveness frames required" }, 400);
 
-  // Default mode: verified age attribute against an existing proof.
-  if (!body.proofHash || !getProof(body.proofHash)) {
-    return c.json({ error: "unknown proofHash" }, 404);
-  }
-
-  const result = await fetchVerifiedAttribute({ attribute: body.attribute, subjectRef: body.subjectRef });
-
-  // Degraded (sandbox down / unconfigured): 200 with the typed result, proof unchanged.
-  if (!result.available) {
-    return c.json({ status: "degraded", verifiedAttribute: null, result }, 200);
-  }
-
-  // Available: record ONLY { attribute, value } — no identity field is ever persisted.
-  setVerifiedAttribute(body.proofHash, {
-    attribute: result.data.attribute,
-    value: result.data.value,
-    checkedAt: result.checkedAt,
+  // No proofHash yet: the verdict is attached later via /liveness-result. Frames are never stored.
+  const result = await checkLivenessVerdict({
+    frames: body.frames.map(String),
+    nonceHex: String(body.nonceHex ?? ""),
+    challenges: Array.isArray(body.challenges) ? body.challenges.map(String) : [],
   });
-  return c.json({
-    status: "recorded",
-    verifiedAttribute: { attribute: result.data.attribute, value: result.data.value },
-    result,
-  });
+  // The ticket is what /liveness-result records; the booleans are for the app's own screen.
+  const verdict = result.available
+    ? { verifiedPerson: result.data.verifiedPerson, degraded: false }
+    : { verifiedPerson: false, degraded: true };
+  return c.json({ ...verdict, ticket: issueTicket(verdict) }, 200);
 });
 
 app.post("/liveness-result", async (c) => {
@@ -326,10 +295,6 @@ app.get("/proof/:hash", (c) => {
     capturedAt: entry.payload.capturedAt,
     attestationCount: entry.attestations.length,
     attestations: entry.attestations,
-    // Boolean-only: { attribute, value }. Never an identity field. Absent until /verify-identity.
-    verifiedAttribute: entry.verifiedAttribute
-      ? { attribute: entry.verifiedAttribute.attribute, value: entry.verifiedAttribute.value }
-      : null,
     // Selfie liveness verdict. null until a result is attached. Boolean only, never an identity field.
     verifiedPerson: typeof entry.verifiedPerson === "boolean" ? entry.verifiedPerson : null,
     // True when the verdict above reflects a degraded provider, not an actual failed check.

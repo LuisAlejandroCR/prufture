@@ -1,13 +1,17 @@
-// assurance.ts: separate liveness and verified-attribute ports, both DEFAULT OFF; an unknown provider
-// fails closed to `none`. Minimal-verdict rule enforced here: only { verifiedPerson } or { attribute,
-// value } pass — no score, session, frame or raw vendor response — and nothing can block offline capture.
+// assurance.ts: the liveness port, DEFAULT OFF with only a `none` adapter until a pilot names a need;
+// any provider name resolves to `none`. Minimal-verdict rule enforced here: only { verifiedPerson }
+// passes — no score, session, frame or raw vendor response — and nothing can block offline capture.
 
-import type { ExternalResult } from "@proof/core";
-import { env } from "./env.js";
-import { guard, unavailable } from "@proof/core";
-import { checkLiveness, getVerifiedAttribute, type LivenessInput, type VerifiedAttribute, type VerifiedAttributeInput } from "./neuro.js";
+import { guard, unavailable, type ExternalResult } from "@proof/core";
 
-export type { LivenessInput, VerifiedAttribute, VerifiedAttributeInput };
+export interface LivenessInput {
+  /** Small base64 frames from the selfie challenge. Sent once, never logged or stored. */
+  frames: string[];
+  /** 16-byte hex nonce that tied the frames to one attempt. */
+  nonceHex: string;
+  /** The gesture sequence the reporter was asked to perform. */
+  challenges: string[];
+}
 
 /** The only shape a liveness provider may return. */
 export interface LivenessVerdict {
@@ -21,14 +25,7 @@ export interface LivenessPort {
   check(input: LivenessInput): Promise<ExternalResult<LivenessVerdict>>;
 }
 
-export interface AttributePort {
-  readonly name: string;
-  isConfigured(): boolean;
-  get(input: VerifiedAttributeInput): Promise<ExternalResult<VerifiedAttribute>>;
-}
-
 const OFF_LIVENESS = "liveness disabled (LIVENESS_PROVIDER=none)";
-const OFF_ATTRIBUTE = "verified attributes disabled (ATTRIBUTE_PROVIDER=none)";
 
 export const noneLiveness: LivenessPort = {
   name: "none",
@@ -38,48 +35,7 @@ export const noneLiveness: LivenessPort = {
   },
 };
 
-export const noneAttribute: AttributePort = {
-  name: "none",
-  isConfigured: () => false,
-  async get(): Promise<ExternalResult<VerifiedAttribute>> {
-    return unavailable("attribute", OFF_ATTRIBUTE);
-  },
-};
-
-/**
- * The current vendor, unchanged, now addressed through the port. neuro.ts still owns the wire
- * format and its own zero-PII guarantees; this adapter only re-narrows the result to the port's
- * verdict shape so a swap cannot widen what callers see.
- */
-export const neuroLiveness: LivenessPort = {
-  name: "neuro",
-  isConfigured: () => neuroConfigured(),
-  async check(input: LivenessInput): Promise<ExternalResult<LivenessVerdict>> {
-    const r = await checkLiveness(input);
-    if (!r.available) return r;
-    // Re-narrow: exactly one boolean survives, whatever the adapter handed back.
-    return { ...r, data: { verifiedPerson: r.data.verifiedPerson === true } };
-  },
-};
-
-export const neuroAttribute: AttributePort = {
-  name: "neuro",
-  isConfigured: () => neuroConfigured(),
-  async get(input: VerifiedAttributeInput): Promise<ExternalResult<VerifiedAttribute>> {
-    const r = await getVerifiedAttribute(input);
-    if (!r.available) return r;
-    return { ...r, data: { attribute: r.data.attribute, value: r.data.value === true } };
-  },
-};
-
-function neuroConfigured(): boolean {
-  // Read the SAME source neuro.ts reads, so "configured" here can never disagree with whether
-  // the adapter will actually call out. (env.neuroUrl/neuroToken are snapshot at module load.)
-  return Boolean(env.neuroUrl && env.neuroToken);
-}
-
-const LIVENESS_PORTS: Record<string, LivenessPort> = { none: noneLiveness, neuro: neuroLiveness };
-const ATTRIBUTE_PORTS: Record<string, AttributePort> = { none: noneAttribute, neuro: neuroAttribute };
+const LIVENESS_PORTS: Record<string, LivenessPort> = { none: noneLiveness };
 
 /** Default OFF. An unknown name resolves to `none` — it never enables a vendor by accident. */
 export function selectedLivenessPort(): LivenessPort {
@@ -87,30 +43,20 @@ export function selectedLivenessPort(): LivenessPort {
   return LIVENESS_PORTS[name] ?? noneLiveness;
 }
 
-export function selectedAttributePort(): AttributePort {
-  const name = process.env.ATTRIBUTE_PROVIDER?.trim() || "none";
-  return ATTRIBUTE_PORTS[name] ?? noneAttribute;
-}
-
 /**
- * What the API calls. Selection, the off switch, and the unconfigured case all collapse into the
- * same typed unavailable, so a caller can never tell a disabled provider from a broken one in a
- * way that would change the reporter's flow — it degrades either way.
+ * What the API calls. The off switch and an unconfigured adapter collapse into the same typed
+ * unavailable, so the reporter's flow degrades the same way whichever it is.
  */
-export async function checkLivenessVerdict(input: LivenessInput): Promise<ExternalResult<LivenessVerdict>> {
-  const port = selectedLivenessPort();
+export async function checkLivenessVerdict(
+  input: LivenessInput,
+  port: LivenessPort = selectedLivenessPort(),
+): Promise<ExternalResult<LivenessVerdict>> {
   if (!isConfiguredSafely(port)) {
     return unavailable("liveness", port.name === "none" ? OFF_LIVENESS : `${port.name} not configured`);
   }
-  return runThrough("liveness", port.name, () => port.check(input));
-}
-
-export async function fetchVerifiedAttribute(input: VerifiedAttributeInput): Promise<ExternalResult<VerifiedAttribute>> {
-  const port = selectedAttributePort();
-  if (!isConfiguredSafely(port)) {
-    return unavailable("attribute", port.name === "none" ? OFF_ATTRIBUTE : `${port.name} not configured`);
-  }
-  return runThrough("attribute", port.name, () => port.get(input));
+  const r = await runThrough("liveness", port.name, () => port.check(input));
+  // Re-narrow: exactly one boolean survives, whatever the adapter handed back.
+  return r.available ? { ...r, data: { verifiedPerson: r.data.verifiedPerson === true } } : r;
 }
 
 /** An adapter's isConfigured() is adapter code: a throw from it means "not configured". */
@@ -123,9 +69,8 @@ function isConfiguredSafely(port: { isConfigured(): boolean }): boolean {
 }
 
 /**
- * Make the ports' typed contract STRUCTURAL rather than a promise every adapter has to keep.
- * Both adapters today guard internally, so nothing throws here now — but assurance must never
- * be able to break the reporter's flow, and the plan exists precisely so adapters get added.
+ * Makes the port's typed contract structural: a throwing or non-conforming adapter degrades to a
+ * typed unavailable instead of breaking the reporter's flow.
  */
 export async function runThrough<T>(
   source: string,
