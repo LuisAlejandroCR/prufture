@@ -1,20 +1,19 @@
-// CellMap.tsx: map of approximate 5-char cells drawn as shaded rectangles — never a pin at a precise
-// point. Used for the reporter's own area and for nearby assignments. Offline it shows a plain text
-// card instead, because map tiles need signal.
+// CellMap.tsx: map of approximate 5-char cells drawn as shaded rectangles — never a pin, because a
+// pin at the cell centre implies a precision the data does not have. Tapping a task area opens it.
+// Offline it shows a plain text card instead, because map tiles need signal.
 
 import NetInfo from "@react-native-community/netinfo";
 import { useEffect, useMemo, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import MapView, { Marker, Polygon, type Region } from "react-native-maps";
+import MapView, { Polygon, type Region } from "react-native-maps";
 import { decodeGeohashBounds } from "../geohash";
-import { cellCentre } from "../tasks";
 import { color, radius, space, type } from "../theme";
 import { Icon } from "./icons/Icon";
 
 export interface MapCell {
   key: string;
   cell: string;
-  /** Marker title at the cell centre; omit for the reporter's own area (rectangle only). */
+  /** Task title, used only for the accessible summary; no marker is drawn. */
   title?: string;
   subtitle?: string;
   tone?: "self" | "task";
@@ -101,20 +100,6 @@ export function CellMap({
             />
           );
         })}
-        {cells
-          .filter((c) => c.title)
-          .map((c) => {
-            return (
-              <Marker
-                key={`${c.key}-pin`}
-                coordinate={cellCentre(c.cell)}
-                title={c.title}
-                description={c.subtitle}
-                pinColor={color.primary}
-                onCalloutPress={c.onPress}
-              />
-            );
-          })}
       </MapView>
     </View>
   );

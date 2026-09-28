@@ -66,7 +66,7 @@ export default function ReportStatusScreen() {
   if (group.length === 0) {
     return (
       <Screen>
-        <BackLink label="Updates" onPress={() => router.back()} />
+        <BackLink label="My reports" onPress={() => router.back()} />
         <Text style={styles.body}>This report could not be found.</Text>
       </Screen>
     );
@@ -88,7 +88,7 @@ export default function ReportStatusScreen() {
 
   return (
     <Screen>
-      <BackLink label="Updates" onPress={() => router.back()} />
+      <BackLink label="My reports" onPress={() => router.back()} />
       <Text style={styles.title} accessibilityRole="header">
         {task.title}
       </Text>

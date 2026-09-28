@@ -1,5 +1,6 @@
 // ui.tsx: shared presentational primitives for the reporter app — screen frame, card, buttons,
-// status pill, reassurance line, chevron row, section label, progress dots and notice box.
+// status pill, reassurance line, chevron row, section label, progress dots, notice box, category
+// badge, brand mark and the Offline pill.
 // Token-driven only (src/theme.ts); screens compose these.
 
 import type { ReactNode } from "react";
@@ -13,7 +14,9 @@ import {
   ViewStyle,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { categoryAccent, categoryIcon, type Category } from "../tasks";
 import {
+  categorySoft,
   color,
   radius,
   shadow,
@@ -286,7 +289,60 @@ export function BackLink({ label, onPress }: { label: string; onPress: () => voi
   );
 }
 
+/** Soft tinted circle with the programme category icon (mission rows, catalog, report header). */
+export function CategoryBadge({ category, size = 48 }: { category: Category; size?: number }) {
+  const accent = categoryAccent[category];
+  return (
+    <View
+      style={[s.badge, { width: size, height: size, backgroundColor: categorySoft[accent] }]}
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+    >
+      <Icon name={categoryIcon[category]} size={Math.round(size * 0.5)} color={color[accent]} />
+    </View>
+  );
+}
+
+/** "Prufture" wordmark with the sprout mark, for the top of tab screens. */
+export function BrandMark() {
+  return (
+    <View style={s.brand} accessibilityRole="header" accessibilityLabel="Prufture">
+      <Icon name="sprout" size={24} filled color={color.primary} />
+      <Text style={s.brandText}>Prufture</Text>
+    </View>
+  );
+}
+
+/** Shown only without signal. Offline is a normal state, so it is calm, never an error. */
+export function OfflinePill({ online }: { online: boolean }) {
+  if (online) return null;
+  return (
+    <View style={s.offlineWrap} accessibilityRole="text" accessibilityLabel="Offline. Reports sync when online.">
+      <View style={s.offlinePill}>
+        <Icon name="offline" size={14} color={color.primary} />
+        <Text style={s.offlineText}>Offline</Text>
+      </View>
+      <Text style={s.offlineCaption}>Reports sync when online</Text>
+    </View>
+  );
+}
+
 const s = StyleSheet.create({
+  badge: { borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
+  brand: { flexDirection: "row", alignItems: "center", gap: space.xs },
+  brandText: { ...type.title, color: color.text },
+  offlineWrap: { alignItems: "flex-end", gap: 2 },
+  offlinePill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.xs,
+    paddingVertical: space.xs,
+    paddingHorizontal: space.md,
+    borderRadius: radius.pill,
+    backgroundColor: color.primarySoft,
+  },
+  offlineText: { ...type.meta, color: color.text, fontWeight: "700" },
+  offlineCaption: { ...type.meta, fontSize: 11, color: color.muted },
   flex: { flex: 1 },
   screen: { flex: 1, backgroundColor: color.background },
   footer: {

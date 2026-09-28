@@ -37,7 +37,16 @@ export type IconName =
   | "language"
   | "accessibility"
   | "info"
-  | "signout";
+  | "signout"
+  | "list"
+  | "map"
+  | "sprout"
+  | "water"
+  | "book"
+  | "health"
+  | "nutrition"
+  | "shield"
+  | "leaf";
 
 export interface IconProps {
   name: IconName;
@@ -268,6 +277,59 @@ function render(
           <Path {...o} d="M14 5.5H6.5a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1H14" />
           <Polyline {...o} points="16.5 8.5 20.5 12 16.5 15.5" />
           <Line {...o} x1="10" y1="12" x2="20" y2="12" />
+        </>
+      );
+    case "list":
+      return (
+        <>
+          <Line {...o} x1="9" y1="7" x2="20" y2="7" />
+          <Line {...o} x1="9" y1="12" x2="20" y2="12" />
+          <Line {...o} x1="9" y1="17" x2="20" y2="17" />
+          <Circle {...solid} cx="5" cy="7" r="1.2" />
+          <Circle {...solid} cx="5" cy="12" r="1.2" />
+          <Circle {...solid} cx="5" cy="17" r="1.2" />
+        </>
+      );
+    case "map":
+      return <Path {...o} d="M3.5 6.5 9 4.5l6 2 5.5-2v13l-5.5 2-6-2-5.5 2v-13ZM9 4.5v13M15 6.5v13" />;
+    case "sprout":
+      return (
+        <>
+          <Path {...(filled ? solid : o)} d="M12 20.5V12c0-4 2.6-6.8 7.5-7-0.2 4.7-3 7.3-7.5 7.3" />
+          <Path {...(filled ? solid : o)} d="M12 14.5c0-3.3-2.2-5.6-6.5-5.8.2 3.9 2.6 6 6.5 6" />
+        </>
+      );
+    case "water":
+      return <Path {...(filled ? solid : o)} d="M12 3.5s6 6.4 6 10.7a6 6 0 0 1-12 0C6 9.9 12 3.5 12 3.5Z" />;
+    case "book":
+      return (
+        <>
+          <Path {...o} d="M12 6.5C10 5 7 4.5 3.5 5v13c3.5-.5 6.5 0 8.5 1.5 2-1.5 5-2 8.5-1.5V5C17 4.5 14 5 12 6.5Z" />
+          <Line {...o} x1="12" y1="6.5" x2="12" y2="19.5" />
+        </>
+      );
+    case "health":
+      return (
+        <>
+          <Path {...o} d="M6.5 3.5v5a4 4 0 0 0 8 0v-5" />
+          <Path {...o} d="M10.5 12.5v2a4.5 4.5 0 0 0 9 0V13" />
+          <Circle {...o} cx="19.5" cy="11" r="1.8" />
+        </>
+      );
+    case "nutrition":
+      return (
+        <>
+          <Path {...o} d="M3.5 12h17a8.5 8.5 0 0 1-17 0Z" />
+          <Path {...o} d="M12 12c0-3 1.6-5 4.5-5.5-.2 2.8-1.9 4.6-4.5 5" />
+        </>
+      );
+    case "shield":
+      return <Path {...(filled ? solid : o)} d="M12 3.2 5.5 6v6c0 4.4 3 7.5 6.5 8.8 3.5-1.3 6.5-4.4 6.5-8.8V6L12 3.2Z" />;
+    case "leaf":
+      return (
+        <>
+          <Path {...o} d="M5 19c0-8 5-13.5 14.5-14-.3 9.5-6 14.5-14 14Z" />
+          <Line {...o} x1="5" y1="19" x2="13" y2="11" />
         </>
       );
     default:

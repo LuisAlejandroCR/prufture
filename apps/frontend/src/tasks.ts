@@ -180,6 +180,16 @@ export function recommendedTask(myCell: string | null = null): TaskDef {
   return sortByDistance(listTasks(), myCell)[0] ?? fromItem(FALLBACK_ITEM, "unknown");
 }
 
+/** Icon drawn in the soft category circle. Icon names are plain strings so this module stays RN-free. */
+export const categoryIcon: Record<Category, "book" | "water" | "health" | "nutrition" | "shield" | "leaf"> = {
+  Education: "book",
+  "Water and sanitation": "water",
+  Health: "health",
+  Nutrition: "nutrition",
+  "Child protection": "shield",
+  Climate: "leaf",
+};
+
 export const categoryAccent: Record<Category, "education" | "water" | "health" | "nutrition" | "protection" | "climate"> = {
   Education: "education",
   "Water and sanitation": "water",

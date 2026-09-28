@@ -1,4 +1,4 @@
-// (tabs)/updates.tsx: what happened after each report was sent — one card per report (per-photo
+// (tabs)/updates.tsx: "My reports" — what happened after each report was sent — one card per report (per-photo
 // proofs grouped by the local reportId), friendly status and relative time, plus a manual
 // "check now". No hashes, no error traces.
 
@@ -82,7 +82,7 @@ export default function UpdatesScreen() {
 
   return (
     <Screen scroll={false}>
-      <ScreenTitle hint="Every report you have made, newest first.">Updates</ScreenTitle>
+      <ScreenTitle hint="Every report you have made, newest first.">My reports</ScreenTitle>
 
       {reachError ? (
         <Notice tone="warning" icon="offline">
@@ -92,7 +92,7 @@ export default function UpdatesScreen() {
 
       {groups.length === 0 ? (
         <View style={styles.empty}>
-          <Icon name="updates" size={32} color={color.faint} />
+          <Icon name="review" size={32} color={color.faint} />
           <Text style={styles.emptyTitle}>No reports yet</Text>
           <Text style={styles.emptyBody}>
             When you finish a report it appears here, and you can follow it from saved to confirmed.
