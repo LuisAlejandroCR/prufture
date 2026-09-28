@@ -1,7 +1,6 @@
-// page.tsx: landing for judges, partners, and community organizations. Not the
-// reporter workflow. Plain-language proposition, offline-first, privacy, a three-step
-// process, links to a sample report and the dashboard, open-source and honest status.
-// Every claim stays true to what the code does: no ZK, TEE, or deployment claim.
+// page.tsx: cinematic public landing page for judges, partners, and communities.
+// It borrows the editorial product-theater rhythm of the supplied reference video,
+// using only first-party copy and CSS-built visuals over an iOS-inspired palette.
 
 import Link from "next/link";
 import { qrPath } from "./pitch/qr";
@@ -10,198 +9,142 @@ const SAMPLE_HASH =
   process.env.NEXT_PUBLIC_SAMPLE_HASH ??
   "992f8d6232210e99a6ed60a9c23dc22b3a304cd0c0d13bbdecf16f3c573d5d75";
 
-// EAS build page for the Android preview APK. iOS has no equivalent standalone install
-// (no Apple Developer account) — iOS reviewers use the demo video or the web.
 const ANDROID_BUILD_URL =
   process.env.NEXT_PUBLIC_ANDROID_BUILD_URL ??
   "https://expo.dev/accounts/alejoo_oo/projects/prufture/builds/4bb39156-6542-44af-b2f8-1976cc90e47d";
 
-export default function Home() {
+function Mark({ compact = false }: { compact?: boolean }) {
   return (
-    <main className="wrap fade-in">
-      <div className="hero">
-        <div className="hero-copy">
-          <h1>
-            Show what is happening <span className="accent">nearby.</span>
-          </h1>
-          <p className="lede">
-            A simple way for communities to document completed activities, even when the connection
-            drops. Photos and a few short answers, no account, no personal data.
-          </p>
-          <div className="cta-row">
-            <Link className="btn" href={`/verify/${SAMPLE_HASH}`}>
-              See a sample report
-            </Link>
-            <Link className="btn secondary" href="/dashboard">
-              Open the stakeholder dashboard
-            </Link>
+    <span className="landing-mark" aria-label="Prufture">
+      <span className="mark-orbit" aria-hidden="true"><span /><span /><span /></span>
+      {!compact && <span>Prufture</span>}
+    </span>
+  );
+}
+
+function ArrowIcon() {
+  return <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11M11 6l4 4-4 4" fill="none" stroke="currentColor" strokeWidth="1.8" /></svg>;
+}
+
+function CheckIcon() {
+  return <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m4 10 4 4 8-9" fill="none" stroke="currentColor" strokeWidth="2" /></svg>;
+}
+
+function SignalIcon() {
+  return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 15.5a10 10 0 0 1 14 0M8.5 19a5 5 0 0 1 7 0M2 12a15 15 0 0 1 20 0" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" /></svg>;
+}
+
+function ProductPreview() {
+  return (
+    <div className="product-stage" aria-label="Prufture report preview">
+      <div className="stage-glow" aria-hidden="true" />
+      <div className="signal-card glass-card float-one">
+        <span className="signal-icon"><SignalIcon /></span>
+        <span><strong>Works offline</strong><small>Ready when signal returns</small></span>
+      </div>
+      <div className="confirm-card glass-card float-two">
+        <span className="mini-check"><CheckIcon /></span>
+        <span><strong>Report confirmed</strong><small>2 community confirmations</small></span>
+      </div>
+      <div className="phone" aria-hidden="true">
+        <div className="phone-bezel">
+          <div className="dynamic-island" />
+          <div className="phone-topline"><span>9:41</span><span>● ● ▰</span></div>
+          <div className="phone-content">
+            <div className="phone-brand"><Mark compact /><span>Field report</span></div>
+            <p className="phone-kicker">TODAY&apos;S TASK</p>
+            <h2>Solar light installation</h2>
+            <div className="photo-placeholder">
+              <span className="sun" /><span className="hill hill-one" /><span className="hill hill-two" />
+              <span className="panel"><i /><i /><i /></span>
+            </div>
+            <div className="phone-progress"><span /></div>
+            <div className="phone-meta"><span>Saved on this phone</span><strong>3 of 4</strong></div>
+            <div className="phone-button">Continue</div>
           </div>
         </div>
-
-        <aside className="payload card" aria-label="What a report carries">
-          <p
-            className="faint"
-            style={{ margin: 0, fontSize: "0.8rem", letterSpacing: "0.04em", textTransform: "uppercase" }}
-          >
-            What a report carries
-          </p>
-          <ul className="payload-list">
-            <li>
-              <strong>The activity</strong>
-              <span className="muted">which field task was done</span>
-            </li>
-            <li>
-              <strong>An approximate area</strong>
-              <span className="muted">a coarse region, never an exact location</span>
-            </li>
-            <li>
-              <strong>The capture time</strong>
-              <span className="muted">when the photo was taken</span>
-            </li>
-            <li>
-              <strong>A public reference</strong>
-              <span className="muted">so anyone can check the report later</span>
-            </li>
-          </ul>
-          <p className="faint" style={{ margin: 0, fontSize: "0.85rem" }}>
-            No photo, no name, and no exact location leaves the phone with the report.
-          </p>
-        </aside>
       </div>
+      <div className="privacy-chip glass-card float-three"><span className="privacy-dot" /> No personal data</div>
+    </div>
+  );
+}
 
-      <h2 id="demo">See it in action</h2>
-      <p className="muted" style={{ marginTop: "calc(-1 * var(--sp-2))" }}>
-        A 1 minute 41 second walkthrough: offline capture, on-device signing, and a real on-chain
-        record with no personal data.
-      </p>
-      <div
-        style={{
-          position: "relative",
-          width: "100%",
-          aspectRatio: "16 / 9",
-          borderRadius: "var(--radius-md, 12px)",
-          overflow: "hidden",
-          border: "1px solid var(--border)",
-        }}
-      >
-        <iframe
-          src="https://www.youtube-nocookie.com/embed/C101NjqKhuQ"
-          title="Prufture demo"
-          loading="lazy"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0 }}
-        />
-      </div>
+export default function Home() {
+  const { size, path } = qrPath(ANDROID_BUILD_URL);
+  return (
+    <main className="landing">
+      <nav className="landing-nav" aria-label="Primary navigation">
+        <Link className="brand-link" href="/"><Mark /></Link>
+        <div className="nav-links"><a href="#how">How it works</a><a href="#privacy">Privacy</a><Link href="/dashboard">Dashboard</Link></div>
+        <Link className="nav-action" href={`/verify/${SAMPLE_HASH}`}>View a report</Link>
+      </nav>
 
-      <h2 id="try">Try the app</h2>
-      <div
-        style={{
-          display: "flex",
-          flexWrap: "wrap",
-          gap: "var(--sp-5, 24px)",
-          alignItems: "flex-start",
-        }}
-      >
-        <figure
-          style={{
-            margin: 0,
-            padding: "var(--sp-3, 12px)",
-            background: "#fbf6ef",
-            border: "1px solid var(--border)",
-            borderRadius: "var(--radius-md, 12px)",
-            textAlign: "center",
-          }}
-        >
-          {(() => {
-            const { size, path } = qrPath(ANDROID_BUILD_URL);
-            return (
-              <svg
-                viewBox={`0 0 ${size} ${size}`}
-                role="img"
-                aria-label="QR code to install the Android app"
-                style={{ width: 260, height: 260, maxWidth: "72vw", display: "block" }}
-              >
-                <rect width={size} height={size} fill="#fbf6ef" />
-                <path d={path} fill="#1c1208" />
-              </svg>
-            );
-          })()}
-          <figcaption style={{ fontSize: "0.85rem", marginTop: "8px", color: "#806f5c" }}>
-            Scan with an Android phone
-          </figcaption>
-        </figure>
-        <div style={{ flex: "1 1 260px" }}>
-          <p style={{ marginTop: 0 }}>
-            <a className="btn" href={ANDROID_BUILD_URL} rel="noreferrer noopener" target="_blank">
-              Install the Android app
-            </a>
-          </p>
-          <p className="muted">
-            A preview build (APK). Open the link on an Android phone and tap Install — no store, no
-            account. It talks to the live backend, so nothing else needs to be running.
-          </p>
-          <p className="faint" style={{ fontSize: "0.9rem" }}>
-            On iPhone, watch the demo above or use this site — a standalone iOS build needs an Apple
-            Developer account, which this prototype does not have.
-          </p>
+      <section className="landing-hero">
+        <div className="hero-orb hero-orb-blue" aria-hidden="true" /><div className="hero-orb hero-orb-green" aria-hidden="true" />
+        <div className="hero-message">
+          <p className="eyebrow"><span /> Evidence that moves at the speed of trust</p>
+          <h1>Proof from the field.<br /><em>Ready for the world.</em></h1>
+          <p className="hero-lede">Communities document completed work without signal, accounts, or personal data. Prufture keeps every report clear, private, and ready to verify.</p>
+          <div className="hero-actions">
+            <Link className="landing-btn landing-btn-primary" href={`/verify/${SAMPLE_HASH}`}>Explore a real report <ArrowIcon /></Link>
+            <a className="landing-btn landing-btn-ghost" href="#how">See how it works</a>
+          </div>
+          <div className="trust-row" aria-label="Product qualities"><span><CheckIcon /> Offline first</span><span><CheckIcon /> No account</span><span><CheckIcon /> Publicly checkable</span></div>
         </div>
-      </div>
+        <ProductPreview />
+        <a className="scroll-cue" href="#story" aria-label="Scroll to learn more"><span>Scroll to discover</span><i aria-hidden="true" /></a>
+      </section>
 
-      <h2 id="how-it-works">How it works</h2>
-      <div className="steps">
-        <div className="step">
-          <span className="n" aria-hidden>
-            1
-          </span>
-          <h3>Capture offline</h3>
-          <p>
-            A community reporter photographs the completed work and answers a couple of short
-            questions. No signal needed.
-          </p>
-        </div>
-        <div className="step">
-          <span className="n" aria-hidden>
-            2
-          </span>
-          <h3>Send when there is signal</h3>
-          <p>
-            The report waits safely on the phone and sends itself once a connection returns. Nothing
-            is lost.
-          </p>
-        </div>
-        <div className="step">
-          <span className="n" aria-hidden>
-            3
-          </span>
-          <h3>Confirm and review</h3>
-          <p>
-            The programme team reviews the report. When another community member reports the same
-            activity, it is marked confirmed.
-          </p>
-        </div>
-      </div>
+      <section className="proof-strip" aria-label="Prufture principles"><div><span>OFFLINE CAPTURE</span><i>●</i><span>PRIVATE BY DESIGN</span><i>●</i><span>COMMUNITY CONFIRMED</span><i>●</i><span>OPEN VERIFICATION</span><i>●</i></div></section>
 
-      <h2>Privacy, in plain language</h2>
-      <ul className="plain">
-        <li>A report never includes the reporter&apos;s name, phone number, or any identity document.</li>
-        <li>Only an approximate area is shared, never the exact spot.</li>
-        <li>The original photo stays on the reporter&apos;s phone unless they choose to share it.</li>
-        <li>Anyone can open a report&apos;s status page with no account and no login.</li>
-      </ul>
+      <section className="story-section" id="story">
+        <div className="section-index">01 / THE MISSION</div>
+        <div className="story-grid">
+          <h2>When the network disappears,<br /><em>the work does not.</em></h2>
+          <div className="story-copy"><p>Vital community work often happens far from reliable connectivity. Prufture lets a reporter capture the moment now and safely send it later.</p><p>The result is a simple public record of what happened, where approximately, and when — without publishing who the reporter is or the exact place they stood.</p></div>
+        </div>
+        <div className="impact-row"><article><strong>0</strong><span>personal details required</span></article><article><strong>5</strong><span>characters of approximate area</span></article><article><strong>24/7</strong><span>public report checking</span></article></div>
+      </section>
 
-      <h2>Open source, honest about status</h2>
-      <p className="muted">
-        Prufture is an open prototype built for a hackathon. It is not a UNICEF product and carries
-        no endorsement or deployment. The device key is kept in the phone&apos;s operating system
-        secure store. Hardware attestation and an on-device zero-knowledge identity proof are named
-        next steps, not current guarantees.
-      </p>
-      <p className="faint" style={{ fontSize: "0.9rem" }}>
-        Check any shared report at <code>/verify/&lt;reference&gt;</code>. Programme staff use the{" "}
-        <Link href="/dashboard">dashboard</Link>.{" "}
-        <Link href="/pitch">Pitch deck</Link>.
-      </p>
+      <section className="process-section" id="how">
+        <div className="section-heading light-heading"><div className="section-index">02 / THE JOURNEY</div><h2>Four quiet steps.<br /><em>One trusted record.</em></h2></div>
+        <div className="process-cards">
+          <article className="process-card process-blue"><span className="card-number">01</span><div className="process-symbol camera-symbol"><i /></div><h3>Capture</h3><p>Photograph completed work and answer a few short questions.</p></article>
+          <article className="process-card process-purple"><span className="card-number">02</span><div className="process-symbol save-symbol"><i /></div><h3>Save offline</h3><p>The report stays safely on the phone, even without a connection.</p></article>
+          <article className="process-card process-orange"><span className="card-number">03</span><div className="process-symbol send-symbol"><i /></div><h3>Send later</h3><p>Once signal returns, the queued report sends itself automatically.</p></article>
+          <article className="process-card process-green"><span className="card-number">04</span><div className="process-symbol verify-symbol"><CheckIcon /></div><h3>Confirm</h3><p>Others can check the public record and add independent confirmation.</p></article>
+        </div>
+        <p className="swipe-note">Designed for the real world — low signal, small screens, high stakes.</p>
+      </section>
+
+      <section className="privacy-section" id="privacy">
+        <div className="privacy-visual" aria-hidden="true">
+          <div className="privacy-rings"><span /><span /><span /></div><div className="privacy-core"><Mark compact /><strong>Yours stays yours.</strong></div>
+          <span className="orbit-label orbit-name">No name</span><span className="orbit-label orbit-photo">Photo stays local</span><span className="orbit-label orbit-location">Approximate area only</span>
+        </div>
+        <div className="privacy-copy"><div className="section-index">03 / PRIVACY</div><h2>Share the outcome.<br /><em>Not the person.</em></h2><p>A public report carries the activity, an approximate area, capture time, and a reference. No name, phone number, identity document, or exact location is included.</p>
+          <ul><li><CheckIcon /><span><strong>Original media stays on the phone</strong> unless the reporter explicitly chooses to share it.</span></li><li><CheckIcon /><span><strong>No login is needed</strong> to check a shared report.</span></li><li><CheckIcon /><span><strong>Honest by design</strong> with no claim beyond what the prototype implements.</span></li></ul>
+          <Link className="text-link" href="/privacy">Read our privacy approach <ArrowIcon /></Link>
+        </div>
+      </section>
+
+      <section className="experience-section" id="experience">
+        <div className="experience-copy"><div className="section-index">04 / EXPERIENCE</div><h2>Built for a thumb.<br /><em>Clear at a glance.</em></h2><p>Friendly language, reassuring offline states, and one next action at every step.</p><Link className="landing-btn landing-btn-dark" href="/pitch">Open the story deck <ArrowIcon /></Link></div>
+        <div className="status-stack" aria-label="Example report statuses">
+          <div className="status-card status-ready"><span className="status-icon">↓</span><div><small>OFFLINE</small><strong>Saved on this phone</strong><p>We&apos;ll send it when signal returns.</p></div></div>
+          <div className="status-card status-sent"><span className="status-icon">↑</span><div><small>SENT</small><strong>Report received</strong><p>Your work is ready to be checked.</p></div></div>
+          <div className="status-card status-confirmed"><span className="status-icon"><CheckIcon /></span><div><small>CONFIRMED</small><strong>Community confirmed</strong><p>Two reports point to the same activity.</p></div></div>
+        </div>
+      </section>
+
+      <section className="try-section" id="try">
+        <div className="try-copy"><div className="section-index">05 / TRY PRUFTURE</div><h2>See the full journey.<br /><em>Then take it with you.</em></h2><p>Explore a sample public report, open the programme dashboard, or install the Android preview. The prototype is open and honest about what is live today.</p><div className="try-links"><Link className="landing-btn landing-btn-primary" href={`/verify/${SAMPLE_HASH}`}>Open sample report <ArrowIcon /></Link><Link className="landing-btn landing-btn-ghost" href="/dashboard">View dashboard</Link></div></div>
+        <a className="download-card" href={ANDROID_BUILD_URL} target="_blank" rel="noreferrer noopener"><svg viewBox={`0 0 ${size} ${size}`} role="img" aria-label="QR code to install the Android preview"><rect width={size} height={size} fill="#ffffff" /><path d={path} fill="#1c1c1e" /></svg><span><small>ANDROID PREVIEW</small><strong>Scan to install</strong><em>No store or account required</em></span><ArrowIcon /></a>
+      </section>
+
+      <section className="closing-section"><Mark compact /><p>Evidence should travel farther than connectivity.</p><h2>Make every completed task<br /><em>visible, verifiable, and human.</em></h2><Link className="landing-btn landing-btn-white" href={`/verify/${SAMPLE_HASH}`}>Explore Prufture <ArrowIcon /></Link></section>
+
+      <footer className="landing-footer"><div><Mark /><p>An open prototype for community field reporting.</p></div><div className="footer-links"><Link href="/dashboard">Dashboard</Link><Link href="/pitch">Pitch</Link><Link href="/support">Support</Link><Link href="/privacy">Privacy</Link></div><p className="footer-note">Built for a hackathon. Not a UNICEF product or endorsement.</p></footer>
     </main>
   );
 }
