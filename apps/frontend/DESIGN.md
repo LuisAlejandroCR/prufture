@@ -51,10 +51,22 @@ interface icons.
 
 ## Navigation
 
-`app/(tabs)/_layout.tsx` renders a custom bottom bar: Home, Tasks, [Report], Updates, Me. Report
-is a raised terracotta control that opens `/report/intro` for the recommended task. The guided
-report flow (`app/report/*`) and the detail screens (`app/task/[id]`, `app/status/[id]`,
-`app/help`) are plain stack screens with in-screen back controls.
+`app/(tabs)/_layout.tsx` renders a custom bottom bar with four equal items: Missions, Report,
+My reports, Me. Report is an action, not a tab: a terracotta plus that opens the item picker
+(`/report/pick`), never a default task. The guided report flow (`app/report/*`) and the detail
+screens (`app/task/[id]`, `app/status/[id]`, `app/help`) are plain stack screens with in-screen
+back controls.
+
+## Missions home
+
+`app/(tabs)/index.tsx` merges the old Home and Tasks tabs (Alternative C, screen 1). Top to
+bottom: `BrandMark` + `OfflinePill` (only without signal), time-of-day greeting, a private
+contribution strip counting **confirmed reports** (never "helped", see `src/home.ts`), resume and
+saved-on-this-phone notices, then "Missions near you · Approximate areas only" with a List / Map
+toggle. List shows a short map preview; Map shows a tall one. Both draw 5-char cells as shaded
+rectangles with no centre pin (`CellMap`). Mission rows use `CategoryBadge` (soft category tint +
+category icon), the first closed question, and "Nearby area" or a rounded distance. A final row
+opens the full catalog.
 
 ## Report flow
 

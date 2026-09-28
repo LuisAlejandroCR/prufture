@@ -54,6 +54,16 @@ export const color = {
   climate: "#4E7D2F",
 } as const;
 
+// Soft tint behind each programme category icon (mission rows, catalog tiles).
+export const categorySoft = {
+  education: color.informationSoft,
+  water: color.successSoft,
+  health: color.attentionSoft,
+  nutrition: color.warningSoft,
+  protection: "#F0EDF8",
+  climate: "#EEF4E8",
+} as const;
+
 // Selected bottom-navigation background tint.
 export const navSelectedTint = color.primarySoft;
 

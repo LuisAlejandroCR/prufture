@@ -1,17 +1,16 @@
-// (tabs)/_layout.tsx: the five reporter destinations (Home, Tasks, [Report], Updates, Me) with a custom
-// bottom bar. Report is a raised terracotta control that opens the guided flow, not a normal tab;
+// (tabs)/_layout.tsx: the reporter destinations (Missions, [Report], My reports, Me) with a custom
+// bottom bar. Report is a raised terracotta control that opens the item picker, not a normal tab;
 // selected icons are filled on a tinted pill, and every control has a label.
 
 import { Tabs, useRouter } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Icon, type IconName } from "../../src/components/icons/Icon";
-import { color, navSelectedTint, radius, shadow, space, target, type } from "../../src/theme";
+import { color, navSelectedTint, radius, space, target, type } from "../../src/theme";
 
 const ITEMS: { name: string; label: string; icon: IconName }[] = [
-  { name: "index", label: "Home", icon: "home" },
-  { name: "tasks", label: "Tasks", icon: "tasks" },
-  { name: "updates", label: "Updates", icon: "updates" },
+  { name: "index", label: "Missions", icon: "home" },
+  { name: "updates", label: "My reports", icon: "review" },
   { name: "me", label: "Me", icon: "profile" },
 ];
 
@@ -24,9 +23,6 @@ function TabBar({ state, navigation }: TabBarShape) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const activeRoute = state.routes[state.index]?.name;
-
-  const left = ITEMS.slice(0, 2);
-  const right = ITEMS.slice(2);
 
   const renderItem = (item: { name: string; label: string; icon: IconName }) => {
     const focused = activeRoute === item.name;
@@ -52,22 +48,28 @@ function TabBar({ state, navigation }: TabBarShape) {
     );
   };
 
+  const [first, ...rest] = ITEMS;
+
   return (
     <View style={[styles.bar, { paddingBottom: insets.bottom + space.sm }]}>
-      {left.map(renderItem)}
+      {first ? renderItem(first) : null}
 
       <Pressable
         onPress={() => router.push("/report/pick")}
         accessibilityRole="button"
         accessibilityLabel="Start a report"
         accessibilityHint="Choose what you are reporting, then follow the guided steps"
-        style={({ pressed }) => [styles.report, pressed && styles.reportPressed]}
+        style={({ pressed }) => [styles.item, pressed && styles.reportPressed]}
       >
-        <Icon name="report" size={28} filled color={color.onPrimary} />
-        <Text style={styles.reportLabel}>Report</Text>
+        <View style={styles.iconWrap}>
+          <View style={styles.reportDot}>
+            <Text style={styles.plus}>+</Text>
+          </View>
+        </View>
+        <Text style={styles.label}>Report</Text>
       </Pressable>
 
-      {right.map(renderItem)}
+      {rest.map(renderItem)}
     </View>
   );
 }
@@ -79,7 +81,6 @@ export default function TabsLayout() {
       screenOptions={{ headerShown: false }}
     >
       <Tabs.Screen name="index" />
-      <Tabs.Screen name="tasks" />
       <Tabs.Screen name="updates" />
       <Tabs.Screen name="me" />
     </Tabs>
@@ -113,17 +114,14 @@ const styles = StyleSheet.create({
   },
   label: { ...type.meta, fontSize: 11, color: color.faint },
   labelActive: { color: color.primary, fontWeight: "700" },
-  report: {
-    width: 60,
-    marginTop: -18,
+  reportPressed: { opacity: 0.7 },
+  reportDot: {
+    width: 26,
+    height: 26,
+    borderRadius: radius.pill,
+    backgroundColor: color.primary,
     alignItems: "center",
     justifyContent: "center",
-    gap: 2,
-    borderRadius: radius.lg,
-    backgroundColor: color.primary,
-    paddingVertical: space.sm,
-    ...shadow.raised,
   },
-  reportPressed: { backgroundColor: color.primaryPressed },
-  reportLabel: { ...type.meta, fontSize: 11, fontWeight: "700", color: color.onPrimary },
+  plus: { fontSize: 20, lineHeight: 22, fontWeight: "700", color: color.onPrimary },
 });
