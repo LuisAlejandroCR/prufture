@@ -95,7 +95,7 @@ export function ScrollFilms() {
               muted
               playsInline
               poster={`/media/${film.slug}.webp`}
-              preload="auto"
+              preload="metadata"
             >
               <source src={`/media/${film.slug}.mp4`} type="video/mp4" />
             </video>
