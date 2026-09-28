@@ -4,6 +4,7 @@
 
 import Link from "next/link";
 import { qrPath } from "./pitch/qr";
+import { ScrollFilms } from "./ScrollFilms";
 
 const SAMPLE_HASH =
   process.env.NEXT_PUBLIC_SAMPLE_HASH ??
@@ -108,13 +109,8 @@ export default function Home() {
 
       <section className="process-section" id="how">
         <div className="section-heading light-heading"><div className="section-index">02 / THE JOURNEY</div><h2>Four quiet steps.<br /><em>One trusted record.</em></h2></div>
-        <div className="process-cards">
-          <article className="process-card process-blue"><span className="card-number">01</span><div className="process-symbol camera-symbol"><i /></div><h3>Capture</h3><p>Photograph completed work and answer a few short questions.</p></article>
-          <article className="process-card process-purple"><span className="card-number">02</span><div className="process-symbol save-symbol"><i /></div><h3>Save offline</h3><p>The report stays safely on the phone, even without a connection.</p></article>
-          <article className="process-card process-orange"><span className="card-number">03</span><div className="process-symbol send-symbol"><i /></div><h3>Send later</h3><p>Once signal returns, the queued report sends itself automatically.</p></article>
-          <article className="process-card process-green"><span className="card-number">04</span><div className="process-symbol verify-symbol"><CheckIcon /></div><h3>Confirm</h3><p>Others can check the public record and add independent confirmation.</p></article>
-        </div>
-        <p className="swipe-note">Designed for the real world — low signal, small screens, high stakes.</p>
+        <ScrollFilms />
+        <p className="swipe-note">Scroll to play the journey — low signal, small screens, high stakes.</p>
       </section>
 
       <section className="privacy-section" id="privacy">
