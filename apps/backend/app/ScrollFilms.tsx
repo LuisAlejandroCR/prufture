@@ -1,6 +1,6 @@
-// ScrollFilms.tsx: scroll-scrubbed playback for the landing-page field journey.
-// Each clip is pinned while its track scrolls past, and scroll progress drives
-// video.currentTime; reduced-motion visitors see the matching poster frame.
+// ScrollFilms.tsx: pinned, in-view playback for the landing-page field journey.
+// Each clip is pinned while its track scrolls past and plays once at normal
+// speed; reduced-motion visitors see the matching poster frame.
 
 "use client";
 
@@ -41,14 +41,6 @@ const films = [
   },
 ] as const;
 
-// Fraction of a track's scroll distance travelled, clamped to [0, 1].
-function trackProgress(track: HTMLElement): number {
-  const rect = track.getBoundingClientRect();
-  const distance = rect.height - window.innerHeight;
-  if (distance <= 0) return rect.top <= 0 ? 1 : 0;
-  return Math.min(1, Math.max(0, -rect.top / distance));
-}
-
 export function ScrollFilms() {
   const reelRef = useRef<HTMLDivElement>(null);
 
@@ -57,40 +49,39 @@ export function ScrollFilms() {
     if (!root) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
-    const tracks = Array.from(root.querySelectorAll<HTMLElement>(".film-track"));
-    const pairs = tracks.flatMap((track) => {
-      const video = track.querySelector("video");
-      return video ? [{ track, video }] : [];
-    });
+    // Play at normal speed once the pinned card is mostly on screen; the clip
+    // holds its last frame when it ends and scrolling is never blocked.
+    const player = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          const video = entry.target.querySelector("video");
+          if (!video) return;
+          if (entry.isIntersecting) {
+            if (video.paused && !video.ended) void video.play().catch(() => undefined);
+          } else {
+            video.pause();
+          }
+        });
+      },
+      { threshold: 0.6 },
+    );
 
-    // Mobile Safari only paints seeked frames after the element has played once.
-    pairs.forEach(({ video }) => {
-      void video.play().then(() => video.pause()).catch(() => undefined);
-    });
-
-    let frame = 0;
-    const scrub = () => {
-      frame = 0;
-      pairs.forEach(({ track, video }) => {
-        if (!video.duration || Number.isNaN(video.duration)) return;
-        const target = trackProgress(track) * (video.duration - 0.05);
-        if (Math.abs(video.currentTime - target) > 1 / 48) video.currentTime = target;
+    // Rewind once a track is fully off screen so the clip replays on return.
+    const rewinder = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        const video = entry.target.querySelector("video");
+        if (video && !entry.isIntersecting) {
+          video.pause();
+          video.currentTime = 0;
+        }
       });
-    };
-    const schedule = () => {
-      if (!frame) frame = requestAnimationFrame(scrub);
-    };
+    });
 
-    pairs.forEach(({ video }) => video.addEventListener("loadedmetadata", schedule));
-    window.addEventListener("scroll", schedule, { passive: true });
-    window.addEventListener("resize", schedule);
-    schedule();
-
+    root.querySelectorAll<HTMLElement>(".scroll-film").forEach((film) => player.observe(film));
+    root.querySelectorAll<HTMLElement>(".film-track").forEach((track) => rewinder.observe(track));
     return () => {
-      if (frame) cancelAnimationFrame(frame);
-      pairs.forEach(({ video }) => video.removeEventListener("loadedmetadata", schedule));
-      window.removeEventListener("scroll", schedule);
-      window.removeEventListener("resize", schedule);
+      player.disconnect();
+      rewinder.disconnect();
     };
   }, []);
 

@@ -110,7 +110,7 @@ export default function Home() {
       <section className="process-section" id="how">
         <div className="section-heading light-heading"><div className="section-index">02 / THE JOURNEY</div><h2>Four quiet steps.<br /><em>One trusted record.</em></h2></div>
         <ScrollFilms />
-        <p className="swipe-note">Scroll to play the journey — low signal, small screens, high stakes.</p>
+        <p className="swipe-note">Each step plays as you reach it — low signal, small screens, high stakes.</p>
       </section>
 
       <section className="privacy-section" id="privacy">
