@@ -13,6 +13,10 @@ const config = getDefaultConfig(projectRoot);
 
 config.watchFolders = [workspaceRoot];
 
+// Other apps' build output churns while Metro watches the whole workspace; a folder deleted under the
+// watcher crashes it (ENOENT on apps/backend/.next), so never crawl build dirs.
+config.resolver.blockList = [/[\\/]\.next[\\/].*/, /[\\/]apps[\\/]api[\\/]\.data[\\/].*/];
+
 config.resolver.nodeModulesPaths = [
   path.resolve(projectRoot, "node_modules"),
   path.resolve(workspaceRoot, "node_modules"),
