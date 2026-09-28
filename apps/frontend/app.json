@@ -21,7 +21,7 @@
       ["expo-notifications", { "icon": "./assets/notification-icon.png", "color": "#C8533A" }]
     ],
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "ai.proofatcapture.app",
       "buildNumber": "1",
       "infoPlist": {

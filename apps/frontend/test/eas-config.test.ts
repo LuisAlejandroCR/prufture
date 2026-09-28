@@ -59,6 +59,10 @@ test("production profile is present and documented as store / app-bundle, not ru
   assert.equal(p.autoIncrement, true);
 });
 
+test("app.json: iPhone only, so App Store Connect asks for no iPad screenshots", () => {
+  assert.equal(app.expo.ios.supportsTablet, false);
+});
+
 test("production store build carries the same public config as preview, and no placeholder values", () => {
   // A missing verify URL shipped a status screen linking to prufture.example; a missing programme
   // key silently skipped sealing the precise point; a "<<...>>" key was baked into the bundle.
