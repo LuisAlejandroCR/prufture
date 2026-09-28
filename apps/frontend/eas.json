@@ -22,7 +22,7 @@
       "channel": "preview",
       "env": {
         "EXPO_PUBLIC_API_URL": "https://prufture-api.onrender.com",
-        "EXPO_PUBLIC_VERIFY_URL": "https://prufture-app.vercel.app/verify",
+        "EXPO_PUBLIC_VERIFY_URL": "https://prufture.vercel.app/verify",
         "EXPO_PUBLIC_PROGRAMME_PUBKEY": "5e2dbae8ea6326921962f0e3e0a68d5db35fdf10bd5c70a870e94e8d47262e7b",
         "EXPO_PUBLIC_IDENTITY_STEP": "off"
       }
@@ -38,7 +38,7 @@
       },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://prufture-api.onrender.com",
-        "EXPO_PUBLIC_VERIFY_URL": "https://prufture-app.vercel.app/verify",
+        "EXPO_PUBLIC_VERIFY_URL": "https://prufture.vercel.app/verify",
         "EXPO_PUBLIC_PROGRAMME_PUBKEY": "5e2dbae8ea6326921962f0e3e0a68d5db35fdf10bd5c70a870e94e8d47262e7b",
         "EXPO_PUBLIC_IDENTITY_STEP": "off"
       }
