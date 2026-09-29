@@ -1,0 +1,4 @@
+# Produced by scripts/build-ios.sh on the builder.
+ios/PruftureZkFFI.xcframework/
+ios/generated/
+ios/assets/
