@@ -8,6 +8,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { CellMap, type MapCell } from "../../src/components/CellMap";
 import { Icon, type IconName } from "../../src/components/icons/Icon";
 import { Appear, BrandMark, CategoryBadge, OfflinePill, Screen } from "../../src/components/ui";
+import { tap } from "../../src/feedback";
 import { confirmedReportCount, greeting, missionPlace, missionQuestion, showReachError } from "../../src/home";
 import { listProofs } from "../../src/queue";
 import type { LocalProof } from "../../src/queue-row";
@@ -80,6 +81,7 @@ export default function MissionsScreen() {
     loadMissionsView().then(setView).catch(() => undefined);
   }, []);
   const chooseView = (v: View_) => {
+    if (v !== view) void tap();
     setView(v);
     void saveMissionsView(v);
   };
