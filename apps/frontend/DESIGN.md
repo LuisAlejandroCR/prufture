@@ -146,6 +146,15 @@ Reporters capture outdoors in daylight; the app commits to a single high-contras
 `app.json` sets `userInterfaceStyle: "light"`, `_layout.tsx` sets `<StatusBar style="dark" />`,
 and `src/theme.ts` carries one light-only token set. Dark mode is a post-hackathon item.
 
+## Keyboard
+
+`Screen` (`src/components/ui.tsx`) is keyboard aware through `src/keyboard.ts`. On iOS the keyboard
+is drawn over the window, so the frame is a `KeyboardAvoidingView` with `padding` (the footer action
+rises above the keyboard), the scroll view keeps the focused field in view
+(`automaticallyAdjustKeyboardInsets`) and a downward drag dismisses the keyboard. Android resizes the
+window itself, so it gets no extra padding and dismisses on drag. The Review note is multiline, so
+its return key is "Done" and blurs the field instead of inserting a new line.
+
 ## Rules
 
 - Em-dash is banned in UI copy.

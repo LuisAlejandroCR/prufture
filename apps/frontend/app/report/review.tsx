@@ -133,6 +133,8 @@ export default function ReportReviewScreen() {
           onEndEditing={() => setNote(note)}
           maxLength={NOTE_MAX}
           multiline
+          returnKeyType="done"
+          submitBehavior="blurAndSubmit"
           placeholder="Share any extra details (no names, please)..."
           placeholderTextColor={color.muted}
           style={styles.note}
