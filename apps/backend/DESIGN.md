@@ -69,7 +69,7 @@ Programme / From / To filters, "Clear filters", newest-first order and "Show mor
 Table columns: Activity (with programme) / Approximate area / Submitted (relative + date) /
 Status / a keyboard-focusable "Open" action. Activity, Submitted and Status sort (`aria-sort`).
 
-Workspace filters live in the URL (`?status=&programme=&q=&from=&to=&sort=`, parsed and
+Workspace filters live in the URL (`?status=&programme=&area=&q=&from=&to=&sort=`, parsed and
 validated by `parseReportFilters`, built by `reportsHref`), so every filtered view is a link.
 Metric tiles, pipeline legend rows, alert actions, programme cards and community regions deep-link
 into the matching view. "/" focuses search. `applyReportFilters` is the one definition of "which
@@ -99,7 +99,9 @@ built-in city list (`lib/places.ts`, nearest city within 40 km of the cell centr
 coarser than the cell) with the region code beside it, or the code alone. Report search matches the
 place name accent-free ("bogota"). The CSV export carries it as `area_name` next to `approximate_region`.
 Alert copy counts what it counts: "45 reports in 2 areas need a second community report", never
-"activities". All day labels, including the Overview date line, are UTC. Every dashboard route has a `loading.tsx` skeleton and
+"activities". The workspace has an Area select (areas by report count, named when a city is
+near); `area=` is an exact cell match validated as 1-5 base-32 chars, and Communities, the coverage
+table and map popups link with it instead of a text search, so `d2g6` never pulls in `d2g62`. All day labels, including the Overview date line, are UTC. Every dashboard route has a `loading.tsx` skeleton and
 an `error.tsx` boundary that never prints raw error text; the site has a branded `not-found.tsx`.
 
 ## Rules

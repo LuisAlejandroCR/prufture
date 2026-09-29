@@ -393,6 +393,8 @@ export const REPORT_SORTS: ReportSort[] = ["newest", "oldest", "activity", "stat
 export interface ReportFilters {
   status?: ReviewStatus | "";
   programme?: string;
+  /** Exact coarse region (geohash cell, at most 5 chars). */
+  area?: string;
   q?: string;
   from?: string;
   to?: string;
@@ -400,6 +402,8 @@ export interface ReportFilters {
 }
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+/** A coarse geohash cell: 1-5 base-32 chars. Anything longer is never accepted from a URL. */
+const AREA_RE = /^[0-9b-hjkmnp-z]{1,5}$/;
 
 /**
  * Parse workspace filters from URL search params, dropping anything unknown or malformed so a
@@ -413,6 +417,7 @@ export function parseReportFilters(params: { get(name: string): string | null })
   return {
     status: (REVIEW_ORDER as string[]).includes(status) ? (status as ReviewStatus) : "",
     programme: (params.get("programme") ?? "").slice(0, 80),
+    area: AREA_RE.test(params.get("area") ?? "") ? (params.get("area") as string) : "",
     q: (params.get("q") ?? "").slice(0, 80),
     from: DATE_RE.test(from) ? from : "",
     to: DATE_RE.test(to) ? to : "",
@@ -425,6 +430,7 @@ export function reportsQuery(f: ReportFilters): string {
   const qs = new URLSearchParams();
   if (f.status) qs.set("status", f.status);
   if (f.programme) qs.set("programme", f.programme);
+  if (f.area) qs.set("area", f.area);
   if (f.q) qs.set("q", f.q);
   if (f.from) qs.set("from", f.from);
   if (f.to) qs.set("to", f.to);
@@ -443,7 +449,7 @@ function utcDay(iso: string): string {
 }
 
 /**
- * Apply workspace filters (status, programme, text search over activity / task / region / place, and an
+ * Apply workspace filters (status, programme, exact area, text search over activity / task / region / place, and an
  * inclusive UTC date range) and then the chosen sort. The single source of truth for "which
  * reports are in this view", shared by the table, the CSV of the view and report prev/next.
  */
@@ -451,6 +457,7 @@ export function applyReportFilters(proofs: ProofSummary[], f: ReportFilters): Pr
   const q = foldText(f.q ?? "");
   const filtered = proofs.filter((p) => {
     if (f.programme && programmeName(p.taskId) !== f.programme) return false;
+    if (f.area && p.geohashRegion !== f.area) return false;
     if (f.status && reviewStatus(p) !== f.status) return false;
     const d = utcDay(p.capturedAt);
     if (f.from && d < f.from) return false;
