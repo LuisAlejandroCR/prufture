@@ -48,6 +48,9 @@ function TabBar({ state, navigation }: TabBarShape) {
         accessibilityRole="tab"
         accessibilityState={{ selected: focused }}
         accessibilityLabel={item.label}
+        // Labels are capped under Larger Text, so a long press shows the iOS Large Content Viewer.
+        accessibilityShowsLargeContentViewer
+        accessibilityLargeContentTitle={item.label}
         style={styles.item}
       >
         <View style={[styles.iconWrap, focused && { backgroundColor: navSelectedTint }]}>
@@ -75,6 +78,8 @@ function TabBar({ state, navigation }: TabBarShape) {
         onPress={() => router.push("/report/pick")}
         accessibilityRole="button"
         accessibilityLabel="Start a report"
+        accessibilityShowsLargeContentViewer
+        accessibilityLargeContentTitle="Report"
         accessibilityHint="Choose what you are reporting, then follow the guided steps"
         style={({ pressed }) => [styles.item, pressed && styles.reportPressed]}
       >
