@@ -99,7 +99,7 @@ stay tappable polygons.
 
 `Data and privacy` (from Me) is the one place that lists what a report keeps and shares, including
 the precise point sealed on-device to the programme key when one is configured
-(`src/location-seal.ts`); Help links there instead of repeating it. `About` holds purpose and version.
+(`src/location-seal.ts`); Help links there instead of repeating it. `About` shows the app version only.
 
 ## Report flow
 

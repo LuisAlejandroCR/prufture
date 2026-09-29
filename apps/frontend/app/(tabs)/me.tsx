@@ -124,7 +124,7 @@ export default function MeScreen() {
       <View style={{ gap: space.sm }}>
         <SectionLabel>Support</SectionLabel>
         <Row icon="help" title="Help" subtitle="How the app works" onPress={() => router.push("/help")} />
-        <Row icon="info" title="About Prufture" subtitle="Purpose and open-source notes" onPress={() => router.push("/about")} />
+        <Row icon="info" title="About Prufture" subtitle="Version" onPress={() => router.push("/about")} />
       </View>
 
       <Text style={styles.about}>
