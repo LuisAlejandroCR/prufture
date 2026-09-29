@@ -20,13 +20,13 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       <main className="dash-main">
         {staffAuth ? null : (
           <p className="dash-auth-banner" role="status">
-            Staff sign-in is not configured on this deployment, so this dashboard is open to anyone
-            with the link. It shows region-level data only, never personal data.
+            <strong>Open preview.</strong> Staff sign-in is not configured on this deployment, so this
+            dashboard is open to anyone with the link. It shows region-level data only, never personal
+            data.
           </p>
         )}
         <p className="dash-narrow-note">
-          This dashboard is built for a desktop screen. The full report table scrolls sideways on a
-          small screen.
+          This dashboard is built for a desktop screen. Wide tables scroll sideways on a small screen.
         </p>
         {children}
       </main>

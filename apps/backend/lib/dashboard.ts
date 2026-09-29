@@ -228,3 +228,68 @@ export function coverage(proofs: ProofSummary[]): CoverageCell[] {
   }
   return cells.sort((a, b) => b.count - a.count);
 }
+
+export const REVIEW_ORDER: ReviewStatus[] = ["confirmed", "needs-another", "ready", "attention"];
+
+/** Count of reports in each review status, in the fixed REVIEW_ORDER. */
+export function statusBreakdown(proofs: ProofSummary[]): { status: ReviewStatus; count: number }[] {
+  const counts = new Map<ReviewStatus, number>(REVIEW_ORDER.map((s) => [s, 0]));
+  for (const p of proofs) {
+    const s = reviewStatus(p);
+    counts.set(s, (counts.get(s) ?? 0) + 1);
+  }
+  return REVIEW_ORDER.map((status) => ({ status, count: counts.get(status) ?? 0 }));
+}
+
+/**
+ * Reports per UTC day for the last `days` days, oldest first, ending today. Days with no
+ * reports are present with a zero count so the chart has no gaps.
+ */
+export function dailyCounts(
+  proofs: ProofSummary[],
+  days = 14,
+  now: number = Date.now(),
+): { day: string; count: number }[] {
+  const today = new Date(now);
+  today.setUTCHours(0, 0, 0, 0);
+  const out: { day: string; count: number }[] = [];
+  const index = new Map<string, number>();
+  for (let i = days - 1; i >= 0; i--) {
+    const key = new Date(today.getTime() - i * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    index.set(key, out.length);
+    out.push({ day: key, count: 0 });
+  }
+  for (const p of proofs) {
+    const t = new Date(p.capturedAt);
+    if (Number.isNaN(t.getTime())) continue;
+    const i = index.get(t.toISOString().slice(0, 10));
+    const bucket = i === undefined ? undefined : out[i];
+    if (bucket) bucket.count += 1;
+  }
+  return out;
+}
+
+/** "Today", "Yesterday", "3 days ago", or the ISO date past two weeks. Empty for a bad date. */
+export function relativeDay(iso: string, now: number = Date.now()): string {
+  const t = new Date(iso);
+  if (Number.isNaN(t.getTime())) return "";
+  const startOf = (ms: number) => {
+    const d = new Date(ms);
+    d.setUTCHours(0, 0, 0, 0);
+    return d.getTime();
+  };
+  const diff = Math.round((startOf(now) - startOf(t.getTime())) / (24 * 60 * 60 * 1000));
+  if (diff <= 0) return "Today";
+  if (diff === 1) return "Yesterday";
+  if (diff < 14) return `${diff} days ago`;
+  return t.toISOString().slice(0, 10);
+}
+
+/** Newest first by capture time; unparseable dates sink to the end. */
+export function byNewest(proofs: ProofSummary[]): ProofSummary[] {
+  const ts = (p: ProofSummary) => {
+    const t = new Date(p.capturedAt).getTime();
+    return Number.isNaN(t) ? -Infinity : t;
+  };
+  return [...proofs].sort((a, b) => ts(b) - ts(a));
+}

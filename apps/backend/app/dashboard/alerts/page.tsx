@@ -3,6 +3,8 @@
 
 import { fetchProofs } from "../../../lib/api";
 import { alerts } from "../../../lib/dashboard";
+import { Icon } from "../../_components/brand";
+import { EmptyState, PageHeader } from "../ui";
 
 export const dynamic = "force-dynamic";
 
@@ -12,30 +14,35 @@ export default async function AlertsPage() {
 
   return (
     <section className="fade-in">
-      <header>
-        <h1>Alerts</h1>
-        <p className="muted">Problems that need a decision or a follow-up.</p>
-      </header>
+      <PageHeader
+        eyebrow="Workspace"
+        title="Alerts"
+        lede="Problems that need a decision or a follow-up."
+      />
 
       {list.length === 0 ? (
-        <div className="card">
-          <h3 style={{ marginTop: 0 }}>Nothing needs attention</h3>
-          <p className="muted" style={{ marginBottom: 0 }}>
-            No degraded services, no stale reports, no coverage gaps right now.
-          </p>
-        </div>
+        <EmptyState icon="check" title="Nothing needs attention">
+          No degraded services, no stale reports, no coverage gaps right now.
+        </EmptyState>
       ) : (
         <div className="attn-list">
           {list.map((a) => (
             <div className={`attn-item ${a.severity === "high" ? "high" : ""}`} key={a.id}>
-              <h3>{a.what}</h3>
-              <p>{a.why}</p>
-              <p style={{ color: "var(--text)" }}>
-                <strong>Recommended:</strong> {a.action}
-              </p>
-              <p className="faint" style={{ fontSize: "0.85rem", marginBottom: 0 }}>
-                {a.severity === "high" ? "High priority" : "Normal"} · {a.when}
-              </p>
+              <span className="attn-icon">
+                <Icon name={a.severity === "high" ? "alert" : a.id === "needs-second" ? "users" : "clock"} />
+              </span>
+              <div>
+                <div className="attn-top">
+                  <h3>{a.what}</h3>
+                  <span className={`pill ${a.severity === "high" ? "attn" : "neutral"}`}>
+                    {a.severity === "high" ? "High priority" : "Normal"} · {a.when}
+                  </span>
+                </div>
+                <p>{a.why}</p>
+                <p className="attn-next">
+                  <strong>Recommended:</strong> {a.action}
+                </p>
+              </div>
             </div>
           ))}
         </div>

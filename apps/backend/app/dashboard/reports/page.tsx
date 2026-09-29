@@ -1,8 +1,9 @@
-// reports/page.tsx: the full-width report workspace — same coarse data and filters as Overview.
-// Region level only, no personal data.
+// reports/page.tsx: the full-width report workspace — status tabs, filters and paging over the same
+// coarse data as Overview. Region level only, no personal data.
 
 import { fetchProofs } from "../../../lib/api";
 import { DashboardTable } from "../DashboardTable";
+import { DegradedNotice, PageHeader } from "../ui";
 
 export const dynamic = "force-dynamic";
 
@@ -11,20 +12,12 @@ export default async function ReportsPage() {
 
   return (
     <section className="fade-in">
-      <header>
-        <h1>Reports</h1>
-        <p className="muted">
-          Every report received, filterable by programme, status, and date. No login, no personal
-          data.
-        </p>
-      </header>
-
-      {degraded ? (
-        <p className="pill wait" style={{ marginBottom: "var(--sp-4)" }}>
-          The report index is unreachable right now. The table shows what was last available.
-        </p>
-      ) : null}
-
+      <PageHeader
+        eyebrow="Workspace"
+        title="Reports"
+        lede="Every report received, newest first. Filter by status, programme, area or date."
+      />
+      {degraded ? <DegradedNotice /> : null}
       <DashboardTable proofs={proofs} />
     </section>
   );

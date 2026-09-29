@@ -1,8 +1,11 @@
 // communities/page.tsx: geographic coverage by coarse region, with aggregate counts and the regions
 // that still need a second community report. Never a household, school or beneficiary coordinate.
 
+import Link from "next/link";
 import { fetchProofs } from "../../../lib/api";
 import { areas } from "../../../lib/dashboard";
+import { Icon } from "../../_components/brand";
+import { DegradedNotice, EmptyState, Metric, Notice, PageHeader } from "../ui";
 
 export const dynamic = "force-dynamic";
 
@@ -10,28 +13,38 @@ export default async function CommunitiesPage() {
   const { proofs, degraded } = await fetchProofs();
   const rows = areas(proofs);
   const gaps = rows.filter((r) => r.needsAnother > 0);
+  const max = rows.reduce((n, r) => Math.max(n, r.received), 1);
+  const fullyConfirmed = rows.filter((r) => r.received > 0 && r.confirmed === r.received).length;
 
   return (
     <section className="fade-in">
-      <header>
-        <h1>Communities and areas</h1>
-        <p className="muted">
-          Coverage by approximate region. Exact locations of households, schools, or people are
-          never shown.
-        </p>
-      </header>
+      <PageHeader
+        eyebrow="Insights"
+        title="Communities"
+        accent="and areas"
+        lede="Coverage by approximate region. Exact locations of households, schools, or people are never shown."
+        actions={
+          <Link className="btn secondary" href="/dashboard/map">
+            <Icon name="map" size={16} /> View on map
+          </Link>
+        }
+      />
 
       {degraded ? (
-        <p className="pill wait">The report index is unreachable right now.</p>
+        <DegradedNotice />
       ) : rows.length === 0 ? (
-        <p className="muted">No regions have reported yet.</p>
+        <EmptyState icon="communities" title="No regions have reported yet" />
       ) : (
         <>
+          <div className="metrics metrics-3">
+            <Metric icon="pin" value={rows.length} label="Approximate regions" />
+            <Metric icon="check" value={fullyConfirmed} label="Fully confirmed" tone="ok" />
+            <Metric icon="users" value={gaps.length} label="Need a second report" tone="wait" />
+          </div>
           {gaps.length > 0 ? (
-            <p className="pill wait" style={{ marginBottom: "var(--sp-4)" }}>
-              {gaps.length} {gaps.length === 1 ? "region needs" : "regions need"} a second community
-              report
-            </p>
+            <Notice tone="info" title={`${gaps.length} ${gaps.length === 1 ? "region needs" : "regions need"} a second community report`}>
+              Ask another community member in the area to report the same activity.
+            </Notice>
           ) : null}
           <div className="table-scroll">
             <table className="data">
@@ -47,11 +60,21 @@ export default async function CommunitiesPage() {
                 {rows.map((r) => (
                   <tr key={r.region}>
                     <td>
-                      <code>{r.region}</code>
+                      <span className="area-chip">
+                        <Icon name="pin" size={14} />
+                        <code>{r.region}</code>
+                      </span>
                     </td>
-                    <td>{r.received}</td>
+                    <td>
+                      <span className="inline-bar">
+                        <span className="inline-bar-track">
+                          <span style={{ width: `${(r.received / max) * 100}%` }} />
+                        </span>
+                        <strong>{r.received}</strong>
+                      </span>
+                    </td>
                     <td>{r.confirmed}</td>
-                    <td>{r.needsAnother}</td>
+                    <td>{r.needsAnother > 0 ? <span className="pill wait"><span className="dot" aria-hidden />{r.needsAnother}</span> : <span className="faint">0</span>}</td>
                   </tr>
                 ))}
               </tbody>

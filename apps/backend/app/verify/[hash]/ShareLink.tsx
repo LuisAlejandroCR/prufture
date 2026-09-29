@@ -20,16 +20,15 @@ export function ShareLink({ url }: { url: string }) {
   }
 
   return (
-    <div style={{ display: "flex", gap: "var(--sp-2)", alignItems: "center", flexWrap: "wrap", margin: "var(--sp-3) 0" }}>
+    <div className="share-row">
       <input
         className="field"
         readOnly
         value={url}
         aria-label="Public verification link"
         onFocus={(e) => e.currentTarget.select()}
-        style={{ flex: "1 1 320px" }}
       />
-      <button type="button" className={`btn ${copied ? "" : "secondary"}`} onClick={copy}>
+      <button type="button" className={`btn ${copied ? "" : "secondary"}`} onClick={copy} aria-live="polite">
         {copied ? "Copied" : "Copy share link"}
       </button>
     </div>

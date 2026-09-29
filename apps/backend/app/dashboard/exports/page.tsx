@@ -4,6 +4,8 @@
 
 import { ExportButton } from "./ExportButton";
 import { fetchProofs } from "../../../lib/api";
+import { Icon } from "../../_components/brand";
+import { Notice, PageHeader } from "../ui";
 
 export const dynamic = "force-dynamic";
 
@@ -12,34 +14,45 @@ export default async function ExportsPage() {
 
   return (
     <section className="fade-in">
-      <header>
-        <h1>Exports</h1>
-        <p className="muted">Download the coarse aggregate for offline programme review.</p>
-      </header>
+      <PageHeader
+        eyebrow="Admin"
+        title="Exports"
+        lede="Download the coarse aggregate for offline programme review."
+      />
 
-      <div className="card">
-        <h3 style={{ marginTop: 0 }}>Coarse report list (CSV)</h3>
-        <p className="muted">
-          One row per report: activity, programme, approximate region, capture date, review status,
-          and confirmation count.
-        </p>
-        <p className="faint" style={{ fontSize: "0.9rem" }}>
-          Excluded: reporter identity, exact location, full reference, photos, and any internal
-          scoring.
-        </p>
-        {degraded ? (
-          <p className="pill wait">The report index is unreachable, so there is nothing to export.</p>
-        ) : (
-          <ExportButton proofs={proofs} />
-        )}
-      </div>
+      <div className="card-grid card-grid-2">
+        <article className="box option-card">
+          <span className="option-icon">
+            <Icon name="file" size={22} />
+          </span>
+          <h3>Coarse report list (CSV)</h3>
+          <p className="muted">
+            One row per report: activity, programme, approximate region, capture date, review status,
+            and confirmation count.
+          </p>
+          <p className="faint" style={{ fontSize: "0.9rem" }}>
+            Excluded: reporter identity, exact location, full reference, photos, and any internal
+            scoring.
+          </p>
+          {degraded ? (
+            <Notice title="Nothing to export">The report index is unreachable right now.</Notice>
+          ) : (
+            <ExportButton proofs={proofs} />
+          )}
+        </article>
 
-      <div className="card" style={{ marginTop: "var(--sp-4)" }}>
-        <h3 style={{ marginTop: 0 }}>Signed evidence bundle</h3>
-        <p className="muted">A per-report evidence package is a planned feature.</p>
-        <button type="button" className="btn secondary" disabled>
-          Not available in this demo
-        </button>
+        <article className="box option-card is-muted">
+          <span className="option-icon">
+            <Icon name="shield" size={22} />
+          </span>
+          <h3>
+            Signed evidence bundle <span className="pill neutral">Planned</span>
+          </h3>
+          <p className="muted">A per-report evidence package is a planned feature.</p>
+          <button type="button" className="btn secondary" disabled>
+            Not available in this demo
+          </button>
+        </article>
       </div>
     </section>
   );
