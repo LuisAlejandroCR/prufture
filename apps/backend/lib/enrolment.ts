@@ -98,6 +98,7 @@ export type ActionState =
   | "invalid"
   | "unknown_programme"
   | "not_configured"
+  | "not_staff"
   | "not_entitled"
   | "entitlement_down"
   | "unreachable";
@@ -109,6 +110,7 @@ export const ACTION_STATES: readonly ActionState[] = [
   "invalid",
   "unknown_programme",
   "not_configured",
+  "not_staff",
   "not_entitled",
   "entitlement_down",
   "unreachable",
@@ -142,6 +144,22 @@ export function toActionState(kind: "enrol" | "epoch", status: number, body: unk
     default:
       return "unreachable";
   }
+}
+
+/**
+ * Whether a server action may write with the coordinator account. Fails closed: staff sign-in must be
+ * configured, the caller signed in, and (when invitations are on) holding a valid invite pass. The
+ * /dashboard middleware alone is not enough: server actions are reachable by action id, and the
+ * middleware lets every request through when Clerk is not configured.
+ */
+export function staffWriteAllowed(gate: {
+  configured: boolean;
+  userId: string | null | undefined;
+  inviteRequired: boolean;
+  passValid: boolean;
+}): boolean {
+  if (!gate.configured || !gate.userId) return false;
+  return !gate.inviteRequired || gate.passValid;
 }
 
 /** Server-only: the RevenueCat app user id this dashboard calls the coordinator API as. */
@@ -202,6 +220,12 @@ export function actionNotice(state: ActionState): ActionNotice {
         tone: "wait",
         title: "Coordinator access is not configured",
         text: "This dashboard has no coordinator account set (COORDINATOR_APP_USER_ID). Nothing was saved.",
+      };
+    case "not_staff":
+      return {
+        tone: "attn",
+        title: "Staff sign-in required",
+        text: "Only signed-in staff with a redeemed invitation can change a group. Sign in, reload the page and try again. Nothing was saved.",
       };
     case "not_entitled":
       return {

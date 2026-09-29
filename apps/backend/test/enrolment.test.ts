@@ -15,9 +15,33 @@ import {
   isCommitment,
   isProgrammeId,
   postCoordinator,
+  staffWriteAllowed,
   toActionState,
   toGroupResult,
 } from "../lib/enrolment.js";
+
+test("staffWriteAllowed fails closed: no Clerk, no user or no invite pass never writes", () => {
+  const ok = { configured: true, userId: "user_1", inviteRequired: true, passValid: true };
+  assert.equal(staffWriteAllowed(ok), true);
+  assert.equal(staffWriteAllowed({ ...ok, inviteRequired: false, passValid: false }), true);
+  assert.equal(staffWriteAllowed({ ...ok, configured: false }), false);
+  assert.equal(staffWriteAllowed({ ...ok, userId: null }), false);
+  assert.equal(staffWriteAllowed({ ...ok, userId: "" }), false);
+  assert.equal(staffWriteAllowed({ ...ok, passValid: false }), false);
+});
+
+test("both enrolment server actions check staff before calling the coordinator api", () => {
+  const src = readFileSync(
+    new URL("../app/dashboard/programmes/[id]/enrolment/actions.ts", import.meta.url),
+    "utf8",
+  );
+  for (const name of ["enrolAction", "newRoundAction"]) {
+    const body = src.slice(src.indexOf(`export async function ${name}`));
+    const gate = body.indexOf('if (!(await isStaff())) back(programmeId, "not_staff")');
+    const call = body.indexOf("postCoordinator(");
+    assert.ok(gate > 0 && gate < call, `${name} must gate before postCoordinator`);
+  }
+});
 
 test("isCommitment accepts a decimal field element above zero", () => {
   assert.equal(isCommitment("1"), true);
