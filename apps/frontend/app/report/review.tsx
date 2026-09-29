@@ -83,7 +83,6 @@ export default function ReportReviewScreen() {
         <CellMap
           cells={[{ key: "report", cell: draft.geohash.slice(0, 5), tone: "self" }]}
           focusCell={draft.geohash.slice(0, 5)}
-          centreLabel="Your report's approximate area"
           height={170}
           caption="Showing an approximate area (not exact location)"
           offlineLabel={`${draft.areaLabel || "Approximate area"}. Only the approximate area is part of the report.`}

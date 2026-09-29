@@ -44,7 +44,6 @@ export default function TaskDetailsScreen() {
           ]}
           height={170}
           focusCell={task.cell}
-          showCentre={false}
           caption="Showing an approximate area (not exact location)"
           offlineLabel={`${task.area}. Map available when online.`}
         />

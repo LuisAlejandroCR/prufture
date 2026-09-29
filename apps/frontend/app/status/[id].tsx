@@ -7,7 +7,7 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import { Linking, LayoutAnimation, Pressable, StyleSheet, Text, View } from "react-native";
 import { Icon } from "../../src/components/icons/Icon";
-import { BackLink, Notice, Screen, SecondaryButton, StatusPill } from "../../src/components/ui";
+import { BackLink, Notice, Screen, SecondaryButton, StatusPill, TaskHeader } from "../../src/components/ui";
 import { listProofs } from "../../src/queue";
 import type { LocalProof } from "../../src/queue-row";
 import { findReport, reportStages } from "../../src/progress";
@@ -74,14 +74,19 @@ export default function ReportStatusScreen() {
   return (
     <Screen>
       <BackLink label="My reports" onPress={() => router.back()} />
-      <Text style={styles.title} accessibilityRole="header">
-        {task.title}
-      </Text>
-      <View style={styles.metaRow}>
-        <Icon name="location" size={15} color={color.faint} />
-        <Text style={styles.meta}>{task.area}</Text>
+      <TaskHeader category={task.category} title={task.title} subtitle={task.purpose} />
+
+      <View style={styles.summary}>
+        <View style={styles.summaryTop}>
+          <Text style={styles.sectionLabel}>Report summary</Text>
+          <StatusPill status={status} count={minCount} />
+        </View>
+        <View style={styles.facts}>
+          <Fact icon="photo" label={photos === 1 ? "1 photo" : `${photos} photos`} />
+          <Fact icon="location" label={task.area} />
+          <Fact icon="clock" label={new Date(newest.capturedAt).toLocaleDateString()} />
+        </View>
       </View>
-      <StatusPill status={status} count={minCount} />
 
       {anyPending ? (
         <Notice tone="info" icon="offline">
@@ -89,25 +94,28 @@ export default function ReportStatusScreen() {
         </Notice>
       ) : null}
 
-      <View style={styles.timeline}>
-        {stages.map((s, i, arr) => (
-          <View key={s.label} style={styles.stageRow}>
-            <View style={styles.stageMarker}>
-              <View style={[styles.node, s.done && styles.nodeDone, s.current && styles.nodeCurrent]}>
-                {s.done ? <Icon name="check" size={12} color={color.onPrimary} /> : null}
+      <View style={styles.progressCard}>
+        <Text style={styles.sectionTitle} accessibilityRole="header">Report progress</Text>
+        <View style={styles.timeline}>
+          {stages.map((s, i, arr) => (
+            <View key={s.label} style={styles.stageRow}>
+              <View style={styles.stageMarker}>
+                <View style={[styles.node, s.done && styles.nodeDone, s.current && styles.nodeCurrent]}>
+                  {s.done ? <Icon name="check" size={12} color={color.onPrimary} /> : null}
+                </View>
+                {i < arr.length - 1 ? (
+                  <View style={[styles.connector, s.done && styles.connectorDone]} />
+                ) : null}
               </View>
-              {i < arr.length - 1 ? (
-                <View style={[styles.connector, s.done && styles.connectorDone]} />
-              ) : null}
+              <View style={styles.stageText}>
+                <Text style={[styles.stageLabel, !s.done && !s.current && styles.stageUpcoming]}>
+                  {s.label}
+                </Text>
+                <Text style={styles.stageDetail}>{s.detail}</Text>
+              </View>
             </View>
-            <View style={styles.stageText}>
-              <Text style={[styles.stageLabel, !s.done && !s.current && styles.stageUpcoming]}>
-                {s.label}
-              </Text>
-              <Text style={styles.stageDetail}>{s.detail}</Text>
-            </View>
-          </View>
-        ))}
+          ))}
+        </View>
       </View>
 
       {note ? (
@@ -178,12 +186,26 @@ function TechRow({ label, value, mono }: { label: string; value: string; mono?: 
   );
 }
 
+function Fact({ icon, label }: { icon: "photo" | "location" | "clock"; label: string }) {
+  return (
+    <View style={styles.fact}>
+      <Icon name={icon} size={15} color={color.primary} />
+      <Text style={styles.factText} numberOfLines={1}>{label}</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  title: { ...type.display, color: color.text },
-  metaRow: { flexDirection: "row", alignItems: "center", gap: space.xs },
-  meta: { ...type.meta, color: color.muted },
   body: { ...type.body, color: color.muted },
   pressed: { opacity: 0.7 },
+  summary: { gap: space.md, padding: space.md, borderRadius: radius.md, backgroundColor: color.surface, borderWidth: 1, borderColor: color.border },
+  summaryTop: { gap: space.sm, alignItems: "flex-start" },
+  sectionLabel: { ...type.meta, color: color.muted, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5 },
+  facts: { gap: space.sm },
+  fact: { flexDirection: "row", alignItems: "center", gap: space.sm },
+  factText: { ...type.meta, color: color.text, flex: 1 },
+  progressCard: { gap: space.md, padding: space.md, borderRadius: radius.md, backgroundColor: color.surface, borderWidth: 1, borderColor: color.border },
+  sectionTitle: { ...type.subtitle, color: color.text },
   timeline: { gap: 0, paddingVertical: space.sm },
   stageRow: { flexDirection: "row", gap: space.md, alignItems: "flex-start" },
   stageMarker: { alignItems: "center", width: 22, alignSelf: "stretch" },

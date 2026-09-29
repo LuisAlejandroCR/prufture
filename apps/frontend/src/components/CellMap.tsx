@@ -1,15 +1,13 @@
 // CellMap.tsx: map of approximate 5-char cells drawn as shaded rectangles. Opens at city zoom on the
-// reporter's area (src/map-region.ts) and marks their city centre with one small dot; tasks get no
-// pin, because a pin at a task's cell centre implies a precision the data does not have. Offline it
-// shows a plain text card instead, because map tiles need signal.
+// reporter's area (src/map-region.ts) without pins: even a cell-centre marker implies precision the
+// data does not have. Offline it shows a plain text card because map tiles need signal.
 
 import NetInfo from "@react-native-community/netinfo";
 import { useEffect, useMemo, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import MapView, { Marker, Polygon } from "react-native-maps";
+import MapView, { Polygon } from "react-native-maps";
 import { decodeGeohashBounds } from "../geohash";
 import { mapRegion } from "../map-region";
-import { cellCentre } from "../tasks";
 import { color, radius, space, type } from "../theme";
 import { Icon } from "./icons/Icon";
 
@@ -42,8 +40,6 @@ export function CellMap({
   caption,
   focusCell = null,
   cityCentre = null,
-  centreLabel = "You are around here",
-  showCentre = true,
 }: {
   cells: MapCell[];
   height?: number;
@@ -55,9 +51,6 @@ export function CellMap({
   focusCell?: string | null;
   /** City centre from geocoding; falls back to the focus cell's centre. */
   cityCentre?: Point | null;
-  centreLabel?: string;
-  /** Draw the city-centre dot. Only for the reporter's own area, never for a task's cell. */
-  showCentre?: boolean;
 }) {
   const [online, setOnline] = useState(true);
   useEffect(
@@ -73,8 +66,6 @@ export function CellMap({
     () => mapRegion(cellKeys ? cellKeys.split(",") : [], focusCell, cityCentre),
     [cellKeys, focusCell, cityCentre],
   );
-  const centre = focusCell && showCentre ? (cityCentre ?? cellCentre(focusCell)) : null;
-
   if (!online || !region) {
     return (
       <View style={[styles.offline, { minHeight: height / 2 }]} accessibilityRole="text">
@@ -110,13 +101,6 @@ export function CellMap({
             />
           );
         })}
-        {centre ? (
-          <Marker coordinate={centre} title={centreLabel} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false}>
-            <View style={styles.dotRing}>
-              <View style={styles.dot} />
-            </View>
-          </Marker>
-        ) : null}
       </MapView>
       {caption ? (
         <View style={styles.caption} pointerEvents="none">
@@ -142,22 +126,6 @@ const styles = StyleSheet.create({
     borderColor: color.border,
   },
   offlineText: { ...type.body, color: color.muted, flex: 1 },
-  dotRing: {
-    width: 22,
-    height: 22,
-    borderRadius: radius.pill,
-    backgroundColor: color.primarySoft,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  dot: {
-    width: 12,
-    height: 12,
-    borderRadius: radius.pill,
-    backgroundColor: color.primary,
-    borderWidth: 2,
-    borderColor: color.surface,
-  },
   caption: {
     position: "absolute",
     top: space.sm,
