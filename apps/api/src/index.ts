@@ -316,6 +316,25 @@ app.get("/personhood/group/:programmeId", (c) => {
   });
 });
 
+// The scope a device must bind its proof to. Computed here, from the stored report's taskId and the
+// group's current epoch, so the app never guesses epoch or policyVersion. Scope and epoch only:
+// no nullifier, commitment or report field leaves this route.
+app.get("/personhood/scope", (c) => {
+  const programmeId = c.req.query("programmeId");
+  if (!isProgrammeId(programmeId)) return c.json({ error: "invalid programmeId" }, 400);
+  const entry = getProof(c.req.query("proofHash") ?? "");
+  if (!entry) return c.json({ error: "unknown proofHash" }, 404);
+  const group = getPersonhoodGroup(programmeId);
+  if (!group) return c.json({ error: "unknown programme" }, 404);
+  const scope = expectedScope({
+    programmeId,
+    taskId: entry.payload.taskId,
+    epoch: BigInt(group.epoch),
+    policyVersion: POLICY_VERSION,
+  });
+  return c.json({ scope: scope.toString(), epoch: group.epoch }, 200);
+});
+
 app.post("/personhood/proof", async (c) => {
   const body = await readJsonObject(c);
   if (!body) return c.json({ error: "invalid json" }, 400);
