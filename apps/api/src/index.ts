@@ -1,5 +1,5 @@
 // index.ts: the api's HTTP surface — public, unauthenticated proof routes (/sync, /attest, /notify,
-// assurance, /proof) plus the PAID /coordinator/* routes gated by a server-side RevenueCat check.
+// assurance, /proof, /proof/:hash/confirmations) plus the PAID /coordinator/* routes gated by a server-side RevenueCat check.
 // Every public route is zero-PII, and no request body can choose the status code or the recipient.
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
@@ -30,6 +30,7 @@ import {
 } from "./store.js";
 import { pushRegistrationCount, registerPushToken } from "./push-store.js";
 import { attestOnce } from "./relayer.js";
+import { taskReports } from "./confirmations.js";
 import { checkLivenessVerdict } from "./assurance.js";
 import {
   POLICY_VERSION,
@@ -380,6 +381,14 @@ app.get("/proof/:hash", (c) => {
     // Additive: "verified" once a group-membership proof was accepted for this report, else null.
     membership: entry.membership ?? null,
   });
+});
+
+// Independent reports for the same task as :hash, so the reporter's phone can show honest community
+// progress. Counts are decided on the phone (apps/frontend/src/confirmations.ts); this only groups.
+app.get("/proof/:hash/confirmations", (c) => {
+  const reports = taskReports(allProofs(), c.req.param("hash"), REGION_PREFIX_LEN);
+  if (!reports) return c.json({ error: "not found" }, 404);
+  return c.json({ reports });
 });
 
 app.get("/proofs", (c) =>

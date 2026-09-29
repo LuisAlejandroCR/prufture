@@ -1,12 +1,14 @@
 // task/[id].tsx: Task details in the Alternative C evidence style — category header, the approximate
 // area on a map, the numbered evidence to capture, the questions that follow, privacy and offline notes,
-// and one "Start report" action. Nothing is captured here.
+// and one "Start report" action. A reporter near an assignment is told their report counts as a community
+// confirmation (src/confirmations.ts). Nothing is captured here.
 
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { StyleSheet, Text, View } from "react-native";
 import { CellMap } from "../../src/components/CellMap";
 import { Icon } from "../../src/components/icons/Icon";
 import { BackLink, EvidenceSteps, InfoCard, Notice, PrimaryButton, Screen, TaskHeader } from "../../src/components/ui";
+import { confirmationInvite } from "../../src/confirmations";
 import { communityProgress } from "../../src/progress";
 import { distanceLabel, getTask } from "../../src/tasks";
 import { color, radius, space, type } from "../../src/theme";
@@ -19,6 +21,7 @@ export default function TaskDetailsScreen() {
   const { cell } = useApproxArea();
   const distance = distanceLabel(cell, task);
   const progress = communityProgress(task);
+  const invite = confirmationInvite(task, cell);
 
   return (
     <Screen
@@ -78,7 +81,7 @@ export default function TaskDetailsScreen() {
           tint={color.success}
           soft={color.successSoft}
           title={`${progress.have} of ${progress.need} confirmations`}
-          body="More confirmations help build a clearer picture for the community."
+          body={invite ?? "More confirmations help build a clearer picture for the community."}
         />
       ) : null}
 
