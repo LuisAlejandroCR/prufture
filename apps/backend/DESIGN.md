@@ -97,7 +97,9 @@ table; a degraded index still shows the alert. Task ids from the reporter catalo
 stripped before labelling and grouping. Areas render through one `AreaChip`: "Near Bogotá" from a
 built-in city list (`lib/places.ts`, nearest city within 40 km of the cell centre, no network call,
 coarser than the cell) with the region code beside it, or the code alone. Report search matches the
-place name accent-free ("bogota"). All day labels, including the Overview date line, are UTC. Every dashboard route has a `loading.tsx` skeleton and
+place name accent-free ("bogota"). The CSV export carries it as `area_name` next to `approximate_region`.
+Alert copy counts what it counts: "45 reports in 2 areas need a second community report", never
+"activities". All day labels, including the Overview date line, are UTC. Every dashboard route has a `loading.tsx` skeleton and
 an `error.tsx` boundary that never prints raw error text; the site has a branded `not-found.tsx`.
 
 ## Rules
