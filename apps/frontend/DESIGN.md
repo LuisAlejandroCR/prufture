@@ -57,7 +57,9 @@ interface icons.
 
 `app/(tabs)/_layout.tsx` renders a custom bottom bar with four equal items: Missions, Report,
 My reports, Me. Report is an action, not a tab: a terracotta plus that opens the item picker
-(`/report/pick`), never a default task. The guided report flow (`app/report/*`) and the detail
+(`/report/pick`), never a default task. The bar emits React Navigation's `tabPress` event (`src/tab-press.ts`):
+tapping another tab navigates; tapping the tab you are on scrolls that page back to the top, the
+iOS convention, via `useScrollToTop` in `Screen` and on the My reports list. The guided report flow (`app/report/*`) and the detail
 screens (`app/task/[id]`, `app/status/[id]`, `app/help`) are plain stack screens with in-screen
 back controls.
 

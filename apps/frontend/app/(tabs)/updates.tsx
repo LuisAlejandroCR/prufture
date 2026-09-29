@@ -3,8 +3,8 @@
 // proofs grouped by the local reportId), friendly status and relative time, plus a manual
 // "check now". No hashes, no error traces.
 
-import { useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useState } from "react";
+import { useFocusEffect, useRouter, useScrollToTop } from "expo-router";
+import { useCallback, useRef, useState } from "react";
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Icon } from "../../src/components/icons/Icon";
 import { Illustration } from "../../src/components/Illustration";
@@ -60,6 +60,9 @@ export default function UpdatesScreen() {
   const router = useRouter();
   const [rows, setRows] = useState<LocalProof[]>([]);
   const [checking, setChecking] = useState(false);
+  // Tapping My reports again while on it scrolls the list back to the top.
+  const listRef = useRef<ScrollView>(null);
+  useScrollToTop(listRef);
   const [reachError, setReachError] = useState(false);
 
   const refresh = useCallback(() => {
@@ -118,6 +121,7 @@ export default function UpdatesScreen() {
         </View>
       ) : (
         <ScrollView
+          ref={listRef}
           style={styles.flex}
           contentContainerStyle={{ gap: space.sm, paddingBottom: space.xl }}
           refreshControl={<RefreshControl refreshing={checking} onRefresh={checkNow} tintColor={color.primary} />}
