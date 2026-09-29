@@ -88,6 +88,8 @@ export default function RootLayout() {
           <Stack.Screen name="help" />
           <Stack.Screen name="data-privacy" />
           <Stack.Screen name="about" />
+          <Stack.Screen name="coordinator" />
+          <Stack.Screen name="paywall" />
           <Stack.Screen name="zk-bench" />
         </Stack>
         {launching ? <LaunchSplash onDone={done} /> : null}

@@ -162,6 +162,31 @@ export async function getEntitlement(): Promise<ExternalResult<Entitlement>> {
   }
 }
 
+/**
+ * The SDK's anonymous app user id (`$RCAnonymousID:…`), sent as `x-app-user-id` so the api can run
+ * its own server-side entitlement check. Never an email, phone or device id.
+ */
+export async function getAppUserId(): Promise<ExternalResult<string>> {
+  try {
+    const RC = await loadPurchases();
+    const id = await RC.getAppUserID();
+    if (!id) return unavailable(SOURCE, "no app user id");
+    return ok(SOURCE, id);
+  } catch (e) {
+    return unavailable(SOURCE, e);
+  }
+}
+
+/** Apple's standard EULA, which applies because the app ships no custom licence agreement. */
+export const TERMS_OF_USE_URL = "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/";
+
+/** Where a subscriber manages or cancels the plan; the app never cancels on their behalf. */
+export function manageSubscriptionsUrl(platform: string): string {
+  return platform === "android"
+    ? "https://play.google.com/store/account/subscriptions"
+    : "https://apps.apple.com/account/subscriptions";
+}
+
 function isEntitled(customerInfo: CustomerInfo): boolean {
   return Boolean(customerInfo.entitlements.active[ENTITLEMENT_ID]);
 }

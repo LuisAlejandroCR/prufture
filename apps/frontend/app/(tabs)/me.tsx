@@ -1,5 +1,6 @@
 // (tabs)/me.tsx: essential settings only, not a social profile — storage line, then language,
-// accessibility, data and privacy, offline storage, help and about. No wallet, no account address.
+// accessibility, data and privacy, offline storage, coordinator review, help and about. No wallet,
+// no account address.
 
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
@@ -153,6 +154,16 @@ export default function MeScreen() {
             setCelebrations(v);
             void setCelebrationsEnabled(v);
           }}
+        />
+      </View>
+
+      <View style={{ gap: space.sm }}>
+        <SectionLabel>For coordinators</SectionLabel>
+        <Row
+          icon="programme"
+          title="Coordinator review"
+          subtitle="Check and export your programme's reports"
+          onPress={() => router.push("/coordinator")}
         />
       </View>
 

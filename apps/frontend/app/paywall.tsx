@@ -1,14 +1,24 @@
-// paywall.tsx: coordinator subscription screen, reachable only from a coordinator surface — never
-// from the reporter capture flow. Shows the two RevenueCat packages via src/purchases.ts with an
-// honest degraded state, legal recurring-price copy and a Restore action.
+// paywall.tsx: coordinator subscription screen, reachable only from the coordinator review screen —
+// never from the reporter capture flow. Shows the two RevenueCat packages via src/purchases.ts with an
+// honest degraded state, price per period, Terms and Privacy links (App Store 3.1.2) and Restore.
 
+import Constants from "expo-constants";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Linking, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import type { PurchasesPackage } from "react-native-purchases";
 import { BackLink, Card, Notice, PrimaryButton, Screen, ScreenTitle } from "../src/components/ui";
-import { getOfferings, purchasePackage, restorePurchases, type Offering } from "../src/purchases";
+import {
+  TERMS_OF_USE_URL,
+  getOfferings,
+  purchasePackage,
+  restorePurchases,
+  type Offering,
+} from "../src/purchases";
 import { color, radius, space, target, type } from "../src/theme";
+
+const PRIVACY_URL =
+  (Constants.expoConfig?.extra?.privacyPolicyUrl as string | undefined) || "https://prufture.vercel.app/privacy";
 
 type LoadState =
   | { kind: "loading" }
@@ -52,7 +62,7 @@ export default function PaywallScreen() {
       return;
     }
     if (result.data.entitled) {
-      router.back();
+      router.replace("/coordinator");
     }
   };
 
@@ -65,11 +75,11 @@ export default function PaywallScreen() {
       setNotice("Couldn't restore purchases right now. Please try again later.");
       return;
     }
-    setNotice(
-      result.data.entitled
-        ? "Your subscription was restored."
-        : "No active subscription was found for this account.",
-    );
+    if (result.data.entitled) {
+      router.replace("/coordinator");
+      return;
+    }
+    setNotice("No active subscription was found for this account.");
   };
 
   return (
@@ -79,9 +89,17 @@ export default function PaywallScreen() {
           <View style={{ gap: space.sm }}>
             <PrimaryButton label="Continue" onPress={handlePurchase} busy={busy} />
             <Text style={styles.legal}>
-              Renews {selected === "monthly" ? "monthly" : "annually"} until cancelled. Cancel
-              anytime in the App Store / Play Store.
+              Payment is charged to your {Platform.OS === "android" ? "Google Play" : "Apple ID"} account at
+              confirmation. The subscription renews{" "}
+              {selected === "monthly" ? "every month" : "every year"} at the same price unless you
+              cancel at least 24 hours before the period ends. Manage or cancel it in your account
+              settings.
             </Text>
+            <View style={styles.links}>
+              <LegalLink label="Terms of Use" url={TERMS_OF_USE_URL} />
+              <Text style={styles.legal}>·</Text>
+              <LegalLink label="Privacy Policy" url={PRIVACY_URL} />
+            </View>
             <Pressable
               onPress={handleRestore}
               disabled={busy}
@@ -127,15 +145,28 @@ export default function PaywallScreen() {
             />
           ) : null}
           <Card>
-            <Text style={styles.fundsTitle}>What this funds</Text>
+            <Text style={styles.fundsTitle}>What the plan includes</Text>
             <Text style={styles.fundsBody}>
-              A coordinator subscription unlocks programme dashboards, task assignment, and
-              cross-team reporting tools for your organization.
+              Coordinator review: every report your programme received, an accepted or rejected
+              verdict on each, and a CSV export. Reporting stays free for everyone.
             </Text>
           </Card>
         </View>
       )}
     </Screen>
+  );
+}
+
+function LegalLink({ label, url }: { label: string; url: string }) {
+  return (
+    <Pressable
+      onPress={() => Linking.openURL(url).catch(() => undefined)}
+      accessibilityRole="link"
+      accessibilityLabel={label}
+      hitSlop={8}
+    >
+      <Text style={styles.link}>{label}</Text>
+    </Pressable>
   );
 }
 
@@ -151,12 +182,13 @@ function PlanOption({
   onSelect: () => void;
 }) {
   const label = plan === "monthly" ? "Monthly" : "Annual";
+  const price = `${pkg.product.priceString} / ${plan === "monthly" ? "month" : "year"}`;
   return (
     <Pressable
       onPress={onSelect}
       accessibilityRole="radio"
       accessibilityState={{ selected }}
-      accessibilityLabel={`${label} plan, ${pkg.product.priceString}`}
+      accessibilityLabel={`${label} plan, ${price}`}
       style={({ pressed }) => [styles.option, selected && styles.optionSelected, pressed && styles.pressed]}
     >
       <View style={styles.optionRadio}>
@@ -164,7 +196,7 @@ function PlanOption({
       </View>
       <View style={styles.flex}>
         <Text style={styles.optionLabel}>{label}</Text>
-        <Text style={styles.optionPrice}>{pkg.product.priceString}</Text>
+        <Text style={styles.optionPrice}>{price}</Text>
       </View>
     </Pressable>
   );
@@ -209,6 +241,8 @@ const styles = StyleSheet.create({
   fundsTitle: { ...type.subtitle, color: color.text, marginBottom: space.xs },
   fundsBody: { ...type.body, color: color.muted },
   legal: { ...type.meta, color: color.muted, textAlign: "center" },
+  links: { flexDirection: "row", justifyContent: "center", alignItems: "center", gap: space.sm },
+  link: { ...type.meta, color: color.primary, fontWeight: "700", textDecorationLine: "underline" },
   restore: {
     minHeight: target.min,
     alignItems: "center",
