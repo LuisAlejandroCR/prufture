@@ -38,3 +38,22 @@ export function missionPlace(task: TaskDef, distance: string | null): string {
   if (distance === "Nearby") return "Nearby area";
   return distance ? `${task.area} · ${distance}` : task.area;
 }
+
+/** Where the reporter's approximate area stands on Home. */
+export type AreaStatus = "checking" | "undetermined" | "denied" | "granted";
+
+export interface NearMePrompt {
+  action: "ask" | "settings" | "retry" | "none";
+  label: string;
+}
+
+/**
+ * What the "missions near you" card offers when the area is unknown. The map only opens once the
+ * area is known: centred on another continent's mission it only confuses (speedrun on 2026-09-29).
+ */
+export function nearMePrompt(status: AreaStatus, canAskAgain: boolean): NearMePrompt {
+  if (status === "checking") return { action: "none", label: "Finding your area…" };
+  if (status === "granted") return { action: "retry", label: "Try again" };
+  if (status === "denied" && !canAskAgain) return { action: "settings", label: "Turn on location in Settings" };
+  return { action: "ask", label: "Show missions near me" };
+}
