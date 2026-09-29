@@ -14,6 +14,7 @@ import { listProofs } from "../../src/queue";
 import type { LocalProof } from "../../src/queue-row";
 import { getTask } from "../../src/tasks";
 import { runPendingSync } from "../../src/useAutoSync";
+import { announce, syncResult } from "../../src/announce";
 import { color, radius, space, type, type FriendlyStatus } from "../../src/theme";
 
 function relativeTime(iso: string): string {
@@ -79,6 +80,7 @@ export default function UpdatesScreen() {
       .then((s) => {
         setReachError(s.failed > 0 && s.synced === 0);
         refresh();
+        void announce(syncResult(s, true));
       })
       .catch(() => undefined)
       .finally(() => setChecking(false));
@@ -88,7 +90,12 @@ export default function UpdatesScreen() {
   const confirmed = confirmedReportCount(rows);
 
   const contribution = (
-    <View style={styles.contribution} accessibilityRole="summary">
+    <View
+      style={styles.contribution}
+      accessible
+      accessibilityLabel={`Your contribution. ${confirmed} ${confirmed === 1 ? "report" : "reports"} confirmed. No ranking. Every useful report counts. Only you see this.`}
+      accessibilityRole="summary"
+    >
       <Illustration scene="growth" height={96} />
       <View style={styles.contributionBody}>
         <Text style={styles.contributionTitle}>Your contribution</Text>
