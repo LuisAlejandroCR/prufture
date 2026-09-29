@@ -215,6 +215,14 @@ export interface Alert {
   link?: { href: string; label: string };
 }
 
+/** "45 reports in 2 areas need a second community report": counts reports, never activities. */
+export function needsSecondText(list: ProofSummary[]): string {
+  const n = list.length;
+  const k = new Set(list.map((p) => p.geohashRegion).filter(Boolean)).size;
+  const where = k > 1 ? ` in ${k} areas` : "";
+  return `${n} report${n === 1 ? "" : "s"}${where} need${n === 1 ? "s" : ""} a second community report`;
+}
+
 export function alerts(proofs: ProofSummary[], apiDegraded: boolean): Alert[] {
   const out: Alert[] = [];
 
@@ -247,8 +255,8 @@ export function alerts(proofs: ProofSummary[], apiDegraded: boolean): Alert[] {
     out.push({
       id: "needs-second",
       severity: "normal",
-      what: `${needsAnother.length} activit${needsAnother.length === 1 ? "y" : "ies"} need a second community report`,
-      why: "One report is in but a second is needed to mark the activity confirmed.",
+      what: needsSecondText(needsAnother),
+      why: "Each of these has one community report; a second report of the same activity confirms it.",
       action: "Ask a second community member in the area to report the same activity.",
       when: "this week",
       link: { href: "/dashboard/communities", label: "See areas needing a report" },

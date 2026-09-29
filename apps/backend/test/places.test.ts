@@ -3,7 +3,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { activityLabel, applyReportFilters, programmeName } from "../lib/dashboard.js";
+import { activityLabel, applyReportFilters, needsSecondText, programmeName } from "../lib/dashboard.js";
 import { foldText, placeFor, placeLabel } from "../lib/places.js";
 import type { ProofSummary } from "../lib/api.js";
 
@@ -52,4 +52,20 @@ test("report search matches the area's place name, accent-free", () => {
   assert.deepEqual(applyReportFilters(list, { q: "bogota" }).map((p) => p.proofHash), ["a"]);
   assert.deepEqual(applyReportFilters(list, { q: "Stockholm" }).map((p) => p.proofHash), ["b"]);
   assert.deepEqual(applyReportFilters(list, { q: "d2g62" }).map((p) => p.proofHash), ["a"]);
+});
+
+test("the needs-second alert counts reports and areas, not activities", () => {
+  const mk = (proofHash: string, geohashRegion: string): ProofSummary => ({
+    proofHash,
+    taskId: "solar-panel-install",
+    geohashRegion,
+    capturedAt: "2026-09-28T10:00:00Z",
+    attestationCount: 1,
+  });
+  assert.equal(needsSecondText([mk("a", "d2g62")]), "1 report needs a second community report");
+  assert.equal(needsSecondText([mk("a", "d2g62"), mk("b", "d2g62")]), "2 reports need a second community report");
+  assert.equal(
+    needsSecondText([mk("a", "d2g62"), mk("b", "u6sce"), mk("c", "u6sce")]),
+    "3 reports in 2 areas need a second community report",
+  );
 });

@@ -20,6 +20,7 @@ export default function SettingsPage() {
           <ul className="check-list">
             <li>Activity, programme grouping, and review status.</li>
             <li>Approximate region only, at most five characters of a geohash.</li>
+            <li>An area name from the nearest large city, when one is within 40 km. Broader than the region itself.</li>
             <li>Capture date and confirmation count.</li>
           </ul>
         </article>
