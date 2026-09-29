@@ -57,9 +57,9 @@
     },
     "owner": "alejoo_oo",
     "runtimeVersion": { "policy": "appVersion" },
-    "updates": { "url": "https://u.expo.dev/ff9cdaeb-a7be-4a1c-a76f-7594b2b51aef" },
+    "updates": { "url": "https://u.expo.dev/8a8c39b6-a9b4-40ab-9bee-5e6f3dffca72" },
     "extra": {
-      "eas": { "projectId": "ff9cdaeb-a7be-4a1c-a76f-7594b2b51aef" },
+      "eas": { "projectId": "8a8c39b6-a9b4-40ab-9bee-5e6f3dffca72" },
       "router": {},
       "privacyPolicyUrl": "https://prufture.vercel.app/privacy",
       "supportUrl": "https://prufture.vercel.app/support"
