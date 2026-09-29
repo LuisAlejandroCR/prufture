@@ -38,3 +38,12 @@ export function missionPlace(task: TaskDef, distance: string | null): string {
   if (distance === "Nearby") return "Nearby area";
   return distance ? `${task.area} · ${distance}` : task.area;
 }
+
+/**
+ * "Could not reach the server" is shown only when the phone is online, reports are still waiting,
+ * and the last sync pass failed for all of them. Offline is the Offline pill's job; once nothing is
+ * waiting there is nothing to warn about, so a stale notice can never outlive a successful sync.
+ */
+export function showReachError(s: { online: boolean; pending: number; synced: number; failed: number }): boolean {
+  return s.online && s.pending > 0 && s.failed > 0 && s.synced === 0;
+}

@@ -5,7 +5,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { LocalProof } from "../src/queue-row.js";
-import { confirmedReportCount, greeting, missionPlace, missionQuestion } from "../src/home.js";
+import { confirmedReportCount, greeting, missionPlace, missionQuestion, showReachError } from "../src/home.js";
 import { categoryIcon, getTask, itemTaskId, listTasks } from "../src/tasks.js";
 import { CATEGORIES } from "../src/items.js";
 
@@ -67,4 +67,13 @@ test("mission place never invents precision", () => {
 test("every category has an icon, so no mission row renders a blank circle", () => {
   for (const c of CATEGORIES) assert.ok(categoryIcon[c], `no icon for ${c}`);
   for (const t of [...listTasks(), getTask(itemTaskId("water-point"))]) assert.ok(categoryIcon[t.category]);
+});
+
+test("server notice: only online, only while reports wait, only when every send failed", () => {
+  const base = { online: true, pending: 2, synced: 0, failed: 2 };
+  assert.equal(showReachError(base), true);
+  assert.equal(showReachError({ ...base, online: false }), false, "offline is the Offline pill's job");
+  assert.equal(showReachError({ ...base, pending: 0 }), false, "nothing waiting: nothing to warn about");
+  assert.equal(showReachError({ ...base, synced: 1 }), false, "partial success is not a reach error");
+  assert.equal(showReachError({ ...base, failed: 0 }), false);
 });

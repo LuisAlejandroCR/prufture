@@ -68,9 +68,18 @@ rectangles with no centre pin (`CellMap`). Mission rows use `CategoryBadge` (sof
 category icon), the first closed question, and "Nearby area" or a rounded distance. A final row
 opens the full catalog.
 
+## Keyboard and connection notices
+
+Scrolling screens set `automaticallyAdjustKeyboardInsets`, so a focused field (the Review note)
+scrolls above the iOS keyboard instead of under it. "Could not reach the server" on Missions
+follows `showReachError` (`src/home.ts`): only online, only while reports are waiting, only when
+the last pass failed for all of them. Offline is the Offline pill's job, and Missions re-syncs
+when signal returns, so the notice never outlives a successful sync.
+
 ## Launch
 
-The native splash (`assets/splash-icon.svg` rendered to `splash-icon.png`) shows the home
+App icon, adaptive icon, favicon, notification icon and native splash are all the sprout mark
+(`assets/*.svg` rendered to PNG with `sharp`); the old shield is gone. The native splash shows the home
 `BrandMark` sprout on a warm sun disc with "Prufture" below. `app/_layout.tsx` holds it
 (`preventAutoHideAsync`) until the root view lays out, then hands off to `LaunchSplash`, which
 starts from the same mark: sun disc swells, stem grows, right then left leaf unfold (back-eased),

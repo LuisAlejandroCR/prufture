@@ -3,12 +3,12 @@
 // nearest first, plus a way into the full catalog. Home and the old Tasks tab are one screen now.
 
 import { useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { CellMap, type MapCell } from "../../src/components/CellMap";
 import { Icon, type IconName } from "../../src/components/icons/Icon";
 import { BrandMark, CategoryBadge, OfflinePill, Screen } from "../../src/components/ui";
-import { confirmedReportCount, greeting, missionPlace, missionQuestion } from "../../src/home";
+import { confirmedReportCount, greeting, missionPlace, missionQuestion, showReachError } from "../../src/home";
 import { listProofs } from "../../src/queue";
 import type { LocalProof } from "../../src/queue-row";
 import {
@@ -33,38 +33,49 @@ export default function MissionsScreen() {
   const { cell, centre } = useApproxArea();
   const [pending, setPending] = useState(0);
   const [confirmed, setConfirmed] = useState(0);
-  const [reachError, setReachError] = useState(false);
+  const [lastSync, setLastSync] = useState({ synced: 0, failed: 0 });
   const [view, setView] = useState<View_>("list");
   const [unfinished, setUnfinished] = useState<{ taskId: string } | null>(null);
   const missions = useMemo(() => sortByDistance(listTasks(), cell), [cell]);
+
+  const count = useCallback((rows: LocalProof[]) => {
+    setPending(rows.filter((r) => r.status === "pending_sync").length);
+    setConfirmed(confirmedReportCount(rows));
+  }, []);
+
+  // Try to send whatever is waiting, then recount. Runs on focus and again when signal returns.
+  const syncWaiting = useCallback(() => {
+    listProofs()
+      .then((rows) => {
+        count(rows);
+        if (!rows.some((r) => r.status === "pending_sync")) return;
+        runPendingSync()
+          .then((s) => {
+            setLastSync({ synced: s.synced, failed: s.failed });
+            listProofs().then(count).catch(() => undefined);
+          })
+          .catch(() => undefined);
+      })
+      .catch(() => {
+        setPending(0);
+        setConfirmed(0);
+      });
+  }, [count]);
 
   useFocusEffect(
     useCallback(() => {
       hasPersistedDraft()
         .then((meta) => setUnfinished(meta && isResumable(meta) ? { taskId: meta.taskId } : null))
         .catch(() => setUnfinished(null));
-      const count = (rows: LocalProof[]) => {
-        setPending(rows.filter((r) => r.status === "pending_sync").length);
-        setConfirmed(confirmedReportCount(rows));
-      };
-      listProofs()
-        .then((rows) => {
-          count(rows);
-          if (rows.some((r) => r.status === "pending_sync")) {
-            runPendingSync()
-              .then((s) => {
-                setReachError(s.failed > 0 && s.synced === 0);
-                listProofs().then(count).catch(() => undefined);
-              })
-              .catch(() => undefined);
-          }
-        })
-        .catch(() => {
-          setPending(0);
-          setConfirmed(0);
-        });
-    }, []),
+      syncWaiting();
+    }, [syncWaiting]),
   );
+
+  useEffect(() => {
+    if (online) syncWaiting();
+  }, [online, syncWaiting]);
+
+  const reachError = showReachError({ online, pending, ...lastSync });
 
   const open = (id: string) => router.push({ pathname: "/task/[id]", params: { id } });
 

@@ -522,3 +522,44 @@ body:has(.pitch-deck) { background: var(--bg); }
 .dash-account { margin-top: auto; padding-top: 16px; }
 .staff-signin { min-height: 100vh; display: grid; place-items: center; align-content: center; gap: 20px; padding: 40px 16px; }
 .staff-signin-note { max-width: 420px; margin: 0; text-align: center; color: #6e6e73; }
+
+/* /verify/[hash]: the page a reporter opens from the app, so it matches the app (Alternative C):
+   light-only ivory tokens even under a dark system theme, sprout brand, cards and a timeline. */
+.verify-page {
+  color-scheme: light;
+  --bg: #fbf6ef;
+  --surface: #ffffff;
+  --surface-2: #f7f2ea;
+  --border: #ede5d8;
+  --text: #1c1208;
+  --text-muted: #806f5c;
+  --text-faint: #806f5c;
+  --brand: #c8533a;
+  --brand-ink: #ffffff;
+  --ok-bg: #ebf7f2;
+  --ok-text: #3d9970;
+  --wait-bg: #fdf5e6;
+  --wait-text: #c88720;
+  --info-bg: #e7f3f8;
+  --info-text: #2982a1;
+  --link: #a8402b;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+}
+.verify-page .wrap { display: grid; gap: var(--sp-4); max-width: 640px; }
+.verify-page .card { border-radius: var(--radius-lg); padding: var(--sp-5); }
+.v-brand {
+  display: inline-flex; align-items: center; gap: var(--sp-2);
+  color: var(--brand); text-decoration: none; font-weight: 700; font-size: 1.15rem;
+}
+.v-brand span { color: var(--text); }
+.v-hero h1 { margin: var(--sp-3) 0 var(--sp-2); font-size: clamp(1.4rem, 5vw, 1.9rem); }
+.v-hero p { margin: 0; }
+.v-timeline { margin: 0; padding: 0 var(--sp-2); }
+.v-detail { display: block; font-size: 0.9rem; }
+.v-card-title { margin: 0 0 var(--sp-2); font-size: 1.05rem; }
+.verify-page .fields { margin: var(--sp-2) 0 0; }
+.verify-page .tech { margin: 0; }
+/* Keep the page edges (overscroll, safe areas) ivory too, not the dark-theme body colour. */
+html:has(.verify-page), body:has(.verify-page) { background: #fbf6ef; color-scheme: light; }
