@@ -4,16 +4,18 @@
 
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
-import { Image, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { CellMap } from "../../src/components/CellMap";
 import { Icon } from "../../src/components/icons/Icon";
 import {
+  AnswerChip,
   BackLink,
-  CategoryBadge,
+  EvidenceSteps,
   Notice,
   PrimaryButton,
   ReportProgress,
   Screen,
+  TaskHeader,
 } from "../../src/components/ui";
 import { captureProof } from "../../src/capture";
 import { bump } from "../../src/feedback";
@@ -71,19 +73,13 @@ export default function ReportReviewScreen() {
         label="Review"
       />
 
-      <View style={styles.header}>
-        <CategoryBadge category={task.category} size={52} />
-        <View style={styles.flex}>
-          <Text style={styles.title} accessibilityRole="header">
-            {task.title}
-          </Text>
-          <Text style={styles.sub}>{task.purpose}</Text>
-        </View>
-      </View>
+      <TaskHeader category={task.category} title={task.title} subtitle={task.purpose} />
 
       {draft?.geohash ? (
         <CellMap
           cells={[{ key: "report", cell: draft.geohash.slice(0, 5), tone: "self" }]}
+          focusCell={draft.geohash.slice(0, 5)}
+          centreLabel="Your report's approximate area"
           height={170}
           caption="Showing an approximate area (not exact location)"
           offlineLabel={`${draft.areaLabel || "Approximate area"}. Only the approximate area is part of the report.`}
@@ -100,36 +96,11 @@ export default function ReportReviewScreen() {
         </Text>
         <Text style={styles.sub}>Tap a photo to take it again.</Text>
       </View>
-      <View style={styles.steps}>
-        {task.photos.map((spec, i) => {
-          const photo = photos.find((p) => p.stepIndex === i);
-          return (
-            <Pressable
-              key={i}
-              onPress={() => retake(i)}
-              accessibilityRole="button"
-              accessibilityLabel={`Photo ${i + 1}: ${spec.prompt}. ${photo ? "Taken. Tap to take again." : "Missing. Tap to take it."}`}
-              style={({ pressed }) => [styles.step, pressed && styles.pressed]}
-            >
-              <View>
-                {photo ? (
-                  <Image source={{ uri: photo.uri }} style={styles.thumb} />
-                ) : (
-                  <View style={[styles.thumb, styles.thumbEmpty]}>
-                    <Icon name="camera" size={24} color={color.muted} />
-                  </View>
-                )}
-                <View style={[styles.num, photo ? styles.numDone : null]}>
-                  <Text style={styles.numText}>{i + 1}</Text>
-                </View>
-              </View>
-              <Text style={styles.stepText} numberOfLines={3}>
-                {spec.prompt}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+      <EvidenceSteps
+        prompts={task.photos.map((p) => p.prompt)}
+        photos={task.photos.map((_, i) => photos.find((p) => p.stepIndex === i)?.uri)}
+        onPress={retake}
+      />
 
       {answered.length > 0 ? (
         <View style={{ gap: space.sm }}>
@@ -144,10 +115,7 @@ export default function ReportReviewScreen() {
             >
               <Text style={styles.answerQ}>{q.text}</Text>
               <View style={styles.answerRow}>
-                <View style={styles.chip}>
-                  <Icon name="check" size={16} color={color.success} />
-                  <Text style={styles.chipText}>{answers[q.id]}</Text>
-                </View>
+                <AnswerChip option={answers[q.id] ?? ""} />
                 <Text style={styles.change}>Change</Text>
               </View>
             </Pressable>
@@ -194,31 +162,9 @@ export default function ReportReviewScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   pressed: { opacity: 0.7 },
-  header: { flexDirection: "row", alignItems: "center", gap: space.md },
-  title: { ...type.display, color: color.text },
   sub: { ...type.meta, color: color.muted },
   section: { ...type.subtitle, color: color.text },
   sectionMeta: { ...type.body, color: color.muted, fontWeight: "400" },
-  steps: { flexDirection: "row", gap: space.md },
-  step: { flex: 1, alignItems: "center", gap: space.sm },
-  thumb: { width: 84, height: 84, borderRadius: radius.pill, backgroundColor: color.surfaceSoft },
-  thumbEmpty: { alignItems: "center", justifyContent: "center", borderWidth: 1.5, borderStyle: "dashed", borderColor: color.border },
-  num: {
-    position: "absolute",
-    top: -2,
-    left: -2,
-    width: 26,
-    height: 26,
-    borderRadius: radius.pill,
-    backgroundColor: color.muted,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 2,
-    borderColor: color.background,
-  },
-  numDone: { backgroundColor: color.success },
-  numText: { ...type.meta, fontWeight: "700", color: color.onPrimary },
-  stepText: { ...type.meta, color: color.text, textAlign: "center" },
   answer: {
     gap: space.sm,
     padding: space.md,
@@ -229,16 +175,6 @@ const styles = StyleSheet.create({
   },
   answerQ: { ...type.meta, color: color.muted },
   answerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  chip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: space.sm,
-    minHeight: target.min - space.xs,
-    paddingHorizontal: space.md,
-    borderRadius: radius.sm,
-    backgroundColor: color.successSoft,
-  },
-  chipText: { ...type.subtitle, color: color.text },
   change: { ...type.meta, color: color.primary, fontWeight: "700" },
   note: {
     ...type.body,

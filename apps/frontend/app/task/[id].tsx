@@ -1,105 +1,120 @@
-// task/[id].tsx: Task Details — exactly what to do before opening the camera: purpose, approximate
-// area, a "what to capture" checklist, a privacy warning where people may appear, and one action.
+// task/[id].tsx: Task details in the Alternative C evidence style — category header, the approximate
+// area on a map, the numbered evidence to capture, the questions that follow, privacy and offline notes,
+// and one "Start report" action. Nothing is captured here.
 
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { StyleSheet, Text, View } from "react-native";
+import { CellMap } from "../../src/components/CellMap";
 import { Icon } from "../../src/components/icons/Icon";
-import { BackLink, Notice, PrimaryButton, Screen, SectionLabel } from "../../src/components/ui";
-import { categoryAccent, getTask } from "../../src/tasks";
+import { BackLink, EvidenceSteps, InfoCard, Notice, PrimaryButton, Screen, TaskHeader } from "../../src/components/ui";
+import { communityProgress } from "../../src/progress";
+import { distanceLabel, getTask } from "../../src/tasks";
 import { color, radius, space, type } from "../../src/theme";
+import { useApproxArea } from "../../src/useApproxArea";
 
 export default function TaskDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const task = getTask(id ?? "");
+  const { cell } = useApproxArea();
+  const distance = distanceLabel(cell, task);
+  const progress = communityProgress(task);
 
   return (
     <Screen
-      footer={<PrimaryButton label="Start report" onPress={() => router.push({ pathname: "/report/intro", params: { id: task.id } })} />}
+      footer={
+        <PrimaryButton label="Start report" onPress={() => router.push({ pathname: "/report/intro", params: { id: task.id } })} />
+      }
     >
-      <BackLink label="Tasks" onPress={() => router.back()} />
+      <BackLink label="Missions" onPress={() => router.back()} />
+      <TaskHeader category={task.category} title={task.title} subtitle={task.purpose} />
 
-      <View style={styles.tag}>
-        <View style={[styles.dot, { backgroundColor: color[categoryAccent[task.category]] }]} />
-        <Text style={styles.tagText}>{task.category}</Text>
-      </View>
-      <Text style={styles.title} accessibilityRole="header">
-        {task.title}
-      </Text>
-
-      <View style={styles.metaRow}>
-        <Icon name="location" size={16} color={color.faint} />
-        <Text style={styles.meta}>{task.area}</Text>
-        <Icon name="clock" size={16} color={color.faint} />
-        <Text style={styles.meta}>About {task.minutes} min</Text>
+      <View style={styles.meta}>
+        <Icon name="location" size={15} color={color.muted} />
+        <Text style={styles.metaText}>{distance ? `${task.area} · ${distance}` : task.area}</Text>
+        <Icon name="clock" size={15} color={color.muted} />
+        <Text style={styles.metaText}>About {task.minutes} min</Text>
       </View>
 
-      <Text style={styles.purpose}>{task.purpose}</Text>
+      {task.cell ? (
+        <CellMap
+          cells={[
+            ...(cell ? [{ key: "me", cell, tone: "self" as const }] : []),
+            { key: task.id, cell: task.cell, tone: "task" as const },
+          ]}
+          height={170}
+          focusCell={task.cell}
+          showCentre={false}
+          caption="Showing an approximate area (not exact location)"
+          offlineLabel={`${task.area}. Map available when online.`}
+        />
+      ) : null}
+
+      <View style={{ gap: space.xs }}>
+        <Text style={styles.section}>
+          Add evidence{" "}
+          <Text style={styles.sectionMeta}>
+            ({task.photos.length} {task.photos.length === 1 ? "step" : "steps"})
+          </Text>
+        </Text>
+        <Text style={styles.sub}>Take a few clear photos to show the situation.</Text>
+      </View>
+      <EvidenceSteps prompts={task.photos.map((p) => p.prompt)} />
+
+      {task.questions.length > 0 ? (
+        <View style={{ gap: space.sm }}>
+          <Text style={styles.section}>Then answer</Text>
+          {task.questions.map((q) => (
+            <View key={q.id} style={styles.question}>
+              <Icon name="questions" size={16} color={color.muted} />
+              <Text style={styles.questionText}>{q.text}</Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
+
+      {progress ? (
+        <InfoCard
+          icon="community"
+          tint={color.success}
+          soft={color.successSoft}
+          title={`${progress.have} of ${progress.need} confirmations`}
+          body="More confirmations help build a clearer picture for the community."
+        />
+      ) : null}
 
       {task.peopleRisk ? (
         <Notice tone="attention" icon="privacy">
-          Protect people's privacy. Avoid faces, names, identity documents, and private records.
+          Protect people's privacy. Avoid faces, names, identity documents and private records.
         </Notice>
       ) : null}
 
-      <View style={{ gap: space.sm }}>
-        <SectionLabel>What to capture</SectionLabel>
-        {task.photos.map((p, i) => (
-          <View key={i} style={styles.checkItem}>
-            <View style={styles.num}>
-              <Text style={styles.numText}>{i + 1}</Text>
-            </View>
-            <Text style={styles.checkText}>{p.prompt}</Text>
-          </View>
-        ))}
-        {task.questions.length > 0 ? (
-          <View style={styles.checkItem}>
-            <View style={styles.num}>
-              <Icon name="questions" size={14} color={color.muted} />
-            </View>
-            <Text style={styles.checkText}>
-              {task.questions.length} short {task.questions.length === 1 ? "question" : "questions"}
-            </Text>
-          </View>
-        ) : null}
-      </View>
-
-      <View style={styles.offline}>
-        <Icon name="offline" size={16} color={color.success} />
-        <Text style={styles.offlineText}>You can finish this report without signal.</Text>
-      </View>
+      <InfoCard
+        icon="offline"
+        tint={color.success}
+        soft={color.successSoft}
+        title="Works offline"
+        body="You can finish this report without signal. It sends when you are back online."
+      />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  tag: { flexDirection: "row", alignItems: "center", gap: space.xs },
-  dot: { width: 8, height: 8, borderRadius: radius.pill },
-  tagText: { ...type.meta, color: color.muted, fontWeight: "700" },
-  title: { ...type.display, color: color.text },
-  metaRow: { flexDirection: "row", alignItems: "center", gap: space.xs, flexWrap: "wrap" },
-  meta: { ...type.meta, color: color.muted, marginRight: space.sm },
-  purpose: { ...type.body, color: color.text },
-  checkItem: {
+  meta: { flexDirection: "row", alignItems: "center", gap: space.xs, flexWrap: "wrap" },
+  metaText: { ...type.meta, color: color.muted, marginRight: space.sm },
+  section: { ...type.subtitle, color: color.text },
+  sectionMeta: { ...type.body, color: color.muted, fontWeight: "400" },
+  sub: { ...type.meta, color: color.muted },
+  question: {
     flexDirection: "row",
     alignItems: "center",
-    gap: space.md,
+    gap: space.sm,
     padding: space.md,
     borderRadius: radius.md,
     backgroundColor: color.surface,
     borderWidth: 1,
     borderColor: color.border,
   },
-  num: {
-    width: 26,
-    height: 26,
-    borderRadius: radius.pill,
-    backgroundColor: color.surfaceSoft,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  numText: { ...type.meta, color: color.muted, fontWeight: "700" },
-  checkText: { ...type.body, color: color.text, flex: 1 },
-  offline: { flexDirection: "row", alignItems: "center", gap: space.sm },
-  offlineText: { ...type.meta, color: color.success, fontWeight: "600" },
+  questionText: { ...type.body, color: color.text, flex: 1 },
 });

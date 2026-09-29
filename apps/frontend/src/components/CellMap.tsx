@@ -1,12 +1,15 @@
-// CellMap.tsx: map of approximate 5-char cells drawn as shaded rectangles — never a pin, because a
-// pin at the cell centre implies a precision the data does not have. Tapping a task area opens it.
-// Offline it shows a plain text card instead, because map tiles need signal.
+// CellMap.tsx: map of approximate 5-char cells drawn as shaded rectangles. Opens at city zoom on the
+// reporter's area (src/map-region.ts) and marks their city centre with one small dot; tasks get no
+// pin, because a pin at a task's cell centre implies a precision the data does not have. Offline it
+// shows a plain text card instead, because map tiles need signal.
 
 import NetInfo from "@react-native-community/netinfo";
 import { useEffect, useMemo, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import MapView, { Polygon, type Region } from "react-native-maps";
+import MapView, { Marker, Polygon } from "react-native-maps";
 import { decodeGeohashBounds } from "../geohash";
+import { mapRegion } from "../map-region";
+import { cellCentre } from "../tasks";
 import { color, radius, space, type } from "../theme";
 import { Icon } from "./icons/Icon";
 
@@ -20,6 +23,8 @@ export interface MapCell {
   onPress?: () => void;
 }
 
+type Point = { latitude: number; longitude: number };
+
 function cellPolygon(cell: string) {
   const b = decodeGeohashBounds(cell);
   return [
@@ -30,34 +35,29 @@ function cellPolygon(cell: string) {
   ];
 }
 
-/** Region that fits every cell with a margin; a single cell gets a district-sized view. */
-export function regionForCells(cells: string[]): Region | undefined {
-  if (cells.length === 0) return undefined;
-  const boxes = cells.map(decodeGeohashBounds);
-  const latMin = Math.min(...boxes.map((b) => b.latMin));
-  const latMax = Math.max(...boxes.map((b) => b.latMax));
-  const lngMin = Math.min(...boxes.map((b) => b.lngMin));
-  const lngMax = Math.max(...boxes.map((b) => b.lngMax));
-  return {
-    latitude: (latMin + latMax) / 2,
-    longitude: (lngMin + lngMax) / 2,
-    latitudeDelta: Math.max((latMax - latMin) * 1.6, 0.12),
-    longitudeDelta: Math.max((lngMax - lngMin) * 1.6, 0.12),
-  };
-}
-
 export function CellMap({
   cells,
   height = 220,
   offlineLabel,
   caption,
+  focusCell = null,
+  cityCentre = null,
+  centreLabel = "You are around here",
+  showCentre = true,
 }: {
   cells: MapCell[];
   height?: number;
-  /** Small chip over the map's top-right corner, e.g. the approximate-area disclaimer. */
-  caption?: string;
   /** Text shown instead of the map with no signal. */
   offlineLabel: string;
+  /** Small chip over the map's top-right corner, e.g. the approximate-area disclaimer. */
+  caption?: string;
+  /** The reporter's approximate cell: the map centres here at city zoom and draws the centre dot. */
+  focusCell?: string | null;
+  /** City centre from geocoding; falls back to the focus cell's centre. */
+  cityCentre?: Point | null;
+  centreLabel?: string;
+  /** Draw the city-centre dot. Only for the reporter's own area, never for a task's cell. */
+  showCentre?: boolean;
 }) {
   const [online, setOnline] = useState(true);
   useEffect(
@@ -68,7 +68,12 @@ export function CellMap({
       }),
     [],
   );
-  const region = useMemo(() => regionForCells(cells.map((c) => c.cell)), [cells]);
+  const cellKeys = cells.map((c) => c.cell).join(",");
+  const region = useMemo(
+    () => mapRegion(cellKeys ? cellKeys.split(",") : [], focusCell, cityCentre),
+    [cellKeys, focusCell, cityCentre],
+  );
+  const centre = focusCell && showCentre ? (cityCentre ?? cellCentre(focusCell)) : null;
 
   if (!online || !region) {
     return (
@@ -82,6 +87,8 @@ export function CellMap({
   return (
     <View style={[styles.frame, { height }]}>
       <MapView
+        // Remount when the area resolves, so a location that arrives after first paint re-centres the map.
+        key={`${region.latitude.toFixed(3)},${region.longitude.toFixed(3)}`}
         style={StyleSheet.absoluteFill}
         initialRegion={region}
         showsUserLocation={false}
@@ -103,6 +110,13 @@ export function CellMap({
             />
           );
         })}
+        {centre ? (
+          <Marker coordinate={centre} title={centreLabel} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false}>
+            <View style={styles.dotRing}>
+              <View style={styles.dot} />
+            </View>
+          </Marker>
+        ) : null}
       </MapView>
       {caption ? (
         <View style={styles.caption} pointerEvents="none">
@@ -128,6 +142,22 @@ const styles = StyleSheet.create({
     borderColor: color.border,
   },
   offlineText: { ...type.body, color: color.muted, flex: 1 },
+  dotRing: {
+    width: 22,
+    height: 22,
+    borderRadius: radius.pill,
+    backgroundColor: color.primarySoft,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  dot: {
+    width: 12,
+    height: 12,
+    borderRadius: radius.pill,
+    backgroundColor: color.primary,
+    borderWidth: 2,
+    borderColor: color.surface,
+  },
   caption: {
     position: "absolute",
     top: space.sm,

@@ -68,6 +68,25 @@ rectangles with no centre pin (`CellMap`). Mission rows use `CategoryBadge` (sof
 category icon), the first closed question, and "Nearby area" or a rounded distance. A final row
 opens the full catalog.
 
+## Shared report pieces (Alternative C)
+
+Every task and report screen is built from the same `src/components/ui.tsx` pieces, so the flow
+reads as one product: `TaskHeader` (category circle, title, purpose), `EvidenceSteps` (numbered
+round photo slots: dashed camera when empty, photo + sage check when taken, terracotta ring on the
+current step), `AnswerChip` and the toned options in Questions (`src/answer-tone.ts`: sage check =
+works, amber warning = missing / partial / broken, neutral info = could not check, so an unsure
+answer never shows a success tick), and `InfoCard` (round icon, title, body) for offline,
+permission, progress and privacy notes. Completion screens (Saved, Sending, Sent) share the
+sun-and-sprout scene and side-by-side View status / Done actions.
+
+## Maps
+
+`src/map-region.ts` decides where a `CellMap` opens: centred on the reporter's approximate cell at
+city zoom (`CITY_DELTA` about 20 km), never a world view; without a location it fits only cells
+within about 1 degree of the nearest one. The reporter's own area gets one small terracotta dot at
+the **centre of their city** (`cityCentreForCell`, geocoded; falls back to the cell centre offline).
+Task cells never get a dot (`showCentre={false}`), because a point there implies false precision.
+
 ## Report flow
 
 `src/report-draft.ts` holds the in-memory draft (photos, answers, coarse area) for the report

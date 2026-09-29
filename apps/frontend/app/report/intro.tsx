@@ -1,5 +1,5 @@
-// report/intro.tsx: reduce uncertainty before the first capture — step count, estimate, offline and
-// privacy notes, one primary action. Starts a fresh draft, unless a recent unfinished draft for the
+// report/intro.tsx: reduce uncertainty before the first capture — task header, the numbered evidence
+// to take, time, offline and privacy notes, one primary action (Alternative C style). Starts a fresh draft, unless a recent unfinished draft for the
 // SAME task is on the phone, in which case it offers continue / start over.
 
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -8,12 +8,14 @@ import { StyleSheet, Text, View } from "react-native";
 import { Icon } from "../../src/components/icons/Icon";
 import {
   BackLink,
-  Card,
+  EvidenceSteps,
+  InfoCard,
   PrimaryButton,
   Reassurance,
   Screen,
   SecondaryButton,
   SectionLabel,
+  TaskHeader,
 } from "../../src/components/ui";
 import {
   clearDraft,
@@ -99,19 +101,14 @@ export default function ReportIntroScreen() {
       >
         <BackLink label="Back" onPress={() => router.back()} />
         <SectionLabel>Unfinished report</SectionLabel>
-        <Text style={styles.title} accessibilityRole="header">
-          {task.title}
-        </Text>
-        <Card>
-          <View style={styles.resumeRow}>
-            <Icon name="offline" size={20} color={color.primary} />
-            <Text style={styles.resumeText}>
-              You started this report earlier and it is still saved on this phone
-              {parts.length ? ` — ${parts.join(" and ")} so far` : ""}. You can pick up where you
-              left off, or start again.
-            </Text>
-          </View>
-        </Card>
+        <TaskHeader category={task.category} title={task.title} />
+        <InfoCard
+          icon="privacy"
+          tint={color.success}
+          soft={color.successSoft}
+          title="Saved on this phone"
+          body={`You started this report earlier${parts.length ? `: ${parts.join(" and ")} so far` : ""}. Pick up where you left off, or start again.`}
+        />
         <Reassurance
           title="Nothing was sent"
           body="An unfinished report stays on this phone only. Starting over deletes it from the phone."
@@ -124,12 +121,22 @@ export default function ReportIntroScreen() {
     <Screen footer={<PrimaryButton label="Begin" onPress={begin} />}>
       <BackLink label="Back" onPress={() => router.back()} />
       <SectionLabel>Before you start</SectionLabel>
-      <Text style={styles.title} accessibilityRole="header">
-        {task.title}
-      </Text>
+      <TaskHeader category={task.category} title={task.title} subtitle={task.purpose} />
+
+      <View style={{ gap: space.xs }}>
+        <Text style={styles.section}>
+          Add evidence{" "}
+          <Text style={styles.sectionMeta}>
+            ({task.photos.length} {task.photos.length === 1 ? "step" : "steps"})
+          </Text>
+        </Text>
+        <Text style={styles.sub}>
+          Then {task.questions.length} short {task.questions.length === 1 ? "question" : "questions"}.
+        </Text>
+      </View>
+      <EvidenceSteps prompts={task.photos.map((p) => p.prompt)} />
 
       <View style={styles.facts}>
-        <Fact icon="review" text={`${task.photos.length} photos, then ${task.questions.length} short ${task.questions.length === 1 ? "question" : "questions"}`} />
         <Fact icon="clock" text={`About ${task.minutes} minutes`} />
         <Fact icon="offline" text="You can finish without signal" tint={color.success} />
       </View>
@@ -142,7 +149,7 @@ export default function ReportIntroScreen() {
   );
 }
 
-function Fact({ icon, text, tint }: { icon: "review" | "clock" | "offline"; text: string; tint?: string }) {
+function Fact({ icon, text, tint }: { icon: "clock" | "offline"; text: string; tint?: string }) {
   return (
     <View style={styles.fact}>
       <View style={styles.factIcon}>
@@ -154,7 +161,9 @@ function Fact({ icon, text, tint }: { icon: "review" | "clock" | "offline"; text
 }
 
 const styles = StyleSheet.create({
-  title: { ...type.display, color: color.text },
+  section: { ...type.subtitle, color: color.text },
+  sectionMeta: { ...type.body, color: color.muted, fontWeight: "400" },
+  sub: { ...type.meta, color: color.muted },
   loading: { ...type.body, color: color.muted },
   facts: { gap: space.sm },
   fact: {
@@ -176,6 +185,4 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   factText: { ...type.body, color: color.text, flex: 1 },
-  resumeRow: { flexDirection: "row", gap: space.sm, alignItems: "flex-start" },
-  resumeText: { ...type.body, color: color.text, flex: 1 },
 });
