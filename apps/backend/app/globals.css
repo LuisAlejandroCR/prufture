@@ -767,6 +767,7 @@ table.data code { font-size: .85em; }
 }
 .area-chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 8px; border-radius: var(--pill); background: var(--surface-2); border: 1px solid var(--border); white-space: nowrap; }
 .area-chip .ic { color: var(--text-muted); }
+.area-chip .area-code { color: var(--text-muted); font-size: 0.85em; }
 .rowlink { display: inline-flex; align-items: center; gap: 4px; color: var(--link); text-decoration: none; font-weight: 650; padding: 6px 10px; border-radius: 8px; white-space: nowrap; }
 .rowlink:hover { background: var(--brand-soft); }
 table.data td:has(> .rowlink) { text-align: right; }

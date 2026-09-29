@@ -20,6 +20,7 @@ import {
 } from "../../../../lib/dashboard";
 import { Icon } from "../../../_components/brand";
 import { EmptyState, StatusPill } from "../../ui";
+import { placeLabel } from "../../../../lib/places";
 import { PagerKeys } from "./PagerKeys";
 
 export const dynamic = "force-dynamic";
@@ -153,8 +154,10 @@ export default async function ReportReviewPage({
             <div className="fact">
               <span className="fact-icon"><Icon name="pin" /></span>
               <small>Approximate area</small>
-              <strong><code>{proof.geohashRegion || "not recorded"}</code></strong>
-              <span className="fact-note">coarse region only</span>
+              <strong>{placeLabel(proof.geohashRegion) || <code>{proof.geohashRegion || "not recorded"}</code>}</strong>
+              <span className="fact-note">
+                {placeLabel(proof.geohashRegion) ? <>region <code>{proof.geohashRegion}</code> · </> : null}coarse region only
+              </span>
             </div>
             <div className="fact">
               <span className="fact-icon"><Icon name="clock" /></span>

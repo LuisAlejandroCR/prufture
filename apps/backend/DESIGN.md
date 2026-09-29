@@ -93,7 +93,11 @@ names the activity types and areas in its hint; the Programmes page has one sect
 (totals, confirmed share, "All <programme> reports") with activity cards inside
 (`programmeGroups`). With a healthy index and no reports, the Overview shows a three-step
 "how the first report gets here" panel and the metric tiles only, never empty charts or an empty
-table; a degraded index still shows the alert. Every dashboard route has a `loading.tsx` skeleton and
+table; a degraded index still shows the alert. Task ids from the reporter catalogue arrive as `item:<id>`; the prefix is
+stripped before labelling and grouping. Areas render through one `AreaChip`: "Near Bogotá" from a
+built-in city list (`lib/places.ts`, nearest city within 40 km of the cell centre, no network call,
+coarser than the cell) with the region code beside it, or the code alone. Report search matches the
+place name accent-free ("bogota"). All day labels, including the Overview date line, are UTC. Every dashboard route has a `loading.tsx` skeleton and
 an `error.tsx` boundary that never prints raw error text; the site has a branded `not-found.tsx`.
 
 ## Rules
