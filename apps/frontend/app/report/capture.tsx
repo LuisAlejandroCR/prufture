@@ -58,7 +58,8 @@ export default function ReportCaptureScreen() {
 
   const next = () => {
     if (retake === "1") {
-      router.replace({ pathname: "/report/review", params: { id: task.id } });
+      // Pushed from Review: return to it rather than stacking a second Review.
+      router.back();
     } else if (stepIndex + 1 < total) {
       router.replace({ pathname: "/report/capture", params: { id: task.id, step: String(stepIndex + 1) } });
     } else if (task.questions.length > 0) {

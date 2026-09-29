@@ -78,6 +78,19 @@ opens the full catalog.
 - `Appear` fades list rows up with a 40 ms stagger (audit motion table), capped at 8 steps, and
   renders in place under reduce motion or with celebrations off.
 
+## Flow integrity
+
+- Review enables "Save report" only when nothing is missing (`src/report-check.ts`): every photo
+  step, every required answer, the approximate area. Otherwise an amber "N things left before
+  saving" card lists each gap, and each row opens its fix.
+- Every question shows on Review; "Change" / "Answer" opens that exact question
+  (`questions?q=<index>&from=review`, one question, "Done" returns). Retake and Location opened from
+  Review go back to the same Review instead of stacking a second one, and Review re-reads the draft
+  on focus.
+- Questions: choosing gives a light haptic and moves to the next question after 380 ms; the last
+  question waits for Continue. Redirects run in an effect, never during render.
+- Light haptic on catalog category tiles and on switching List / Map.
+
 ## Round 9 details
 
 - Live camera: numbered step circles (sage check done, terracotta current, rails between) above

@@ -1,9 +1,10 @@
 // report/review.tsx: the evidence sheet (Alternative C, screen 2) — item header, the approximate area
 // on a map, numbered evidence photos (tap one to retake it), the answers, an optional private note and
-// one "Save report" action. Saving turns the draft into signed queued proofs via report-draft.saveDraft.
+// one "Save report" action, enabled only when nothing is missing (src/report-check.ts; each gap links
+// straight to its fix). Saving turns the draft into signed queued proofs via report-draft.saveDraft.
 
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { useState } from "react";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import { useCallback, useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { CellMap } from "../../src/components/CellMap";
 import { Icon } from "../../src/components/icons/Icon";
@@ -21,6 +22,7 @@ import { captureProof } from "../../src/capture";
 import { bump } from "../../src/feedback";
 import { identityStepEnabled } from "../../src/flags";
 import { getDraft, saveDraft, setCaptureProof, setNote } from "../../src/report-draft";
+import { missingItems, type Missing } from "../../src/report-check";
 import { NOTE_MAX, noteCounter } from "../../src/report-note";
 import { getTask } from "../../src/tasks";
 import { color, radius, space, target, type } from "../../src/theme";
@@ -38,10 +40,13 @@ export default function ReportReviewScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [note, setNoteText] = useState(draft?.note ?? "");
+  // Retake, Change and Location edit the draft on other screens; re-read it on return.
+  const [, force] = useState(0);
+  useFocusEffect(useCallback(() => force((n) => n + 1), []));
 
   const photos = draft?.photos ?? [];
   const answers = draft?.answers ?? {};
-  const answered = task.questions.filter((q) => answers[q.id]);
+  const missing = missingItems(task, draft);
   const counter = noteCounter(note);
 
   const finish = async () => {
@@ -61,11 +66,30 @@ export default function ReportReviewScreen() {
     });
   };
 
+  const editQuestion = (index: number) =>
+    router.push({ pathname: "/report/questions", params: { id: task.id, q: String(index), from: "review" } });
+
+  const fix = (m: Missing) => {
+    if (m.kind === "photo") retake(m.step);
+    else if (m.kind === "answer") editQuestion(m.index);
+    else router.push({ pathname: "/report/location", params: { id: task.id, from: "review" } });
+  };
+
   const retake = (step: number) =>
     router.push({ pathname: "/report/capture", params: { id: task.id, step: String(step), retake: "1" } });
 
   return (
-    <Screen footer={<PrimaryButton label="Save report" onPress={finish} busy={busy} />}>
+    <Screen
+      footer={
+        <PrimaryButton
+          label="Save report"
+          onPress={finish}
+          busy={busy}
+          disabled={missing.length > 0}
+          accessibilityHint={missing.length > 0 ? "Finish the missing items listed above first" : undefined}
+        />
+      }
+    >
       <BackLink label="Back" onPress={() => router.back()} />
       <ReportProgress
         step={identityStepEnabled() ? 4 : 3}
@@ -74,6 +98,33 @@ export default function ReportReviewScreen() {
       />
 
       <TaskHeader category={task.category} title={task.title} subtitle={task.purpose} />
+
+      {missing.length > 0 ? (
+        <View style={styles.missing} accessibilityRole="summary">
+          <Text style={styles.missingTitle}>
+            {missing.length === 1 ? "One thing left before saving" : `${missing.length} things left before saving`}
+          </Text>
+          {missing.map((m) => (
+            <Pressable
+              key={`${m.kind}-${m.kind === "photo" ? m.step : m.kind === "answer" ? m.index : 0}`}
+              onPress={() => fix(m)}
+              accessibilityRole="button"
+              accessibilityLabel={`${m.kind === "photo" ? "Take photo" : m.kind === "answer" ? "Answer" : "Add"}: ${m.label}`}
+              style={({ pressed }) => [styles.missingRow, pressed && styles.pressed]}
+            >
+              <Icon
+                name={m.kind === "photo" ? "camera" : m.kind === "answer" ? "questions" : "location"}
+                size={18}
+                color={color.warning}
+              />
+              <Text style={styles.missingText} numberOfLines={2}>
+                {m.label}
+              </Text>
+              <Icon name="chevron" size={16} color={color.faint} />
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
 
       {draft?.geohash ? (
         <CellMap
@@ -102,21 +153,25 @@ export default function ReportReviewScreen() {
         onPress={retake}
       />
 
-      {answered.length > 0 ? (
+      {task.questions.length > 0 ? (
         <View style={{ gap: space.sm }}>
           <Text style={styles.section}>Current condition</Text>
-          {answered.map((q) => (
+          {task.questions.map((q, i) => (
             <Pressable
               key={q.id}
-              onPress={() => router.push({ pathname: "/report/questions", params: { id: task.id } })}
+              onPress={() => editQuestion(i)}
               accessibilityRole="button"
-              accessibilityLabel={`${q.text} ${answers[q.id]}. Tap to change.`}
+              accessibilityLabel={`${q.text} ${answers[q.id] ?? "Not answered"}. Tap to change.`}
               style={({ pressed }) => [styles.answer, pressed && styles.pressed]}
             >
               <Text style={styles.answerQ}>{q.text}</Text>
               <View style={styles.answerRow}>
-                <AnswerChip option={answers[q.id] ?? ""} />
-                <Text style={styles.change}>Change</Text>
+                {answers[q.id] ? (
+                  <AnswerChip option={answers[q.id] ?? ""} />
+                ) : (
+                  <Text style={styles.unanswered}>{q.required ? "Not answered yet" : "Optional, not answered"}</Text>
+                )}
+                <Text style={styles.change}>{answers[q.id] ? "Change" : "Answer"}</Text>
               </View>
             </Pressable>
           ))}
@@ -165,6 +220,19 @@ const styles = StyleSheet.create({
   sub: { ...type.meta, color: color.muted },
   section: { ...type.subtitle, color: color.text },
   sectionMeta: { ...type.body, color: color.muted, fontWeight: "400" },
+  missing: { gap: space.sm, padding: space.md, borderRadius: radius.md, backgroundColor: color.warningSoft },
+  missingTitle: { ...type.subtitle, color: color.text },
+  missingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.sm,
+    minHeight: target.min,
+    paddingHorizontal: space.md,
+    borderRadius: radius.sm,
+    backgroundColor: color.surface,
+  },
+  missingText: { ...type.meta, color: color.text, flex: 1 },
+  unanswered: { ...type.meta, color: color.muted },
   answer: {
     gap: space.sm,
     padding: space.md,

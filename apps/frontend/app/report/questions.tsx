@@ -1,49 +1,69 @@
 // report/questions.tsx: only the answers needed to understand the activity — one question per view,
-// large choices toned by meaning (works / problem / unsure, src/answer-tone.ts), no free text, no PII. Answers live in the in-memory draft and survive going offline.
+// large choices toned by meaning (works / problem / unsure, src/answer-tone.ts), no free text, no PII.
+// Choosing gives a light haptic and moves to the next question by itself; `q` + `from=review` opens
+// one question for a quick change. Answers live in the draft and survive going offline.
 
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { answerTone } from "../../src/answer-tone";
 import { Icon } from "../../src/components/icons/Icon";
 import { BackLink, CategoryBadge, PrimaryButton, ReportProgress, Screen } from "../../src/components/ui";
+import { tap } from "../../src/feedback";
 import { identityStepEnabled } from "../../src/flags";
+import { questionIndex } from "../../src/report-check";
 import { ensureDraft, getDraft, setAnswer } from "../../src/report-draft";
 import { getTask } from "../../src/tasks";
 import { color, radius, space, target, type } from "../../src/theme";
 
 export default function ReportQuestionsScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, q: qParam, from } = useLocalSearchParams<{ id: string; q?: string; from?: string }>();
   const router = useRouter();
   const task = getTask(id ?? "");
   ensureDraft(task.id);
 
   const questions = task.questions;
-  const [index, setIndex] = useState(0);
+  // From Review, "Change" opens one specific question and "Done" goes straight back.
+  const editing = from === "review";
+  const [index, setIndex] = useState(() => questionIndex(qParam, questions.length));
   const q = questions[index];
   const [, force] = useState(0);
   const current = getDraft()?.answers[q?.id ?? ""] ?? null;
+  const autoNext = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  if (!q) {
-    router.replace({ pathname: "/report/location", params: { id: task.id } });
-    return null;
-  }
+  // No questions for this task: move on in an effect, never during render.
+  useEffect(() => {
+    if (!q) router.replace({ pathname: "/report/location", params: { id: task.id } });
+  }, [q, router, task.id]);
+  useEffect(() => () => {
+    if (autoNext.current) clearTimeout(autoNext.current);
+  }, []);
 
-  const choose = (value: string) => {
-    setAnswer(q.id, value);
-    force((n) => n + 1);
-  };
+  if (!q) return null;
+
+  const isLast = index + 1 >= questions.length;
 
   const advance = () => {
-    if (index + 1 < questions.length) {
-      setIndex(index + 1);
-    } else {
-      router.replace({ pathname: "/report/location", params: { id: task.id } });
+    if (autoNext.current) clearTimeout(autoNext.current);
+    if (editing) router.back();
+    else if (!isLast) setIndex(index + 1);
+    else router.replace({ pathname: "/report/location", params: { id: task.id } });
+  };
+
+  const choose = (value: string) => {
+    void tap();
+    setAnswer(q.id, value);
+    force((n) => n + 1);
+    // Move on by itself to the next question after a short beat; the last one waits for Continue.
+    if (!editing && !isLast) {
+      if (autoNext.current) clearTimeout(autoNext.current);
+      autoNext.current = setTimeout(() => setIndex((i) => i + 1), 380);
     }
   };
 
   const back = () => {
-    if (index === 0) router.back();
+    if (autoNext.current) clearTimeout(autoNext.current);
+    if (editing || index === 0) router.back();
     else setIndex(index - 1);
   };
 
@@ -51,7 +71,7 @@ export default function ReportQuestionsScreen() {
     <Screen
       footer={
         <PrimaryButton
-          label={index + 1 < questions.length ? "Next" : "Continue"}
+          label={editing ? "Done" : isLast ? "Continue" : "Next"}
           onPress={advance}
           disabled={q.required && !current}
           accessibilityHint={q.required && !current ? "Choose an answer to continue" : undefined}
