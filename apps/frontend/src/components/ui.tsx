@@ -8,6 +8,8 @@ import type { ReactNode } from "react";
 import {
   AccessibilityRole,
   Image,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -17,6 +19,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { answerTone } from "../answer-tone";
+import { keyboardFrame } from "../keyboard";
 import { categoryAccent, categoryIcon, type Category } from "../tasks";
 import {
   categorySoft,
@@ -40,7 +43,7 @@ export function screenPaddingTop(insetTop: number): number {
   return insetTop || space.md;
 }
 
-/** Full-screen frame: ivory ground, safe-area aware, optional scroll. */
+/** Full-screen frame: ivory ground, safe-area aware, keyboard aware (see src/keyboard.ts), optional scroll. */
 export function Screen({
   children,
   scroll = true,
@@ -53,12 +56,15 @@ export function Screen({
   padded?: boolean;
 }) {
   const insets = useSafeAreaInsets();
+  const kb = keyboardFrame(Platform.OS);
   const pad = padded ? { padding: space.lg } : undefined;
   const body = scroll ? (
     <ScrollView
       style={s.flex}
       contentContainerStyle={[pad, { paddingBottom: space.xl, gap: space.lg }]}
       keyboardShouldPersistTaps="handled"
+      keyboardDismissMode={kb.dismissMode}
+      automaticallyAdjustKeyboardInsets={kb.adjustInsets}
     >
       {children}
     </ScrollView>
@@ -67,12 +73,15 @@ export function Screen({
   );
 
   return (
-    <View style={[s.screen, { paddingTop: screenPaddingTop(insets.top) }]}>
+    <KeyboardAvoidingView
+      behavior={kb.avoidBehavior}
+      style={[s.screen, { paddingTop: screenPaddingTop(insets.top) }]}
+    >
       {body}
       {footer ? (
         <View style={[s.footer, { paddingBottom: insets.bottom + space.md }]}>{footer}</View>
       ) : null}
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
