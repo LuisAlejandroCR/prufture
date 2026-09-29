@@ -1,9 +1,19 @@
 // dashboard-helpers.test.ts: unit tests for the Overview chart and table helpers — status
-// breakdown, the zero-filled daily series, relative day labels and newest-first ordering.
+// breakdown, the zero-filled daily series, relative day labels, ordering, and the URL-backed
+// workspace filters (parse, serialise, sort).
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { byNewest, dailyCounts, relativeDay, statusBreakdown } from "../lib/dashboard.js";
+import {
+  alerts,
+  byNewest,
+  dailyCounts,
+  parseReportFilters,
+  relativeDay,
+  reportsHref,
+  sortReports,
+  statusBreakdown,
+} from "../lib/dashboard.js";
 import type { ProofSummary } from "../lib/api.js";
 
 const NOW = Date.parse("2026-09-29T12:00:00Z");
@@ -48,4 +58,35 @@ test("byNewest: newest first, bad dates last, input untouched", () => {
   const input = [p("nope"), p("2026-09-01T00:00:00Z"), p("2026-09-20T00:00:00Z")];
   assert.deepEqual(byNewest(input).map((x) => x.capturedAt), ["2026-09-20T00:00:00Z", "2026-09-01T00:00:00Z", "nope"]);
   assert.equal(input[0].capturedAt, "nope");
+});
+
+test("sortReports: oldest keeps bad dates last; status puts attention first", () => {
+  const input = [p("nope"), p("2026-09-20T00:00:00Z", 2), p("2026-09-01T00:00:00Z")];
+  assert.deepEqual(sortReports(input, "oldest").map((x) => x.capturedAt), ["2026-09-01T00:00:00Z", "2026-09-20T00:00:00Z", "nope"]);
+  // 2026-09-01 with no confirmation is stale ("attention"); the confirmed one ranks last.
+  const byStatus = sortReports(input, "status");
+  assert.equal(byStatus[0].capturedAt, "2026-09-01T00:00:00Z");
+  assert.equal(byStatus[byStatus.length - 1].attestationCount, 2);
+});
+
+test("parseReportFilters: keeps valid values, drops unknown status, sort and bad dates", () => {
+  const ok = parseReportFilters(new URLSearchParams("status=attention&sort=oldest&from=2026-09-01&q=pump&programme=Health"));
+  assert.deepEqual(ok, { status: "attention", sort: "oldest", from: "2026-09-01", to: "", q: "pump", programme: "Health" });
+  const bad = parseReportFilters(new URLSearchParams("status=hacked&sort=evil&from=yesterday&to=2026-9-1"));
+  assert.deepEqual(bad, { status: "", sort: "newest", from: "", to: "", q: "", programme: "" });
+});
+
+test("reportsHref: round-trips through parseReportFilters and omits defaults", () => {
+  assert.equal(reportsHref(), "/dashboard/reports");
+  assert.equal(reportsHref({ sort: "newest", q: "" }), "/dashboard/reports");
+  const href = reportsHref({ status: "ready", programme: "Water and sanitation", sort: "activity" });
+  const back = parseReportFilters(new URL(href, "http://x").searchParams);
+  assert.equal(back.status, "ready");
+  assert.equal(back.programme, "Water and sanitation");
+  assert.equal(back.sort, "activity");
+});
+
+test("alerts: stale-report alert links to the pre-filtered, oldest-first workspace", () => {
+  const list = alerts([p("2026-01-01T00:00:00Z")], false);
+  assert.equal(list[0]?.link?.href, "/dashboard/reports?status=attention&sort=oldest");
 });

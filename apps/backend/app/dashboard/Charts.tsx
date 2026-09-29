@@ -1,9 +1,11 @@
 // Charts.tsx: the two Overview charts, pure markup + CSS (no chart library). StatusBar is one
 // stacked bar of review statuses with a labelled legend, so status is never colour-alone.
 // ActivityChart is a single-series column chart of reports per day with a hover/focus tooltip
-// and a screen-reader list. Inputs are aggregate counts only.
+// and a screen-reader list. Inputs are aggregate counts only. Each legend row links to the
+// workspace filtered to that status.
 
-import { REVIEW_CLASS, REVIEW_LABEL, type ReviewStatus } from "../../lib/dashboard";
+import Link from "next/link";
+import { REVIEW_CLASS, REVIEW_LABEL, reportsHref, type ReviewStatus } from "../../lib/dashboard";
 
 export function StatusBar({ rows }: { rows: { status: ReviewStatus; count: number }[] }) {
   const total = rows.reduce((n, r) => n + r.count, 0);
@@ -27,10 +29,12 @@ export function StatusBar({ rows }: { rows: { status: ReviewStatus; count: numbe
       <ul className="statusbar-legend">
         {rows.map((r) => (
           <li key={r.status}>
-            <span className={`legend-dot ${REVIEW_CLASS[r.status]}`} aria-hidden />
-            <span className="legend-label">{REVIEW_LABEL[r.status]}</span>
-            <strong>{r.count}</strong>
-            <span className="legend-pct">{pct(r.count)}%</span>
+            <Link href={reportsHref({ status: r.status })} aria-label={`${REVIEW_LABEL[r.status]}: ${r.count} reports. Open this list`}>
+              <span className={`legend-dot ${REVIEW_CLASS[r.status]}`} aria-hidden />
+              <span className="legend-label">{REVIEW_LABEL[r.status]}</span>
+              <strong>{r.count}</strong>
+              <span className="legend-pct">{pct(r.count)}%</span>
+            </Link>
           </li>
         ))}
       </ul>

@@ -2,9 +2,10 @@
 // title with an optional serif accent, actions), metric tiles, the degraded-service notice and
 // the status pill. Pure markup over already-coarse values; no data access here.
 
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { Icon, type IconName } from "../_components/brand";
-import { REVIEW_CLASS, REVIEW_LABEL, type ReviewStatus } from "../../lib/dashboard";
+import { REVIEW_CLASS, REVIEW_LABEL, type Alert, type ReviewStatus } from "../../lib/dashboard";
 
 export function PageHeader({
   eyebrow,
@@ -45,22 +46,37 @@ export function Metric({
   label,
   hint,
   tone = "neutral",
+  href,
 }: {
   icon: IconName;
   value: number | string;
   label: string;
   hint?: string;
   tone?: "neutral" | "ok" | "wait" | "info" | "attn";
+  /** When set, the whole tile opens this (usually pre-filtered) view. */
+  href?: string;
 }) {
-  return (
-    <div className={`metric tone-${tone}`}>
+  const body = (
+    <>
       <span className="metric-icon">
         <Icon name={icon} />
       </span>
       <span className="n">{value}</span>
       <span className="k">{label}</span>
       {hint ? <span className="metric-hint">{hint}</span> : null}
-    </div>
+      {href ? (
+        <span className="metric-go" aria-hidden>
+          <Icon name="arrow" size={16} />
+        </span>
+      ) : null}
+    </>
+  );
+  return href ? (
+    <Link className={`metric tone-${tone} is-link`} href={href}>
+      {body}
+    </Link>
+  ) : (
+    <div className={`metric tone-${tone}`}>{body}</div>
   );
 }
 
@@ -91,6 +107,37 @@ export function DegradedNotice() {
     <Notice title="The report index is unreachable right now">
       Figures show what was last available. This is a service degradation, not an empty programme.
     </Notice>
+  );
+}
+
+/** One actionable alert: what happened, why it matters, the next step and, when one exists, a
+ *  link straight into the pre-filtered view where that step starts. */
+export function AlertCard({ alert: a, showMeta = false }: { alert: Alert; showMeta?: boolean }) {
+  return (
+    <div className={`attn-item ${a.severity === "high" ? "high" : ""}`}>
+      <span className="attn-icon">
+        <Icon name={a.severity === "high" ? "alert" : a.id === "needs-second" ? "users" : "clock"} />
+      </span>
+      <div>
+        <div className="attn-top">
+          <h3>{a.what}</h3>
+          {showMeta ? (
+            <span className={`pill ${a.severity === "high" ? "attn" : "neutral"}`}>
+              {a.severity === "high" ? "High priority" : "Normal"} · {a.when}
+            </span>
+          ) : null}
+        </div>
+        <p>{a.why}</p>
+        <p className="attn-next">
+          <strong>Next:</strong> {a.action}
+        </p>
+        {a.link ? (
+          <Link className="attn-link" href={a.link.href}>
+            {a.link.label} <Icon name="arrow" size={15} />
+          </Link>
+        ) : null}
+      </div>
+    </div>
   );
 }
 

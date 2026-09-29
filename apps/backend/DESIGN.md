@@ -67,7 +67,13 @@ screen-reader list), one attention panel (max three items + "All alerts"), and t
 reports with a link to the workspace. The Reports workspace has status tabs with counts, search,
 Programme / From / To filters, "Clear filters", newest-first order and "Show more" paging.
 Table columns: Activity (with programme) / Approximate area / Submitted (relative + date) /
-Status / a keyboard-focusable "Open" action.
+Status / a keyboard-focusable "Open" action. Activity, Submitted and Status sort (`aria-sort`).
+
+Workspace filters live in the URL (`?status=&programme=&q=&from=&to=&sort=`, parsed and
+validated by `parseReportFilters`, built by `reportsHref`), so every filtered view is a link.
+Metric tiles, pipeline legend rows, alert actions, programme cards and community regions deep-link
+into the matching view. "/" focuses search. Every dashboard route has a `loading.tsx` skeleton and
+an `error.tsx` boundary that never prints raw error text; the site has a branded `not-found.tsx`.
 
 ## Rules
 

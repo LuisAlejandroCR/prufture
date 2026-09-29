@@ -1,21 +1,26 @@
-// DashboardTable.tsx: the report workspace — status tabs with counts, programme filter, and
-// search/date filters over the already-coarse proof list, newest first, paged with "Show more".
-// `compact` renders the Overview variant: latest rows only, no filters. The row action opens the
-// review page. It never sees a full geohash, GPS point or reporter identity and cannot add one.
+// DashboardTable.tsx: the report workspace — status tabs with counts, programme filter, search and
+// date filters, and sortable columns over the already-coarse proof list, paged with "Show more".
+// Filters live in the URL (?status=&programme=&q=&from=&to=&sort=), so a filtered view can be
+// bookmarked, shared, or linked from an alert. `compact` renders the Overview variant: latest rows
+// only, no filters. It never sees a full geohash, GPS point or reporter identity and cannot add one.
 
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ProofSummary } from "../../lib/api";
 import {
   activityLabel,
   byNewest,
   programmeName,
   relativeDay,
+  reportsQuery,
   REVIEW_LABEL,
   REVIEW_ORDER,
   reviewStatus,
+  sortReports,
+  type ReportFilters,
+  type ReportSort,
   type ReviewStatus,
 } from "../../lib/dashboard";
 import { Icon } from "../_components/brand";
@@ -27,9 +32,55 @@ function day(iso: string): string {
 }
 
 const PAGE = 15;
+const EMPTY: Required<ReportFilters> = { status: "", programme: "", q: "", from: "", to: "", sort: "newest" };
 
-export function DashboardTable({ proofs, compact = false }: { proofs: ProofSummary[]; compact?: boolean }) {
-  const sorted = useMemo(() => byNewest(proofs), [proofs]);
+type SortColumn = "activity" | "submitted" | "status";
+
+function SortHeader({
+  column,
+  label,
+  sort,
+  onSort,
+}: {
+  column: SortColumn;
+  label: string;
+  sort: ReportSort;
+  onSort: (s: ReportSort) => void;
+}) {
+  const active =
+    (column === "activity" && sort === "activity") ||
+    (column === "status" && sort === "status") ||
+    (column === "submitted" && (sort === "newest" || sort === "oldest"));
+  const ariaSort = !active
+    ? "none"
+    : column === "submitted"
+      ? sort === "oldest"
+        ? "ascending"
+        : "descending"
+      : "ascending";
+  const next: ReportSort =
+    column === "submitted" ? (sort === "newest" ? "oldest" : "newest") : column === "activity" ? "activity" : "status";
+  return (
+    <th aria-sort={ariaSort}>
+      <button type="button" className={`th-sort ${active ? "is-active" : ""}`} onClick={() => onSort(next)}>
+        {label}
+        <span className="th-sort-icon" aria-hidden>
+          {active ? (ariaSort === "descending" ? "↓" : "↑") : "↕"}
+        </span>
+      </button>
+    </th>
+  );
+}
+
+export function DashboardTable({
+  proofs,
+  compact = false,
+  initial = EMPTY,
+}: {
+  proofs: ProofSummary[];
+  compact?: boolean;
+  initial?: Required<ReportFilters>;
+}) {
   const programmeList = useMemo(
     () => [...new Set(proofs.map((p) => programmeName(p.taskId)))].sort(),
     [proofs],
@@ -40,48 +91,66 @@ export function DashboardTable({ proofs, compact = false }: { proofs: ProofSumma
     return m;
   }, [proofs]);
 
-  const [programme, setProgramme] = useState("");
-  const [status, setStatus] = useState<"" | ReviewStatus>("");
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
-  const [q, setQ] = useState("");
+  const [f, setF] = useState<Required<ReportFilters>>(initial);
   const [shown, setShown] = useState(PAGE);
+  const search = useRef<HTMLInputElement>(null);
 
-  const rows = useMemo(
-    () =>
-      sorted.filter((p) => {
-        if (programme && programmeName(p.taskId) !== programme) return false;
-        if (status && reviewStatus(p) !== status) return false;
-        const d = day(p.capturedAt);
-        if (from && d < from) return false;
-        if (to && d > to) return false;
-        if (q) {
-          const hay = `${activityLabel(p.taskId)} ${p.taskId} ${p.geohashRegion}`.toLowerCase();
-          if (!hay.includes(q.toLowerCase())) return false;
-        }
-        return true;
-      }),
-    [sorted, programme, status, from, to, q],
-  );
-
-  const active = programme || status || from || to || q;
-  const limit = compact ? 6 : shown;
-  const visible = rows.slice(0, limit);
-  const reset = () => {
-    setProgramme("");
-    setStatus("");
-    setFrom("");
-    setTo("");
-    setQ("");
+  const update = (patch: Partial<ReportFilters>) => {
+    setF((prev) => ({ ...prev, ...patch }));
     setShown(PAGE);
   };
+
+  // Mirror filters into the URL without a navigation, so the server page is not re-fetched.
+  useEffect(() => {
+    if (compact) return;
+    const next = `${window.location.pathname}${reportsQuery(f)}`;
+    if (next !== `${window.location.pathname}${window.location.search}`) {
+      window.history.replaceState(window.history.state, "", next);
+    }
+  }, [f, compact]);
+
+  // "/" focuses search, as in most workspaces; ignored while typing in a field.
+  useEffect(() => {
+    if (compact) return;
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (e.key !== "/" || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (t && (t.tagName === "INPUT" || t.tagName === "SELECT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+      e.preventDefault();
+      search.current?.focus();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [compact]);
+
+  const rows = useMemo(() => {
+    const { status, programme, q, from, to } = f;
+    const filtered = proofs.filter((p) => {
+      if (programme && programmeName(p.taskId) !== programme) return false;
+      if (status && reviewStatus(p) !== status) return false;
+      const d = day(p.capturedAt);
+      if (from && d < from) return false;
+      if (to && d > to) return false;
+      if (q) {
+        const hay = `${activityLabel(p.taskId)} ${p.taskId} ${p.geohashRegion}`.toLowerCase();
+        if (!hay.includes(q.toLowerCase())) return false;
+      }
+      return true;
+    });
+    return compact ? byNewest(filtered) : sortReports(filtered, f.sort);
+  }, [proofs, f, compact]);
+
+  const active = Boolean(f.programme || f.status || f.from || f.to || f.q);
+  const limit = compact ? 6 : shown;
+  const visible = rows.slice(0, limit);
+  const reset = () => update({ status: "", programme: "", q: "", from: "", to: "" });
 
   return (
     <div className="workspace">
       {compact ? null : (
         <>
           <div className="tabs" role="group" aria-label="Filter by status">
-            <button type="button" className="tab" aria-pressed={status === ""} onClick={() => setStatus("")}>
+            <button type="button" className="tab" aria-pressed={f.status === ""} onClick={() => update({ status: "" })}>
               All <span className="tab-count">{proofs.length}</span>
             </button>
             {REVIEW_ORDER.map((s) => (
@@ -89,11 +158,8 @@ export function DashboardTable({ proofs, compact = false }: { proofs: ProofSumma
                 key={s}
                 type="button"
                 className="tab"
-                aria-pressed={status === s}
-                onClick={() => {
-                  setStatus(status === s ? "" : s);
-                  setShown(PAGE);
-                }}
+                aria-pressed={f.status === s}
+                onClick={() => update({ status: f.status === s ? "" : s })}
               >
                 {REVIEW_LABEL[s]} <span className="tab-count">{statusCounts.get(s) ?? 0}</span>
               </button>
@@ -105,26 +171,20 @@ export function DashboardTable({ proofs, compact = false }: { proofs: ProofSumma
               <span className="sr-only">Search</span>
               <Icon name="search" />
               <input
+                ref={search}
                 className="field"
                 type="search"
-                value={q}
-                onChange={(e) => {
-                  setQ(e.target.value);
-                  setShown(PAGE);
-                }}
+                value={f.q}
+                onChange={(e) => update({ q: e.target.value })}
                 placeholder="Search activity or area"
               />
+              <kbd className="kbd-hint" aria-hidden>
+                /
+              </kbd>
             </label>
             <label>
               Programme
-              <select
-                className="field"
-                value={programme}
-                onChange={(e) => {
-                  setProgramme(e.target.value);
-                  setShown(PAGE);
-                }}
-              >
+              <select className="field" value={f.programme} onChange={(e) => update({ programme: e.target.value })}>
                 <option value="">All programmes</option>
                 {programmeList.map((p) => (
                   <option key={p} value={p}>
@@ -135,11 +195,11 @@ export function DashboardTable({ proofs, compact = false }: { proofs: ProofSumma
             </label>
             <label>
               From
-              <input type="date" className="field" value={from} onChange={(e) => setFrom(e.target.value)} />
+              <input type="date" className="field" value={f.from} max={f.to || undefined} onChange={(e) => update({ from: e.target.value })} />
             </label>
             <label>
               To
-              <input type="date" className="field" value={to} onChange={(e) => setTo(e.target.value)} />
+              <input type="date" className="field" value={f.to} min={f.from || undefined} onChange={(e) => update({ to: e.target.value })} />
             </label>
             {active ? (
               <button type="button" className="btn secondary small" onClick={reset}>
@@ -160,10 +220,21 @@ export function DashboardTable({ proofs, compact = false }: { proofs: ProofSumma
         <table className="data">
           <thead>
             <tr>
-              <th>Activity</th>
-              <th>Approximate area</th>
-              <th>Submitted</th>
-              <th>Status</th>
+              {compact ? (
+                <>
+                  <th>Activity</th>
+                  <th>Approximate area</th>
+                  <th>Submitted</th>
+                  <th>Status</th>
+                </>
+              ) : (
+                <>
+                  <SortHeader column="activity" label="Activity" sort={f.sort} onSort={(sort) => update({ sort })} />
+                  <th>Approximate area</th>
+                  <SortHeader column="submitted" label="Submitted" sort={f.sort} onSort={(sort) => update({ sort })} />
+                  <SortHeader column="status" label="Status" sort={f.sort} onSort={(sort) => update({ sort })} />
+                </>
+              )}
               <th>
                 <span className="sr-only">Action</span>
               </th>
@@ -193,8 +264,9 @@ export function DashboardTable({ proofs, compact = false }: { proofs: ProofSumma
                   </td>
                   <td>
                     <span className="cell-date">
-                      {relativeDay(p.capturedAt)}
-                      <small>{day(p.capturedAt)}</small>
+                      {relativeDay(p.capturedAt) || "not recorded"}
+                      {/* Past two weeks relativeDay already is the date; don't print it twice. */}
+                      {relativeDay(p.capturedAt) !== day(p.capturedAt) ? <small>{day(p.capturedAt)}</small> : null}
                     </span>
                   </td>
                   <td>

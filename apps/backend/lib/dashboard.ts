@@ -143,6 +143,8 @@ export interface Alert {
   why: string;
   action: string;
   when: string;
+  /** Where the fix starts: a pre-filtered dashboard view, when one exists. */
+  link?: { href: string; label: string };
 }
 
 export function alerts(proofs: ProofSummary[], apiDegraded: boolean): Alert[] {
@@ -168,6 +170,7 @@ export function alerts(proofs: ProofSummary[], apiDegraded: boolean): Alert[] {
       why: "Reports left unreviewed slow down programme confirmation.",
       action: "Open Reports, filter by Needs attention, and review the oldest first.",
       when: "today",
+      link: { href: reportsHref({ status: "attention", sort: "oldest" }), label: "Review stale reports" },
     });
   }
 
@@ -180,6 +183,7 @@ export function alerts(proofs: ProofSummary[], apiDegraded: boolean): Alert[] {
       why: "One report is in but a second is needed to mark the activity confirmed.",
       action: "Ask a second community member in the area to report the same activity.",
       when: "this week",
+      link: { href: "/dashboard/communities", label: "See areas needing a report" },
     });
   }
 
@@ -285,11 +289,88 @@ export function relativeDay(iso: string, now: number = Date.now()): string {
   return t.toISOString().slice(0, 10);
 }
 
+function capturedMs(p: ProofSummary): number | null {
+  const t = new Date(p.capturedAt).getTime();
+  return Number.isNaN(t) ? null : t;
+}
+
+/** Compare by capture time in the given direction; unparseable dates always sink to the end. */
+function byCaptured(dir: 1 | -1) {
+  return (a: ProofSummary, b: ProofSummary) => {
+    const ta = capturedMs(a);
+    const tb = capturedMs(b);
+    if (ta === null) return tb === null ? 0 : 1;
+    if (tb === null) return -1;
+    return dir * (ta - tb);
+  };
+}
+
 /** Newest first by capture time; unparseable dates sink to the end. */
 export function byNewest(proofs: ProofSummary[]): ProofSummary[] {
-  const ts = (p: ProofSummary) => {
-    const t = new Date(p.capturedAt).getTime();
-    return Number.isNaN(t) ? -Infinity : t;
+  return [...proofs].sort(byCaptured(-1));
+}
+
+/** Sort orders the report workspace supports; "newest" is the default and never written to the URL. */
+export type ReportSort = "newest" | "oldest" | "activity" | "status";
+export const REPORT_SORTS: ReportSort[] = ["newest", "oldest", "activity", "status"];
+
+export interface ReportFilters {
+  status?: ReviewStatus | "";
+  programme?: string;
+  q?: string;
+  from?: string;
+  to?: string;
+  sort?: ReportSort;
+}
+
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Parse workspace filters from URL search params, dropping anything unknown or malformed so a
+ * hand-edited link can never put the table in an impossible state.
+ */
+export function parseReportFilters(params: { get(name: string): string | null }): Required<ReportFilters> {
+  const status = params.get("status") ?? "";
+  const sort = params.get("sort") ?? "";
+  const from = params.get("from") ?? "";
+  const to = params.get("to") ?? "";
+  return {
+    status: (REVIEW_ORDER as string[]).includes(status) ? (status as ReviewStatus) : "",
+    programme: (params.get("programme") ?? "").slice(0, 80),
+    q: (params.get("q") ?? "").slice(0, 80),
+    from: DATE_RE.test(from) ? from : "",
+    to: DATE_RE.test(to) ? to : "",
+    sort: (REPORT_SORTS as string[]).includes(sort) ? (sort as ReportSort) : "newest",
   };
-  return [...proofs].sort((a, b) => ts(b) - ts(a));
+}
+
+/** Query string for a filtered workspace view; empty values and the default sort are omitted. */
+export function reportsQuery(f: ReportFilters): string {
+  const qs = new URLSearchParams();
+  if (f.status) qs.set("status", f.status);
+  if (f.programme) qs.set("programme", f.programme);
+  if (f.q) qs.set("q", f.q);
+  if (f.from) qs.set("from", f.from);
+  if (f.to) qs.set("to", f.to);
+  if (f.sort && f.sort !== "newest") qs.set("sort", f.sort);
+  const out = qs.toString();
+  return out ? `?${out}` : "";
+}
+
+export function reportsHref(f: ReportFilters = {}): string {
+  return `/dashboard/reports${reportsQuery(f)}`;
+}
+
+const STATUS_RANK: Record<ReviewStatus, number> = { attention: 0, ready: 1, "needs-another": 2, confirmed: 3 };
+
+/** Order a (filtered) report list by the chosen sort; always returns a new array. */
+export function sortReports(proofs: ProofSummary[], sort: ReportSort): ProofSummary[] {
+  if (sort === "oldest") return [...proofs].sort(byCaptured(1));
+  const newest = byNewest(proofs);
+  if (sort === "activity") {
+    return newest.sort((a, b) => activityLabel(a.taskId).localeCompare(activityLabel(b.taskId)));
+  }
+  // "status" puts what needs a human first: attention, ready, needs-another, confirmed.
+  if (sort === "status") return newest.sort((a, b) => STATUS_RANK[reviewStatus(a)] - STATUS_RANK[reviewStatus(b)]);
+  return newest;
 }

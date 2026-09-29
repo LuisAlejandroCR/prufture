@@ -1,9 +1,11 @@
 // programmes/page.tsx: coverage by activity type, not by person — one card per activity with
 // reports received, the confirmed share, reports needing attention, areas touched and last activity.
-// Region level only.
+// Region level only. Each card links to the workspace filtered to that activity.
 
+import Link from "next/link";
 import { fetchProofs } from "../../../lib/api";
-import { activityLabel, programmeName, programmes, relativeDay } from "../../../lib/dashboard";
+import { activityLabel, programmeName, programmes, relativeDay, reportsHref } from "../../../lib/dashboard";
+import { Icon } from "../../_components/brand";
 import { DegradedNotice, EmptyState, PageHeader } from "../ui";
 
 export const dynamic = "force-dynamic";
@@ -64,6 +66,9 @@ export default async function ProgrammesPage() {
                     <dd>{relativeDay(r.lastActivity) || "not recorded"}</dd>
                   </div>
                 </dl>
+                <Link className="card-link" href={reportsHref({ q: activityLabel(r.taskId) })}>
+                  View {r.received} {r.received === 1 ? "report" : "reports"} <Icon name="arrow" size={15} />
+                </Link>
               </article>
             );
           })}

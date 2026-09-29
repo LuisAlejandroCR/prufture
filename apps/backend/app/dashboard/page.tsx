@@ -4,11 +4,11 @@
 
 import Link from "next/link";
 import { fetchProofs } from "../../lib/api";
-import { alerts, dailyCounts, metrics, statusBreakdown } from "../../lib/dashboard";
+import { alerts, dailyCounts, metrics, reportsHref, statusBreakdown } from "../../lib/dashboard";
 import { Icon } from "../_components/brand";
 import { ActivityChart, StatusBar } from "./Charts";
 import { DashboardTable } from "./DashboardTable";
-import { DegradedNotice, Metric, PageHeader } from "./ui";
+import { AlertCard, DegradedNotice, Metric, PageHeader } from "./ui";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +17,8 @@ export default async function DashboardOverview() {
   const m = metrics(proofs);
   const attention = alerts(proofs, degraded);
   const today = new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
+  // Matches metrics().thisWeek closely enough for a link: the last seven UTC days, today included.
+  const weekStart = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
   return (
     <section className="fade-in">
@@ -35,10 +37,37 @@ export default async function DashboardOverview() {
       {degraded ? <DegradedNotice /> : null}
 
       <div className="metrics">
-        <Metric icon="inbox" value={m.thisWeek} label="Reports this week" hint={`${proofs.length} received in total`} />
-        <Metric icon="clock" value={m.readyToReview} label="Ready to review" hint="No confirmation yet" tone="info" />
-        <Metric icon="users" value={m.needAnother} label="Need another report" hint="One community report in" tone="wait" />
-        <Metric icon="layers" value={m.programmes} label="Programmes covered" hint={`${m.areas} approximate ${m.areas === 1 ? "area" : "areas"}`} tone="ok" />
+        <Metric
+          icon="inbox"
+          value={m.thisWeek}
+          label="Reports this week"
+          hint={`${proofs.length} received in total`}
+          href={reportsHref({ from: weekStart })}
+        />
+        <Metric
+          icon="clock"
+          value={m.readyToReview}
+          label="Ready to review"
+          hint="No confirmation yet"
+          tone="info"
+          href={reportsHref({ status: "ready" })}
+        />
+        <Metric
+          icon="users"
+          value={m.needAnother}
+          label="Need another report"
+          hint="One community report in"
+          tone="wait"
+          href={reportsHref({ status: "needs-another" })}
+        />
+        <Metric
+          icon="layers"
+          value={m.programmes}
+          label="Programmes covered"
+          hint={`${m.areas} approximate ${m.areas === 1 ? "area" : "areas"}`}
+          tone="ok"
+          href="/dashboard/programmes"
+        />
       </div>
 
       <div className="dash-grid">
@@ -76,18 +105,7 @@ export default async function DashboardOverview() {
           ) : (
             <div className="attn-list">
               {attention.slice(0, 3).map((a) => (
-                <div className={`attn-item ${a.severity === "high" ? "high" : ""}`} key={a.id}>
-                  <span className="attn-icon">
-                    <Icon name={a.severity === "high" ? "alert" : a.id === "needs-second" ? "users" : "clock"} />
-                  </span>
-                  <div>
-                    <h3>{a.what}</h3>
-                    <p>{a.why}</p>
-                    <p className="attn-next">
-                      <strong>Next:</strong> {a.action}
-                    </p>
-                  </div>
-                </div>
+                <AlertCard alert={a} key={a.id} />
               ))}
             </div>
           )}
