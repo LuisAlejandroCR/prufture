@@ -112,14 +112,28 @@ contacted, so no real report is ever sent to a provider under evaluation.
   Decoded calldata is exactly `proofHash / taskId / geohash / capturedAt`; the relayer moves no funds.
 - A second attestation over the same hash (deduped by attester).
 - Public `/verify/[hash]` and `/dashboard`, no login, coarse region only.
-- WhatsApp delivery of the verification link (Kapso); email degrades cleanly.
+- WhatsApp delivery of the verification link through Kapso's v24 Meta endpoint with the approved
+  `report_ready` template (`apps/api/src/channels.ts`); the Meta business account is still under
+  review. Email degrades cleanly.
+- iOS 1.0 built with EAS (`apps/frontend/eas.json`) and submitted to App Store review on
+  2026-09-29; not yet approved.
+- A group-membership proof generated on the phone: a Semaphore v4 prover (depth 10, Rust +
+  `circom-prover`) in `packages/zk-prover`, wrapped for iOS only by
+  `apps/frontend/modules/prufture-zk`. Off by default: the reporter journey does not call it. A
+  hidden benchmark route, `apps/frontend/app/zk-bench.tsx`, measured about 55 ms per proof on one
+  iPhone.
+- Server-side verification of those membership proofs in `apps/api/src/personhood.ts`, with
+  enrolment and proof routes, off by default (enabled only by `PERSONHOOD_PROVIDER=semaphore`).
+- `apps/frontend/modules/prufture-liveness` wraps AWS Face Liveness (official Swift SDK). It is
+  dormant, and the server has no liveness adapter for it yet (`apps/api/src/assurance.ts` offers
+  only `none`).
 - Automated tests: `packages/core` 22 · `apps/api` 292 · `apps/backend` 37 · `apps/frontend` 139
   (490 total).
 
-**Scoped next, not implemented:** on-device zero-knowledge proof (a commitment stands in); hardware
-attestation / TEE signing; App/Play Store publication (config written, not run); selfie liveness
-and verified attributes through a chosen vendor (see *Replacing Dwellir and Neuro*); binding the
-sealed precise location and a personhood commitment into a schema v2.
+**Scoped next, not implemented:** hardware attestation / TEE signing; App Store approval and
+Play Store publication; turning on the membership proof in the reporter journey; a server adapter
+for selfie liveness and verified attributes through a chosen vendor (see *Replacing Dwellir and
+Neuro*); binding the sealed precise location and a membership commitment into a schema v2.
 
 ---
 
@@ -322,7 +336,7 @@ behind it is finished.
 | Phase 3 sandbox check | One consented end-to-end check before any adapter is labelled verified |
 | Phase 4 observation window | `shadow-compare` of `local-key` against `openzeppelin-relayer` in the sandbox: READY over 5 synthetic proofs. The real window runs once the relayer is deployed; keep `local-key` configured through it |
 | CI runners | GitHub Actions jobs on the account stopped starting on 2026-09-26 (billing). Until they run again, `npm run verify` locally is the gate |
-| Scoped next | On-device ZK proof, hardware attestation / TEE signing, store publication, schema v2 with the sealed precise location |
+| Scoped next | Membership proof on in the reporter journey (the prover exists, off by default), hardware attestation / TEE signing, App Store approval and Play Store publication, schema v2 with the sealed precise location |
 | Programme inputs | A baseline for the cost figure (reports per month, re-visit share, cost per trip) and the pilot legal preconditions — programme work, not code |
 
 ### Replacing Dwellir and Neuro: vendor findings
