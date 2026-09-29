@@ -72,7 +72,13 @@ Status / a keyboard-focusable "Open" action. Activity, Submitted and Status sort
 Workspace filters live in the URL (`?status=&programme=&q=&from=&to=&sort=`, parsed and
 validated by `parseReportFilters`, built by `reportsHref`), so every filtered view is a link.
 Metric tiles, pipeline legend rows, alert actions, programme cards and community regions deep-link
-into the matching view. "/" focuses search. Every dashboard route has a `loading.tsx` skeleton and
+into the matching view. "/" focuses search. `applyReportFilters` is the one definition of "which
+reports are in this view": the table, "Download this view (CSV)" and the review page all use it.
+Row links carry the view's query, so the review page's Back returns to it and Previous / Next (and
+the j / k keys) step through it with an "n of N" position. Coverage-map zones open a popup linking
+to that area's reports. Every dashboard page sets its own tab title; the dashboard has a "Skip to
+content" link. `/verify` shows a QR of its own public link and sets a link-preview title from the
+activity and plain status only. Every dashboard route has a `loading.tsx` skeleton and
 an `error.tsx` boundary that never prints raw error text; the site has a branded `not-found.tsx`.
 
 ## Rules

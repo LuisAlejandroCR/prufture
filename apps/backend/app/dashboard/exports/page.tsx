@@ -8,6 +8,7 @@ import { Icon } from "../../_components/brand";
 import { Notice, PageHeader } from "../ui";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "Exports" };
 
 export default async function ExportsPage() {
   const { proofs, degraded } = await fetchProofs();

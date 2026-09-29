@@ -1,31 +1,62 @@
 // reports/[hash]/page.tsx: review one report — status, approximate area, capture time, evidence
 // summary, confirmation count and timeline. Unsupported actions are shown disabled and labelled,
-// never faked. No reporter identity, exact location or private media path.
+// never faked. No reporter identity, exact location or private media path. The workspace view it was
+// opened from rides along in the query string, so Back returns to that exact view and Previous /
+// Next step through it.
 
 import Link from "next/link";
-import { fetchProof } from "../../../../lib/api";
-import { activityLabel, programmeName, relativeDay, type ReviewStatus } from "../../../../lib/dashboard";
+import { fetchProof, fetchProofs } from "../../../../lib/api";
+import {
+  activityLabel,
+  applyReportFilters,
+  neighbours,
+  parseReportFilters,
+  programmeName,
+  relativeDay,
+  reportsHref,
+  reportsQuery,
+  reviewStatus,
+  type ReportFilters,
+} from "../../../../lib/dashboard";
 import { Icon } from "../../../_components/brand";
 import { EmptyState, StatusPill } from "../../ui";
+import { PagerKeys } from "./PagerKeys";
 
 export const dynamic = "force-dynamic";
 
-function Back() {
+type Search = Record<string, string | string[] | undefined>;
+
+export async function generateMetadata({ params }: { params: Promise<{ hash: string }> }) {
+  const { hash } = await params;
+  const r = await fetchProof(hash);
+  return { title: r.state === "ok" ? `${activityLabel(r.proof.taskId)} · Review` : "Report" };
+}
+
+function Back({ filters }: { filters: ReportFilters }) {
   return (
-    <Link href="/dashboard/reports" className="back-link">
+    <Link href={reportsHref(filters)} className="back-link">
       <Icon name="back" size={16} /> Back to reports
     </Link>
   );
 }
 
-export default async function ReportReviewPage({ params }: { params: Promise<{ hash: string }> }) {
-  const { hash } = await params;
-  const result = await fetchProof(hash);
+export default async function ReportReviewPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ hash: string }>;
+  searchParams: Promise<Search>;
+}) {
+  const [{ hash }, sp] = await Promise.all([params, searchParams]);
+  const filters = parseReportFilters({ get: (k) => (typeof sp[k] === "string" ? (sp[k] as string) : null) });
+  const [result, list] = await Promise.all([fetchProof(hash), fetchProofs()]);
+  const view = list.degraded ? null : neighbours(applyReportFilters(list.proofs, filters), hash);
+  const q = reportsQuery(filters);
 
   if (result.state !== "ok") {
     return (
       <section className="fade-in">
-        <Back />
+        <Back filters={filters} />
         <EmptyState
           icon={result.state === "not_found" ? "reports" : "signal"}
           title={result.state === "not_found" ? "Report not found" : "Report index unavailable"}
@@ -39,8 +70,8 @@ export default async function ReportReviewPage({ params }: { params: Promise<{ h
   }
 
   const { proof } = result;
-  const status: ReviewStatus =
-    proof.attestationCount >= 2 ? "confirmed" : proof.attestationCount === 1 ? "needs-another" : "ready";
+  // Same rule as the table, including "needs attention" for unreviewed reports older than 3 days.
+  const status = reviewStatus(proof);
   const stages: { label: string; note: string; done: boolean; current?: boolean }[] = [
     { label: "Received", note: "Signed on the phone and delivered.", done: true },
     {
@@ -64,7 +95,38 @@ export default async function ReportReviewPage({ params }: { params: Promise<{ h
 
   return (
     <section className="fade-in">
-      <Back />
+      <div className="report-nav">
+        <Back filters={filters} />
+        {view ? (
+          <nav className="pager" aria-label="Reports in this view">
+            <PagerKeys
+              prev={view.prev ? `/dashboard/reports/${view.prev.proofHash}${q}` : null}
+              next={view.next ? `/dashboard/reports/${view.next.proofHash}${q}` : null}
+            />
+            <span className="pager-pos" title="Press k for previous, j for next">
+              {view.index + 1} of {view.total}
+            </span>
+            {view.prev ? (
+              <Link className="pager-btn" href={`/dashboard/reports/${view.prev.proofHash}${q}`} rel="prev" aria-label={`Previous: ${activityLabel(view.prev.taskId)}`}>
+                <Icon name="back" size={16} />
+              </Link>
+            ) : (
+              <span className="pager-btn is-off" aria-hidden>
+                <Icon name="back" size={16} />
+              </span>
+            )}
+            {view.next ? (
+              <Link className="pager-btn" href={`/dashboard/reports/${view.next.proofHash}${q}`} rel="next" aria-label={`Next: ${activityLabel(view.next.taskId)}`}>
+                <Icon name="arrow" size={16} />
+              </Link>
+            ) : (
+              <span className="pager-btn is-off" aria-hidden>
+                <Icon name="arrow" size={16} />
+              </span>
+            )}
+          </nav>
+        ) : null}
+      </div>
 
       <div className="report-hero">
         <div>
@@ -75,7 +137,7 @@ export default async function ReportReviewPage({ params }: { params: Promise<{ h
             <span className="muted">Captured {relativeDay(proof.capturedAt).toLowerCase() || "at an unknown time"}</span>
           </div>
         </div>
-        <Link className="btn secondary" href={`/verify/${proof.proofHash}`} target="_blank">
+        <Link className="btn secondary" href={`/verify/${proof.proofHash}`} target="_blank" rel="noreferrer noopener">
           Public page <Icon name="external" size={16} />
         </Link>
       </div>

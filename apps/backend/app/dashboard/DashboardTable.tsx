@@ -11,6 +11,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { ProofSummary } from "../../lib/api";
 import {
   activityLabel,
+  applyReportFilters,
   byNewest,
   programmeName,
   relativeDay,
@@ -18,12 +19,12 @@ import {
   REVIEW_LABEL,
   REVIEW_ORDER,
   reviewStatus,
-  sortReports,
   type ReportFilters,
   type ReportSort,
   type ReviewStatus,
 } from "../../lib/dashboard";
 import { Icon } from "../_components/brand";
+import { downloadCsv } from "./exports/ExportButton";
 import { StatusPill } from "./ui";
 
 function day(iso: string): string {
@@ -123,22 +124,9 @@ export function DashboardTable({
     return () => window.removeEventListener("keydown", onKey);
   }, [compact]);
 
-  const rows = useMemo(() => {
-    const { status, programme, q, from, to } = f;
-    const filtered = proofs.filter((p) => {
-      if (programme && programmeName(p.taskId) !== programme) return false;
-      if (status && reviewStatus(p) !== status) return false;
-      const d = day(p.capturedAt);
-      if (from && d < from) return false;
-      if (to && d > to) return false;
-      if (q) {
-        const hay = `${activityLabel(p.taskId)} ${p.taskId} ${p.geohashRegion}`.toLowerCase();
-        if (!hay.includes(q.toLowerCase())) return false;
-      }
-      return true;
-    });
-    return compact ? byNewest(filtered) : sortReports(filtered, f.sort);
-  }, [proofs, f, compact]);
+  const rows = useMemo(() => (compact ? byNewest(proofs) : applyReportFilters(proofs, f)), [proofs, f, compact]);
+  // Row links carry the view, so the review page can offer Back / Previous / Next inside it.
+  const viewQuery = compact ? "" : reportsQuery(f);
 
   const active = Boolean(f.programme || f.status || f.from || f.to || f.q);
   const limit = compact ? 6 : shown;
@@ -208,11 +196,21 @@ export function DashboardTable({
             ) : null}
           </div>
 
-          <p className="result-count" aria-live="polite">
-            Showing <strong>{visible.length}</strong> of <strong>{rows.length}</strong>{" "}
-            {rows.length === 1 ? "report" : "reports"}
-            {active ? " matching these filters" : ""}
-          </p>
+          <div className="result-bar">
+            <p className="result-count" aria-live="polite">
+              Showing <strong>{visible.length}</strong> of <strong>{rows.length}</strong>{" "}
+              {rows.length === 1 ? "report" : "reports"}
+              {active ? " matching these filters" : ""}
+            </p>
+            <button
+              type="button"
+              className="btn secondary small"
+              disabled={rows.length === 0}
+              onClick={() => downloadCsv(rows, active ? "-filtered" : "")}
+            >
+              <Icon name="export" size={15} /> Download {active ? "this view" : "all"} (CSV)
+            </button>
+          </div>
         </>
       )}
 
@@ -273,7 +271,7 @@ export function DashboardTable({
                     <StatusPill status={reviewStatus(p)} />
                   </td>
                   <td>
-                    <Link className="rowlink" href={`/dashboard/reports/${p.proofHash}`} aria-label={`Open ${label}`}>
+                    <Link className="rowlink" href={`/dashboard/reports/${p.proofHash}${viewQuery}`} aria-label={`Open ${label}`}>
                       Open <Icon name="arrow" size={15} />
                     </Link>
                   </td>

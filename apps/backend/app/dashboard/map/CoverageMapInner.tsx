@@ -6,9 +6,9 @@
 
 import "leaflet/dist/leaflet.css";
 import { useEffect, useRef, useState } from "react";
-import { MapContainer, Rectangle, TileLayer, Tooltip, useMap } from "react-leaflet";
+import { MapContainer, Popup, Rectangle, TileLayer, Tooltip, useMap } from "react-leaflet";
 import type { LatLngBoundsExpression } from "leaflet";
-import type { CoverageCell } from "../../../lib/dashboard";
+import { reportsHref, type CoverageCell } from "../../../lib/dashboard";
 
 const FILL = "#C8533A";
 const MIN_OPACITY = 0.15;
@@ -98,6 +98,15 @@ export default function CoverageMapInner({ cells }: { cells: CoverageCell[] }) {
                   Approximate area {c.region} · {c.count}{" "}
                   {c.count === 1 ? "report" : "reports"} · {c.confirmed} confirmed
                 </Tooltip>
+                <Popup>
+                  <div className="cov-pop">
+                    <strong>Area {c.region}</strong>
+                    <span>
+                      {c.count} {c.count === 1 ? "report" : "reports"} · {c.confirmed} confirmed
+                    </span>
+                    <a href={reportsHref({ q: c.region })}>View reports in this area →</a>
+                  </div>
+                </Popup>
               </Rectangle>
             );
           })}
@@ -114,7 +123,7 @@ export default function CoverageMapInner({ cells }: { cells: CoverageCell[] }) {
       </div>
       <p className="muted cov-note">
         Each shaded square is an approximate zone about 2.4 km across, not the location of any
-        person. Darker means more reports fall in that zone.
+        person. Darker means more reports fall in that zone. Click a zone to open its reports.
       </p>
     </div>
   );

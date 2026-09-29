@@ -869,6 +869,42 @@ table.data th[aria-sort] { padding: 0; }
 .empty-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 14px; }
 .empty-ref { font-family: var(--mono); font-size: .75rem; margin-top: 10px !important; }
 
+/* Skip link: first focusable element on every dashboard page. */
+.skip-link {
+  position: absolute; left: 12px; top: -60px; z-index: 50; padding: 10px 16px; border-radius: var(--pill);
+  background: var(--text); color: var(--bg); font-weight: 700; font-size: .88rem; text-decoration: none;
+}
+.skip-link:focus { top: 12px; outline: 2px solid var(--brand); outline-offset: 2px; }
+.dash-main:focus { outline: none; }
+
+/* Workspace result bar: count + CSV of the current view. */
+.result-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+
+/* Review page: back link + position and prev/next inside the filtered view. */
+.report-nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+.report-nav .back-link { margin-bottom: 0; }
+.pager { display: inline-flex; align-items: center; gap: 6px; }
+.pager-pos { font-size: .82rem; color: var(--text-muted); font-weight: 600; margin-right: 6px; font-variant-numeric: tabular-nums; }
+.pager-btn {
+  width: 36px; height: 36px; display: grid; place-items: center; border-radius: 10px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text); text-decoration: none;
+}
+a.pager-btn:hover { border-color: var(--brand-line); color: var(--brand); }
+a.pager-btn:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.pager-btn.is-off { opacity: .4; }
+
+/* Coverage map popup. */
+.cov-pop { display: grid; gap: 4px; font-family: var(--font); font-size: .85rem; }
+.cov-pop span { color: #806f5c; }
+.cov-pop a { color: #a8402b; font-weight: 650; text-decoration: none; }
+
+/* /verify share card with QR. */
+.share-grid { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 24px; align-items: start; }
+.share-qr { margin: 0; display: grid; justify-items: center; gap: 8px; }
+.share-qr svg { width: 148px; height: 148px; padding: 8px; background: #fbf6ef; border: 1px solid var(--border); border-radius: var(--radius-md); }
+.share-qr figcaption { font-size: .76rem; color: var(--text-muted); font-weight: 600; }
+@media (max-width: 640px) { .share-grid { grid-template-columns: 1fr; } .share-qr { justify-self: start; } }
+
 @media (max-width: 1180px) {
   .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .dash-grid, .report-grid { grid-template-columns: 1fr; }

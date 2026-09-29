@@ -2,12 +2,15 @@
 // one cell per 5-char geohash region and hands the cells to the client map. No precise location
 // exists on this route; zones are approximate (~2.4 km), never a reporter's position.
 
+import Link from "next/link";
 import { fetchProofs } from "../../../lib/api";
-import { coverage } from "../../../lib/dashboard";
+import { coverage, reportsHref } from "../../../lib/dashboard";
+import { Icon } from "../../_components/brand";
 import { CoverageMap } from "../CoverageMap";
 import { DegradedNotice, EmptyState, Metric, PageHeader } from "../ui";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "Coverage map" };
 
 export default async function CoverageMapPage() {
   const { proofs, degraded } = await fetchProofs();
@@ -54,7 +57,10 @@ export default async function CoverageMapPage() {
                 {cells.map((c) => (
                   <tr key={c.region}>
                     <td>
-                      <code>{c.region}</code>
+                      <Link className="area-chip is-link" href={reportsHref({ q: c.region })} aria-label={`Reports in area ${c.region}`}>
+                        <Icon name="pin" size={14} />
+                        <code>{c.region}</code>
+                      </Link>
                     </td>
                     <td>{c.count}</td>
                     <td>{c.confirmed}</td>

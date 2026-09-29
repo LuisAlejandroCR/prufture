@@ -361,6 +361,45 @@ export function reportsHref(f: ReportFilters = {}): string {
   return `/dashboard/reports${reportsQuery(f)}`;
 }
 
+function utcDay(iso: string): string {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10);
+}
+
+/**
+ * Apply workspace filters (status, programme, text search over activity / task / region, and an
+ * inclusive UTC date range) and then the chosen sort. The single source of truth for "which
+ * reports are in this view", shared by the table, the CSV of the view and report prev/next.
+ */
+export function applyReportFilters(proofs: ProofSummary[], f: ReportFilters): ProofSummary[] {
+  const q = (f.q ?? "").toLowerCase();
+  const filtered = proofs.filter((p) => {
+    if (f.programme && programmeName(p.taskId) !== f.programme) return false;
+    if (f.status && reviewStatus(p) !== f.status) return false;
+    const d = utcDay(p.capturedAt);
+    if (f.from && d < f.from) return false;
+    if (f.to && d > f.to) return false;
+    if (q && !`${activityLabel(p.taskId)} ${p.taskId} ${p.geohashRegion}`.toLowerCase().includes(q)) return false;
+    return true;
+  });
+  return sortReports(filtered, f.sort ?? "newest");
+}
+
+/** Position of one report inside a filtered view, with its neighbours for prev/next links. */
+export function neighbours(
+  list: ProofSummary[],
+  proofHash: string,
+): { index: number; total: number; prev: ProofSummary | null; next: ProofSummary | null } | null {
+  const index = list.findIndex((p) => p.proofHash === proofHash);
+  if (index < 0) return null;
+  return {
+    index,
+    total: list.length,
+    prev: index > 0 ? list[index - 1] ?? null : null,
+    next: index < list.length - 1 ? list[index + 1] ?? null : null,
+  };
+}
+
 const STATUS_RANK: Record<ReviewStatus, number> = { attention: 0, ready: 1, "needs-another": 2, confirmed: 3 };
 
 /** Order a (filtered) report list by the chosen sort; always returns a new array. */

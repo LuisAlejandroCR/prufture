@@ -4,6 +4,8 @@
 import { Icon } from "../../_components/brand";
 import { PageHeader } from "../ui";
 
+export const metadata = { title: "Settings" };
+
 export default function SettingsPage() {
   return (
     <section className="fade-in">
