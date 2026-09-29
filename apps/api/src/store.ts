@@ -43,11 +43,28 @@ export interface Entry {
   // Groups 1..N signed proofs of one field report. NOT part of the signed payload and never
   // exposed on a public route — used only to send ONE programme notification per report.
   reportId?: string;
+  /**
+   * Semaphore group-membership result. Only "verified" is ever persisted: the route is
+   * unauthenticated, so a failed attempt must not be able to mark someone else's report.
+   */
+  membership?: "verified";
+}
+
+/** One programme's enrolled commitments and the roots a proof may be made against. */
+export interface PersonhoodGroupRecord {
+  commitments: string[];
+  /** Newest last. Older roots stay accepted so a device with a stale group can still prove. */
+  roots: string[];
+  /** Bumped by a coordinator to open a new round; part of the nullifier scope. */
+  epoch: number;
 }
 
 // Reserved top-level JSON key (never a 64-hex proofHash) holding the dedup keys already
 // notified to the programme team, so one report is never messaged twice across a restart.
 const NOTIFIED_KEYS_FIELD = "__notifiedKeys__";
+// Reserved keys for the personhood layer. Nullifiers are private: no route ever returns them.
+const PERSONHOOD_GROUPS_FIELD = "__personhoodGroups__";
+const NULLIFIERS_FIELD = "__nullifiers__";
 
 // SWAP POINT: a JSON file needs a host with a persistent writable disk (Render disk, Railway or
 // Fly volume) — NOT Vercel serverless. If apps/api is deployed somewhere ephemeral, replace only
@@ -78,6 +95,8 @@ function defaultStorePath(): string {
 let storePath = defaultStorePath();
 const byHash = new Map<string, Entry>();
 const notifiedKeys = new Set<string>();
+const personhoodGroups = new Map<string, PersonhoodGroupRecord>();
+const nullifiers = new Set<string>();
 let flushTimer: NodeJS.Timeout | null = null;
 
 /**
@@ -106,6 +125,8 @@ function sanitizeAttestations(value: unknown): AttestationRecord[] {
 function load(): void {
   byHash.clear();
   notifiedKeys.clear();
+  personhoodGroups.clear();
+  nullifiers.clear();
   let raw: string;
   try {
     raw = readFileSync(storePath, "utf8");
@@ -118,6 +139,14 @@ function load(): void {
       for (const [hash, value] of Object.entries(obj)) {
         if (hash === NOTIFIED_KEYS_FIELD) {
           if (Array.isArray(value)) for (const k of value) if (typeof k === "string") notifiedKeys.add(k);
+          continue;
+        }
+        if (hash === NULLIFIERS_FIELD) {
+          if (Array.isArray(value)) for (const k of value) if (typeof k === "string") nullifiers.add(k);
+          continue;
+        }
+        if (hash === PERSONHOOD_GROUPS_FIELD) {
+          loadGroups(value);
           continue;
         }
         const v = value as Entry;
@@ -145,6 +174,7 @@ function load(): void {
                   }
                 : undefined,
             reportId: typeof v.reportId === "string" ? v.reportId : undefined,
+            membership: v.membership === "verified" ? "verified" : undefined,
           });
         }
       }
@@ -152,6 +182,22 @@ function load(): void {
   } catch {
     byHash.clear(); // corrupt / partial file -> start empty, never throw
     notifiedKeys.clear();
+    personhoodGroups.clear();
+    nullifiers.clear();
+  }
+}
+
+const isNumeric = (x: unknown): x is string => typeof x === "string" && /^\d{1,78}$/.test(x);
+
+function loadGroups(value: unknown): void {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return;
+  for (const [id, g] of Object.entries(value as Record<string, unknown>)) {
+    if (!g || typeof g !== "object") continue;
+    const r = g as Record<string, unknown>;
+    const commitments = Array.isArray(r.commitments) ? r.commitments.filter(isNumeric) : [];
+    const roots = Array.isArray(r.roots) ? r.roots.filter(isNumeric) : [];
+    const epoch = typeof r.epoch === "number" && Number.isSafeInteger(r.epoch) && r.epoch >= 1 ? r.epoch : 1;
+    personhoodGroups.set(id, { commitments, roots, epoch });
   }
 }
 
@@ -166,6 +212,8 @@ function flushNow(): void {
     const tmp = `${storePath}.tmp`;
     const out: Record<string, unknown> = Object.fromEntries(byHash);
     if (notifiedKeys.size > 0) out[NOTIFIED_KEYS_FIELD] = [...notifiedKeys];
+    if (personhoodGroups.size > 0) out[PERSONHOOD_GROUPS_FIELD] = Object.fromEntries(personhoodGroups);
+    if (nullifiers.size > 0) out[NULLIFIERS_FIELD] = [...nullifiers];
     writeFileSync(tmp, JSON.stringify(out));
     renameSync(tmp, storePath);
   } catch {
@@ -256,6 +304,37 @@ export function setReview(proofHash: string, rec: ReviewRecord): boolean {
   entry.review = rec;
   scheduleFlush();
   return true;
+}
+
+/** Record a verified membership proof against a report. Write-once. False if the proof is unknown. */
+export function setMembershipVerified(proofHash: string): boolean {
+  const entry = byHash.get(proofHash);
+  if (!entry) return false;
+  if (entry.membership !== "verified") {
+    entry.membership = "verified";
+    scheduleFlush();
+  }
+  return true;
+}
+
+export function getPersonhoodGroup(programmeId: string): PersonhoodGroupRecord | undefined {
+  return personhoodGroups.get(programmeId);
+}
+
+export function putPersonhoodGroup(programmeId: string, group: PersonhoodGroupRecord): void {
+  personhoodGroups.set(programmeId, group);
+  scheduleFlush();
+}
+
+export function hasNullifier(key: string): boolean {
+  return nullifiers.has(key);
+}
+
+export function addNullifier(key: string): void {
+  if (!nullifiers.has(key)) {
+    nullifiers.add(key);
+    scheduleFlush();
+  }
 }
 
 export function getProof(proofHash: string): Entry | undefined {
