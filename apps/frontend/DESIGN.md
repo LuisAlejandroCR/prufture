@@ -159,11 +159,13 @@ turned celebrations off OR the OS reduce-motion setting is on):
 
 The "Celebrations and motion" and "Haptics" toggles live on the Me screen under Accessibility.
 
-The live camera (`report/capture`) is the one dark screen. It draws its own chrome, so it sets
-`<StatusBar style="light" />` while mounted (the root dark style returns when it unmounts), pads its
-top bar and shutter with the real safe-area insets (`src/camera-frame.ts`, clearing the notch /
+The live camera (`report/capture`) and the optional selfie check (`report/identity`) are the only
+dark screens. The selfie check's large gesture glyph is decorative: it does not scale with Larger
+Text and is hidden from VoiceOver, because the instruction below it says the same thing. Each
+draws its own chrome, so it sets `<StatusBar style="light" />` while mounted (the root dark style
+returns when it unmounts), pads its top bar and bottom controls with the real safe-area insets (`src/camera-frame.ts`, clearing the notch /
 Dynamic Island and the home indicator), and takes every colour from `cameraColor` in
-`src/theme.ts`, each at least 4.5:1 on its ground. `BackLink tone="onDark"` replaces `muted`, which
+`src/theme.ts`, every text colour at least 4.5:1 on its ground (`track` is decorative only). `BackLink tone="onDark"` replaces `muted`, which
 is only 3.9:1 there.
 
 Reporters capture outdoors in daylight; the app commits to a single high-contrast light theme.

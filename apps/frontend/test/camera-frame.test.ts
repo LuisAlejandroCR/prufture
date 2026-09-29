@@ -43,3 +43,23 @@ test("the live camera sets a light status bar, uses the insets and no raw hex", 
   assert.match(src, /<BackLink label="Cancel" tone="onDark"/);
   assert.equal(/#[0-9A-Fa-f]{6}/.test(src), false, "camera colours must come from cameraColor in src/theme.ts");
 });
+
+test("the selfie check camera gets the same light status bar, insets and tokens", () => {
+  const src = read("../app/report/identity.tsx");
+  assert.match(src, /<StatusBar style="light" \/>/);
+  assert.match(src, /cameraFramePadding\(insets\)/);
+  assert.match(src, /<BackLink label="Back" tone="onDark"/);
+  assert.equal(/#[0-9A-Fa-f]{6}/.test(src), false, "colours must come from cameraColor in src/theme.ts");
+});
+
+test("the gesture glyph is decorative: no Larger Text blow-up, hidden from VoiceOver", () => {
+  const src = read("../app/report/identity.tsx");
+  assert.match(src, /<View style=\{styles\.overlay\} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">/);
+  assert.match(src, /<Text style=\{styles\.glyph\} allowFontScaling=\{false\}>/);
+});
+
+test("the selfie check uses the shared moment timing and haptics", () => {
+  const src = read("../app/report/identity.tsx");
+  assert.equal(/const MOMENT_IDENTITY_MS = /.test(src), false, "use the shared constant from src/feedback");
+  assert.match(src, /import \{ MOMENT_IDENTITY_MS, success, warn \} from "\.\.\/\.\.\/src\/feedback";/);
+});

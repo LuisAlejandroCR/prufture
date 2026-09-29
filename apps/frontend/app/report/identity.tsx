@@ -4,18 +4,18 @@
 
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Animated, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { cameraFramePadding } from "../../src/camera-frame";
 import { Icon } from "../../src/components/icons/Icon";
 import { BackLink, Notice, PrimaryButton, ReportProgress, Screen } from "../../src/components/ui";
+import { MOMENT_IDENTITY_MS, success, warn } from "../../src/feedback";
 import { runLiveness, submitLiveness, type Gesture } from "../../src/liveness";
 import { ensureDraft, setLiveness } from "../../src/report-draft";
 import { getTask } from "../../src/tasks";
-import { color, radius, space, type } from "../../src/theme";
-
-// Duplicates src/feedback MOMENT_IDENTITY_MS, inlined before that constant existed; switch to the
-// shared constant + haptics.
-const MOMENT_IDENTITY_MS = 1500;
+import { cameraColor, color, radius, space, type } from "../../src/theme";
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8787";
 
@@ -39,11 +39,14 @@ export default function ReportIdentityScreen() {
   const [phase, setPhase] = useState<Phase>("intro");
   const [step, setStep] = useState<{ gesture: Gesture; index: number; total: number } | null>(null);
   const badge = useMemo(() => new Animated.Value(0), []);
+  const insets = useSafeAreaInsets();
+  const frame = cameraFramePadding(insets);
 
   const advance = () => router.replace({ pathname: "/report/capture", params: { id: task.id, step: "0" } });
 
   useEffect(() => {
     if (phase !== "verified") return;
+    void success();
     Animated.spring(badge, { toValue: 1, useNativeDriver: true, friction: 5 }).start();
     const t = setTimeout(advance, MOMENT_IDENTITY_MS);
     return () => clearTimeout(t);
@@ -68,6 +71,7 @@ export default function ReportIdentityScreen() {
     setPhase("checking");
     const verdict = await submitLiveness(API_URL, result);
     setLiveness(true, verdict.verifiedPerson, verdict.degraded, verdict.ticket);
+    if (!verdict.verifiedPerson) void warn();
     setPhase(verdict.verifiedPerson ? "verified" : "degraded");
   }
 
@@ -124,20 +128,24 @@ export default function ReportIdentityScreen() {
 
   return (
     <View style={styles.screen}>
-      <View style={styles.top}>
-        <BackLink label="Back" onPress={() => router.back()} />
+      {/* Dark camera screen: light status bar on iOS; the root dark style returns on unmount. */}
+      <StatusBar style="light" />
+      <View style={[styles.top, { paddingTop: frame.top }]}>
+        <BackLink label="Back" tone="onDark" onPress={() => router.back()} />
       </View>
 
       <View style={styles.viewport}>
         <CameraView ref={cameraRef} style={StyleSheet.absoluteFill} facing="front" />
         {phase === "running" && step ? (
-          <View style={styles.overlay}>
-            <Text style={styles.glyph}>{GESTURE_COPY[step.gesture].glyph}</Text>
+          <View style={styles.overlay} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+            <Text style={styles.glyph} allowFontScaling={false}>
+              {GESTURE_COPY[step.gesture].glyph}
+            </Text>
           </View>
         ) : null}
       </View>
 
-      <View style={styles.controls}>
+      <View style={[styles.controls, { paddingBottom: frame.bottom }]}>
         {phase === "intro" ? (
           <>
             <Text style={styles.stepLabelLight}>Step 1 of 4 · Identity</Text>
@@ -172,8 +180,8 @@ export default function ReportIdentityScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#141210" },
-  top: { paddingHorizontal: space.lg, paddingTop: space.xxl, paddingBottom: space.sm },
+  screen: { flex: 1, backgroundColor: cameraColor.ground },
+  top: { paddingHorizontal: space.lg, paddingBottom: space.sm },
   viewport: { flex: 1, overflow: "hidden" },
   overlay: {
     position: "absolute",
@@ -184,13 +192,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  glyph: { fontSize: 96, color: "#FFFFFF", opacity: 0.9 },
-  controls: { padding: space.lg, paddingBottom: space.xxl, gap: space.sm, backgroundColor: "#141210" },
-  stepLabelLight: { ...type.meta, color: "#F4C9BC", fontWeight: "700" },
-  instructionLight: { ...type.subtitle, color: "#FFFFFF" },
-  hintLight: { ...type.meta, color: "#C9BEB2" },
+  glyph: { fontSize: 96, color: cameraColor.text, opacity: 0.9 },
+  controls: { padding: space.lg, gap: space.sm, backgroundColor: cameraColor.ground },
+  stepLabelLight: { ...type.meta, color: cameraColor.step, fontWeight: "700" },
+  instructionLight: { ...type.subtitle, color: cameraColor.text },
+  hintLight: { ...type.meta, color: cameraColor.hint },
   progressRow: { flexDirection: "row", gap: space.xs, marginTop: space.xs },
-  progressDot: { height: 6, flex: 1, borderRadius: radius.pill, backgroundColor: "#3A342E" },
+  progressDot: { height: 6, flex: 1, borderRadius: radius.pill, backgroundColor: cameraColor.track },
   progressDotOn: { backgroundColor: color.primary },
   center: { alignItems: "center", gap: space.md, paddingVertical: space.xxl },
   badge: {
