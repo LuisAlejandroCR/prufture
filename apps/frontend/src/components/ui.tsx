@@ -59,6 +59,9 @@ export function Screen({
       style={s.flex}
       contentContainerStyle={[pad, { paddingBottom: space.xl, gap: space.lg }]}
       keyboardShouldPersistTaps="handled"
+      // iOS: scroll the focused field (e.g. the Review note) above the keyboard instead of under it.
+      automaticallyAdjustKeyboardInsets
+      keyboardDismissMode="interactive"
     >
       {children}
     </ScrollView>

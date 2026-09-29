@@ -34,6 +34,15 @@ All tokens live in `app/globals.css` as CSS custom properties. Components use th
   region and the public reference.
 - Spacing: 4 / 8 / 12 / 16 / 24 / 40 / 64. Radius: 8 / 12 / 20 / pill.
 
+## /verify (Alternative C)
+
+`/verify/[hash]` is the page a reporter opens from the app, so it looks like the app: a
+`.verify-page` scope pins the light ivory tokens even under a dark system theme (page edges
+included via `body:has(.verify-page)`), a sprout brand link, a white status card (pill +
+activity + plain line), a three-stage timeline (Received by the programme / Community reviewed /
+Confirmed), a "Report details" card and a "Share this report" card. The personhood row is
+labelled "Identity check". The dashboard keeps light and dark.
+
 ## Language
 
 The public journey speaks plainly. `/verify` lifecycle: Report received / Waiting for more
