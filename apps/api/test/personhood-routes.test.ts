@@ -163,6 +163,48 @@ test("flag off -> unavailable; unknown report or programme -> 404", async () => 
   assert.equal((await post("/personhood/proof", { proofHash: fx.hashes.one, programmeId: "other", proof: fx.first })).status, 404);
 });
 
+const scopeUrl = (programmeId: string, proofHash: string) =>
+  `/personhood/scope?programmeId=${encodeURIComponent(programmeId)}&proofHash=${encodeURIComponent(proofHash)}`;
+
+test("scope route returns the exact scope the fixture proof was made for, and nothing else", async () => {
+  freshStore();
+  seedGroup();
+  seedReport(fx.hashes.one);
+  const res = await app.request(scopeUrl(PROGRAMME, fx.hashes.one));
+  assert.equal(res.status, 200);
+  const body = (await res.json()) as Record<string, unknown>;
+  assert.deepEqual(Object.keys(body).sort(), ["epoch", "scope"]);
+  assert.deepEqual(body, { scope: fx.first.scope, epoch: 1 });
+  assert.ok(!JSON.stringify(body).includes(fx.first.nullifier));
+});
+
+test("scope route follows the stored taskId and the current epoch", async () => {
+  freshStore();
+  seedGroup();
+  seedReport(fx.hashes.one, fx.scopes.B.taskId);
+  const b = (await (await app.request(scopeUrl(PROGRAMME, fx.hashes.one))).json()) as { scope: string };
+  assert.notEqual(b.scope, fx.first.scope);
+  assert.match(b.scope, /^[0-9]+$/);
+
+  seedReport(fx.hashes.two);
+  const h = coordinator();
+  await post("/coordinator/personhood/epoch", { programmeId: PROGRAMME }, h);
+  const next = (await (await app.request(scopeUrl(PROGRAMME, fx.hashes.two))).json()) as { scope: string; epoch: number };
+  assert.equal(next.epoch, 2);
+  assert.notEqual(next.scope, fx.first.scope);
+});
+
+test("scope route: invalid programmeId -> 400, unknown programme or proofHash -> 404", async () => {
+  freshStore();
+  seedGroup();
+  seedReport(fx.hashes.one);
+  assert.equal((await app.request(scopeUrl("Pilot 1", fx.hashes.one))).status, 400);
+  assert.equal((await app.request(`/personhood/scope?proofHash=${fx.hashes.one}`)).status, 400);
+  assert.equal((await app.request(scopeUrl("other", fx.hashes.one))).status, 404);
+  assert.equal((await app.request(scopeUrl(PROGRAMME, fx.hashes.two))).status, 404);
+  assert.equal((await app.request(`/personhood/scope?programmeId=${PROGRAMME}`)).status, 404);
+});
+
 test("groups, nullifiers and membership survive a restart; junk is dropped", async () => {
   const p = freshStore();
   seedGroup();
