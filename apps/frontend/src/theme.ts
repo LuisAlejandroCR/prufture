@@ -112,6 +112,10 @@ export const type = {
   action: { fontSize: 17, fontWeight: "700" as const, letterSpacing: 0.1 },
 } as const;
 
+// iOS Larger Text (Dynamic Type) scales text up to about 3x. Body copy scales freely; these caps
+// apply only to text locked inside a fixed-size shape. iOS itself barely grows tab bar labels.
+export const maxTextScale = { tabLabel: 1.2, badge: 1.3 } as const;
+
 // MOTION_INTENSITY 2: state transitions only. Callers gate these behind reduce-motion.
 export const motion = { fast: 140, base: 200 } as const;
 

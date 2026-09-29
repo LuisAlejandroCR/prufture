@@ -32,6 +32,10 @@ same one warm palette used by `apps/backend/app/globals.css`.
   4.5:1 is ever used. `disabled` is decorative / disabled-state only.
 - Type scale: display 28 / title 20 / subtitle 17 / body 15 / meta 13 / label 11 / action 17.
 - Spacing: 4 / 8 / 12 / 16 / 24 / 40. Radius: 10 / 14 / 20 / pill.
+- Larger Text (iOS Dynamic Type) is honoured: body copy scales without a cap. Only text locked in
+  a fixed-size shape is capped through `maxTextScale` in `src/theme.ts`: tab bar labels 1.2x (iOS
+  barely grows its own tab labels) and the photo-slot step number 1.3x inside its 26px circle. The
+  Report "+" is a glyph, not copy, so it does not scale. Never set `allowFontScaling={false}` on copy.
 - Targets: 44px minimum, 56px for the primary and capture buttons.
 
 ## Product language

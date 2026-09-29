@@ -6,7 +6,7 @@ import { Tabs, useRouter } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Icon, type IconName } from "../../src/components/icons/Icon";
-import { color, navSelectedTint, radius, space, target, type } from "../../src/theme";
+import { color, maxTextScale, navSelectedTint, radius, space, target, type } from "../../src/theme";
 import { select } from "../../src/feedback";
 
 const ITEMS: { name: string; label: string; icon: IconName }[] = [
@@ -47,7 +47,9 @@ function TabBar({ state, navigation }: TabBarShape) {
             color={focused ? color.primary : color.faint}
           />
         </View>
-        <Text style={[styles.label, focused && styles.labelActive]}>{item.label}</Text>
+        <Text style={[styles.label, focused && styles.labelActive]} maxFontSizeMultiplier={maxTextScale.tabLabel}>
+          {item.label}
+        </Text>
       </Pressable>
     );
   };
@@ -67,10 +69,14 @@ function TabBar({ state, navigation }: TabBarShape) {
       >
         <View style={styles.iconWrap}>
           <View style={styles.reportDot}>
-            <Text style={styles.plus}>+</Text>
+            <Text style={styles.plus} allowFontScaling={false}>
+              +
+            </Text>
           </View>
         </View>
-        <Text style={styles.label}>Report</Text>
+        <Text style={styles.label} maxFontSizeMultiplier={maxTextScale.tabLabel}>
+          Report
+        </Text>
       </Pressable>
 
       {rest.map(renderItem)}
