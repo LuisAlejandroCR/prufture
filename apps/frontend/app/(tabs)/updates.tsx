@@ -9,7 +9,7 @@ import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "r
 import { Icon } from "../../src/components/icons/Icon";
 import { Illustration } from "../../src/components/Illustration";
 import { confirmedReportCount } from "../../src/home";
-import { Notice, Screen, ScreenTitle, StatusPill } from "../../src/components/ui";
+import { Appear, CategoryBadge, Notice, Screen, ScreenTitle, StatusPill } from "../../src/components/ui";
 import { listProofs } from "../../src/queue";
 import type { LocalProof } from "../../src/queue-row";
 import { getTask } from "../../src/tasks";
@@ -123,7 +123,7 @@ export default function UpdatesScreen() {
           refreshControl={<RefreshControl refreshing={checking} onRefresh={checkNow} tintColor={color.primary} />}
         >
           {contribution}
-          {groups.map((g) => {
+          {groups.map((g, gi) => {
             const newest = g.rows[0];
             if (!newest) return null;
             const task = getTask(newest.taskId);
@@ -131,29 +131,31 @@ export default function UpdatesScreen() {
             const photos = g.rows.length;
             const target = newest.reportId || newest.id;
             return (
-              <Pressable
-                key={g.key}
-                onPress={() => router.push({ pathname: "/status/[id]", params: { id: target } })}
-                accessibilityRole="button"
-                accessibilityLabel={`${task.title}. ${task.area}. Status ${status}. ${photos} ${photos === 1 ? "photo" : "photos"}. ${relativeTime(newest.createdAt)}.`}
-                style={({ pressed }) => [styles.row, pressed && styles.pressed]}
-              >
-                <View style={styles.flex}>
-                  <Text style={styles.rowTitle} numberOfLines={1}>
-                    {task.title}
-                  </Text>
-                  <Text style={styles.rowMeta}>
-                    {task.area} · {relativeTime(newest.createdAt)}
-                  </Text>
-                  <View style={styles.pillRow}>
-                    <StatusPill status={status} />
+              <Appear key={g.key} index={gi}>
+                <Pressable
+                  onPress={() => router.push({ pathname: "/status/[id]", params: { id: target } })}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${task.title}. ${task.area}. Status ${status}. ${photos} ${photos === 1 ? "photo" : "photos"}. ${relativeTime(newest.createdAt)}.`}
+                  style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+                >
+                  <CategoryBadge category={task.category} size={44} />
+                  <View style={styles.flex}>
+                    <Text style={styles.rowTitle} numberOfLines={2}>
+                      {task.title}
+                    </Text>
+                    <Text style={styles.rowMeta}>
+                      {task.area} · {relativeTime(newest.createdAt)}
+                    </Text>
+                    <View style={styles.pillRow}>
+                      <StatusPill status={status} />
+                    </View>
+                    <Text style={styles.count}>
+                      {photos} {photos === 1 ? "photo" : "photos"}
+                    </Text>
                   </View>
-                  <Text style={styles.count}>
-                    {photos} {photos === 1 ? "photo" : "photos"}
-                  </Text>
-                </View>
-                <Icon name="chevron" size={18} color={color.faint} />
-              </Pressable>
+                  <Icon name="chevron" size={18} color={color.faint} />
+                </Pressable>
+              </Appear>
             );
           })}
         </ScrollView>

@@ -178,7 +178,7 @@ const styles = StyleSheet.create({
   toggleIcon: {
     width: 40,
     height: 40,
-    borderRadius: radius.sm,
+    borderRadius: radius.pill,
     backgroundColor: color.surfaceSoft,
     alignItems: "center",
     justifyContent: "center",

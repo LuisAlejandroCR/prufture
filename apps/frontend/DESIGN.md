@@ -68,6 +68,16 @@ rectangles with no centre pin (`CellMap`). Mission rows use `CategoryBadge` (sof
 category icon), the first closed question, and "Nearby area" or a rounded distance. A final row
 opens the full catalog.
 
+## Polish (Alternative C)
+
+- Every icon container is round: `Row`, Help, Intro facts and Me toggles match `CategoryBadge`.
+- My reports rows lead with the task's `CategoryBadge`, like Missions.
+- Missions remembers List or Map across launches (`src/view-pref.ts`, secure store, default List).
+- While `EXAMPLE_ASSIGNMENTS` is true, Missions shows "Example missions for this pilot", so demo
+  data is never presented as live programme work.
+- `Appear` fades list rows up with a 40 ms stagger (audit motion table), capped at 8 steps, and
+  renders in place under reduce motion or with celebrations off.
+
 ## Keyboard and connection notices
 
 Scrolling screens set `automaticallyAdjustKeyboardInsets`, so a focused field (the Review note)

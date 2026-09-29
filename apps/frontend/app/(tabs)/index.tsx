@@ -7,7 +7,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { CellMap, type MapCell } from "../../src/components/CellMap";
 import { Icon, type IconName } from "../../src/components/icons/Icon";
-import { BrandMark, CategoryBadge, OfflinePill, Screen } from "../../src/components/ui";
+import { Appear, BrandMark, CategoryBadge, OfflinePill, Screen } from "../../src/components/ui";
 import { confirmedReportCount, greeting, missionPlace, missionQuestion, showReachError } from "../../src/home";
 import { listProofs } from "../../src/queue";
 import type { LocalProof } from "../../src/queue-row";
@@ -19,11 +19,12 @@ import {
   restoreDraft,
   resumeTarget,
 } from "../../src/report-draft";
-import { distanceLabel, getTask, listTasks, sortByDistance, type TaskDef } from "../../src/tasks";
+import { EXAMPLE_ASSIGNMENTS, distanceLabel, getTask, listTasks, sortByDistance, type TaskDef } from "../../src/tasks";
 import { color, radius, shadow, space, target, type } from "../../src/theme";
 import { useApproxArea } from "../../src/useApproxArea";
 import { runPendingSync } from "../../src/useAutoSync";
 import { useOnline } from "../../src/useOnline";
+import { loadMissionsView, saveMissionsView } from "../../src/view-pref";
 
 type View_ = "list" | "map";
 
@@ -74,6 +75,14 @@ export default function MissionsScreen() {
   useEffect(() => {
     if (online) syncWaiting();
   }, [online, syncWaiting]);
+
+  useEffect(() => {
+    loadMissionsView().then(setView).catch(() => undefined);
+  }, []);
+  const chooseView = (v: View_) => {
+    setView(v);
+    void saveMissionsView(v);
+  };
 
   const reachError = showReachError({ online, pending, ...lastSync });
 
@@ -180,9 +189,16 @@ export default function MissionsScreen() {
         </View>
       </View>
 
+      {EXAMPLE_ASSIGNMENTS ? (
+        <View style={styles.example} accessibilityRole="text">
+          <Icon name="info" size={14} color={color.information} />
+          <Text style={styles.exampleText}>Example missions for this pilot. Your programme team will add real ones.</Text>
+        </View>
+      ) : null}
+
       <View style={styles.toggle} accessibilityRole="tablist">
         {(["list", "map"] as const).map((v) => (
-          <ToggleItem key={v} value={v} active={view === v} onPress={() => setView(v)} />
+          <ToggleItem key={v} value={v} active={view === v} onPress={() => chooseView(v)} />
         ))}
       </View>
 
@@ -195,8 +211,10 @@ export default function MissionsScreen() {
       />
 
       <View style={{ gap: space.sm }}>
-        {missions.map((t) => (
-          <MissionRow key={t.id} task={t} place={missionPlace(t, distanceLabel(cell, t))} onPress={() => open(t.id)} />
+        {missions.map((t, i) => (
+          <Appear key={t.id} index={i}>
+            <MissionRow task={t} place={missionPlace(t, distanceLabel(cell, t))} onPress={() => open(t.id)} />
+          </Appear>
         ))}
       </View>
 
@@ -323,6 +341,16 @@ const styles = StyleSheet.create({
   smallTextPrimary: { color: color.onPrimary, fontWeight: "700" },
   sectionHead: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: space.sm },
   section: { ...type.title, color: color.text },
+  example: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.xs,
+    paddingVertical: space.xs,
+    paddingHorizontal: space.sm,
+    borderRadius: radius.sm,
+    backgroundColor: color.informationSoft,
+  },
+  exampleText: { ...type.meta, color: color.text, flex: 1 },
   approx: { flexDirection: "row", alignItems: "center", gap: space.xs },
   approxText: { ...type.meta, color: color.muted },
   toggle: { flexDirection: "row", padding: space.xs, gap: space.xs, borderRadius: radius.md, backgroundColor: color.surfaceSoft },

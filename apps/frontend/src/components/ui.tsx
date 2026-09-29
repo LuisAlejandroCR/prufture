@@ -4,9 +4,11 @@
 // header, numbered evidence slots, answer chip and info card.
 // Token-driven only (src/theme.ts); screens compose these.
 
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import {
   AccessibilityRole,
+  Animated,
+  Easing,
   Image,
   Pressable,
   ScrollView,
@@ -17,6 +19,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { answerTone } from "../answer-tone";
+import { celebrationsAllowed } from "../feedback";
 import { categoryAccent, categoryIcon, type Category } from "../tasks";
 import {
   categorySoft,
@@ -292,6 +295,40 @@ export function BackLink({ label, onPress }: { label: string; onPress: () => voi
       <Icon name="back" size={20} color={color.muted} />
       <Text style={s.backText}>{label}</Text>
     </Pressable>
+  );
+}
+
+/**
+ * Fades a list row up into place, staggered 40 ms by `index` (audit motion table: "rows reveal in a
+ * 40 ms stagger"). With reduce motion or celebrations off it renders in place, no movement.
+ */
+export function Appear({ index = 0, children }: { index?: number; children: ReactNode }) {
+  const v = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    let alive = true;
+    void celebrationsAllowed()
+      .catch(() => false)
+      .then((allowed) => {
+        if (!alive) return;
+        if (!allowed) return v.setValue(1);
+        Animated.timing(v, {
+          toValue: 1,
+          duration: 220,
+          delay: Math.min(index, 8) * 40,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }).start();
+      });
+    return () => {
+      alive = false;
+    };
+  }, [v, index]);
+  return (
+    <Animated.View
+      style={{ opacity: v, transform: [{ translateY: v.interpolate({ inputRange: [0, 1], outputRange: [8, 0] }) }] }}
+    >
+      {children}
+    </Animated.View>
   );
 }
 
@@ -621,7 +658,7 @@ const s = StyleSheet.create({
   rowIcon: {
     width: 40,
     height: 40,
-    borderRadius: radius.sm,
+    borderRadius: radius.pill,
     alignItems: "center",
     justifyContent: "center",
   },
