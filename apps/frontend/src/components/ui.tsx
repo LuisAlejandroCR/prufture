@@ -4,7 +4,7 @@
 // header, numbered evidence slots, answer chip and info card.
 // Token-driven only (src/theme.ts); screens compose these.
 
-import type { ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
 import {
   AccessibilityRole,
   Image,
@@ -17,6 +17,7 @@ import {
   View,
   ViewStyle,
 } from "react-native";
+import { useScrollToTop } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { answerTone } from "../answer-tone";
 import { keyboardFrame } from "../keyboard";
@@ -58,9 +59,13 @@ export function Screen({
 }) {
   const insets = useSafeAreaInsets();
   const kb = keyboardFrame(Platform.OS);
+  // On a tab root, tapping the current tab again scrolls back to the top (no-op on stack screens).
+  const scrollRef = useRef<ScrollView>(null);
+  useScrollToTop(scrollRef);
   const pad = padded ? { padding: space.lg } : undefined;
   const body = scroll ? (
     <ScrollView
+      ref={scrollRef}
       style={s.flex}
       contentContainerStyle={[pad, { paddingBottom: space.xl, gap: space.lg }]}
       keyboardShouldPersistTaps="handled"
