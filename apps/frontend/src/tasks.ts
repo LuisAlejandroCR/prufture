@@ -31,6 +31,11 @@ export interface TaskDef {
   progressLabel?: string;
   /** Community confirmations the programme asked for, and how many it has. Assignments only. */
   confirmations?: { have: number; need: number };
+  /**
+   * High-assurance assignment: only participant-confirmed reports (src/assurance.ts) count toward
+   * its community confirmations. Assignments only; false for self-started reports.
+   */
+  highAssurance: boolean;
   /** True when people, faces, or documents may appear and a warning is needed. */
   peopleRisk: boolean;
   /** True for a report the reporter started from the item catalog. */
@@ -47,6 +52,7 @@ interface Assignment {
   area: string;
   cell: string;
   confirmations?: { have: number; need: number };
+  highAssurance?: boolean;
 }
 
 // Example programme assignments. In a pilot these come from the programme team; ids are stable
@@ -82,6 +88,7 @@ const ASSIGNMENTS: Assignment[] = [
     area: "Ciudad Bolívar, Bogotá",
     cell: "d2g38",
     confirmations: { have: 2, need: 3 },
+    highAssurance: true,
   },
   {
     id: "handwashing-lima",
@@ -118,6 +125,7 @@ function fromItem(item: ItemDef, id: string): TaskDef {
     minutes: item.minutes,
     offlineOk: true,
     peopleRisk: item.peopleRisk,
+    highAssurance: false,
     selfStarted: true,
   };
 }
@@ -131,6 +139,7 @@ function fromAssignment(a: Assignment): TaskDef {
     cell: a.cell,
     confirmations: a.confirmations,
     progressLabel: a.confirmations ? progressLabelFor(a.confirmations) : undefined,
+    highAssurance: a.highAssurance === true,
     selfStarted: false,
   };
 }

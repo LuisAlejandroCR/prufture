@@ -1,5 +1,5 @@
-// index.ts: JS face of the PruftureZk native module. In Expo Go, on Android, or in any build
-// without the prover it resolves to null, and every caller degrades to "unavailable".
+// index.ts: JS face of the PruftureZk native module (iOS and Android). In Expo Go, on web, or in
+// any build without the prover it resolves to null, and every caller degrades to "unavailable".
 
 import { requireOptionalNativeModule } from "expo";
 

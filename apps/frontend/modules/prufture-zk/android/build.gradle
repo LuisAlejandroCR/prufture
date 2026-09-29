@@ -1,0 +1,32 @@
+// build.gradle: Android library for the PruftureZk Expo module. Compiles the committed UniFFI Kotlin
+// bindings from packages/zk-prover next to the module, and packages the jniLibs + zkey asset that
+// scripts/build-android.sh stages on the EAS builder (both gitignored, never committed).
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'expo.modules.prufturezk'
+version = '0.1.0'
+
+android {
+  namespace "expo.modules.prufturezk"
+  defaultConfig {
+    versionCode 1
+    versionName '0.1.0'
+    consumerProguardFiles 'consumer-rules.pro'
+  }
+  sourceSets {
+    main {
+      java.srcDirs += "${projectDir}/../../../../../packages/zk-prover/bindings/kotlin"
+    }
+  }
+  lintOptions {
+    abortOnError false
+  }
+}
+
+dependencies {
+  // UniFFI's Kotlin bindings call into libprufture_zk_prover.so through JNA.
+  implementation 'net.java.dev.jna:jna:5.14.0@aar'
+}

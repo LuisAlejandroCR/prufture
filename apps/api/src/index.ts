@@ -1,5 +1,5 @@
 // index.ts: the api's HTTP surface — public, unauthenticated proof routes (/sync, /attest, /notify,
-// assurance, /proof) plus the PAID /coordinator/* routes gated by a server-side RevenueCat check.
+// assurance, /proof, /proof/:hash/confirmations) plus the PAID /coordinator/* routes gated by a server-side RevenueCat check.
 // Every public route is zero-PII, and no request body can choose the status code or the recipient.
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
@@ -30,6 +30,7 @@ import {
 } from "./store.js";
 import { pushRegistrationCount, registerPushToken } from "./push-store.js";
 import { attestOnce } from "./relayer.js";
+import { taskReports } from "./confirmations.js";
 import { checkLivenessVerdict, createLivenessSession, livenessSessionVerdict } from "./assurance.js";
 import { isSessionId } from "./liveness-aws.js";
 import {
@@ -342,6 +343,25 @@ app.get("/personhood/group/:programmeId", (c) => {
   });
 });
 
+// The scope a device must bind its proof to. Computed here, from the stored report's taskId and the
+// group's current epoch, so the app never guesses epoch or policyVersion. Scope and epoch only:
+// no nullifier, commitment or report field leaves this route.
+app.get("/personhood/scope", (c) => {
+  const programmeId = c.req.query("programmeId");
+  if (!isProgrammeId(programmeId)) return c.json({ error: "invalid programmeId" }, 400);
+  const entry = getProof(c.req.query("proofHash") ?? "");
+  if (!entry) return c.json({ error: "unknown proofHash" }, 404);
+  const group = getPersonhoodGroup(programmeId);
+  if (!group) return c.json({ error: "unknown programme" }, 404);
+  const scope = expectedScope({
+    programmeId,
+    taskId: entry.payload.taskId,
+    epoch: BigInt(group.epoch),
+    policyVersion: POLICY_VERSION,
+  });
+  return c.json({ scope: scope.toString(), epoch: group.epoch }, 200);
+});
+
 app.post("/personhood/proof", async (c) => {
   const body = await readJsonObject(c);
   if (!body) return c.json({ error: "invalid json" }, 400);
@@ -387,6 +407,14 @@ app.get("/proof/:hash", (c) => {
     // Additive: "verified" once a group-membership proof was accepted for this report, else null.
     membership: entry.membership ?? null,
   });
+});
+
+// Independent reports for the same task as :hash, so the reporter's phone can show honest community
+// progress. Counts are decided on the phone (apps/frontend/src/confirmations.ts); this only groups.
+app.get("/proof/:hash/confirmations", (c) => {
+  const reports = taskReports(allProofs(), c.req.param("hash"), REGION_PREFIX_LEN);
+  if (!reports) return c.json({ error: "not found" }, 404);
+  return c.json({ reports });
 });
 
 app.get("/proofs", (c) =>

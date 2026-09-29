@@ -481,6 +481,74 @@ body:has(.pitch-deck) { background: var(--bg); }
   .scroll-film { position: relative; top: auto; margin-bottom: 22px; }
 }
 
+/* The real app journey replaces the illustrative phone in the hero. The warm-dark stage lets the
+   portrait recording read as the moving focal point while the four field films carry the story. */
+.landing-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex: none;
+  box-shadow: 0 8px 24px #4d1b1030;
+}
+.landing .landing-nav { color: #fffaf4; }
+.landing .landing-nav .nav-action { background: #fffaf4; color: var(--ios-ink) !important; }
+.landing-hero {
+  color: #fffaf4;
+  background:
+    radial-gradient(circle at 72% 44%, #7e352d 0 12%, #40201c 34%, transparent 58%),
+    linear-gradient(132deg, #190f09 0%, #29150f 48%, #130c08 100%);
+}
+.landing-hero .eyebrow, .landing-hero .hero-lede { color: #d7c5b8; }
+.landing-hero h1 em { color: #ef9a7a; }
+.landing-hero .landing-btn-ghost { border-color: #ffffff4a; background: #ffffff12; color: white !important; }
+.landing-hero .trust-row { color: #cdb9ab; }
+.landing-hero .hero-orb-blue { background: radial-gradient(circle at 45% 48%, #e0765c55 0 24%, #c8533a30 45%, #c8533a00 72%); }
+.landing-hero .hero-orb-green { background: radial-gradient(circle, #4f8d6240 0%, #4f8d6200 68%); }
+.landing-hero .stage-glow { width: 82%; background: #e0765c40; filter: blur(42px); }
+.landing-hero .phone {
+  width: min(350px, 68vw);
+  aspect-ratio: 390 / 846;
+  border-radius: 58px;
+  background: linear-gradient(145deg, #85817e, #070605 34% 78%, #928d89);
+  box-shadow: 0 54px 120px #00000080, 0 0 0 1px #ffffff38, inset 0 0 0 1px #ffffff4a;
+}
+.landing-hero .phone-bezel {
+  height: 100%;
+  padding: 0;
+  border-radius: 50px;
+  background: #f7f2ea url("/media/app-journey.webp") center / cover no-repeat;
+}
+.phone-journey { width: 100%; height: 100%; display: block; object-fit: cover; }
+.phone-reflection { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(115deg, #ffffff20 0 9%, transparent 22% 72%, #ffffff12 90%); mix-blend-mode: screen; }
+.landing-hero .scroll-cue { color: #bba89a !important; }
+.landing-hero .scroll-cue i { background: #806f5c; }
+.landing-hero .scroll-cue i::after { border-color: #bba89a; }
+.closing-section .landing-icon { width: 64px; height: 64px; border-radius: 17px; box-shadow: 0 18px 50px #6d211e66; }
+.privacy-core .landing-icon { width: 46px; height: 46px; border-radius: 12px; box-shadow: none; }
+
+@media (max-width: 980px) {
+  .landing-nav { color: #fffaf4; }
+}
+@media (max-width: 1100px) {
+  .landing-hero { grid-template-columns: 1fr; padding-top: 145px; text-align: center; }
+  .landing-hero .hero-message { margin: auto; }
+  .landing-hero h1 { max-width: 11ch; margin-left: auto; margin-right: auto; }
+  .landing-hero .hero-lede { margin-left: auto; margin-right: auto; }
+  .landing-hero .hero-actions, .landing-hero .trust-row { justify-content: center; }
+  .landing-hero .product-stage { min-height: 650px; }
+  .landing-hero .scroll-cue { display: none; }
+}
+@media (max-width: 640px) {
+  .landing-nav .nav-action { background: #fffaf4; color: var(--ios-ink) !important; }
+  .landing-hero .product-stage { min-height: 570px; }
+  .landing-hero .phone { width: 270px; border-radius: 46px; }
+  .landing-hero .phone-bezel { border-radius: 40px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .phone-journey { display: none; }
+}
+
 
 /* Shared brand chrome (app/_components/brand.tsx): the mark and stroke icons outside the landing. */
 .brand-mark { color: var(--text); }

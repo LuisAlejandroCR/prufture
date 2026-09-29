@@ -5,6 +5,7 @@
 import Link from "next/link";
 import { qrPath } from "./pitch/qr";
 import { ScrollFilms } from "./ScrollFilms";
+import { HeroPhone } from "./HeroPhone";
 
 const SAMPLE_HASH =
   process.env.NEXT_PUBLIC_SAMPLE_HASH ??
@@ -17,7 +18,7 @@ const ANDROID_BUILD_URL =
 function Mark({ compact = false }: { compact?: boolean }) {
   return (
     <span className="landing-mark" aria-label="Prufture">
-      <span className="mark-orbit" aria-hidden="true"><span /><span /><span /></span>
+      <img className="landing-icon" src="/media/prufture-icon.png" alt="" aria-hidden="true" />
       {!compact && <span>Prufture</span>}
     </span>
   );
@@ -49,20 +50,7 @@ function ProductPreview() {
       </div>
       <div className="phone" aria-hidden="true">
         <div className="phone-bezel">
-          <div className="dynamic-island" />
-          <div className="phone-topline"><span>9:41</span><span>● ● ▰</span></div>
-          <div className="phone-content">
-            <div className="phone-brand"><Mark compact /><span>Field report</span></div>
-            <p className="phone-kicker">TODAY&apos;S TASK</p>
-            <h2>Solar light installation</h2>
-            <div className="photo-placeholder">
-              <span className="sun" /><span className="hill hill-one" /><span className="hill hill-two" />
-              <span className="panel"><i /><i /><i /></span>
-            </div>
-            <div className="phone-progress"><span /></div>
-            <div className="phone-meta"><span>Saved on this phone</span><strong>3 of 4</strong></div>
-            <div className="phone-button">Continue</div>
-          </div>
+          <HeroPhone />
         </div>
       </div>
       <div className="privacy-chip glass-card float-three"><span className="privacy-dot" /> No personal data</div>
