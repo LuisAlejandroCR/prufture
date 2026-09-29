@@ -11,15 +11,19 @@
     "rpc-check": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/rpc-check.ts",
     "submitter-sandbox": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/submitter-sandbox.ts",
     "register-schema": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/register-schema.ts",
-    "test": "node --import tsx --test --test-concurrency=1 $(find test -name \"*.test.ts\")"
+    "test": "node --import tsx --test --test-concurrency=1 $(find test -name \"*.test.ts\")",
+    "personhood-fixtures": "tsx scripts/make-personhood-fixtures.ts"
   },
   "dependencies": {
-    "@proof/core": "*",
     "@hono/node-server": "^1.13.0",
+    "@proof/core": "*",
+    "@semaphore-protocol/proof": "^4.14.3",
     "hono": "^4.6.0",
     "viem": "^2.21.0"
   },
   "devDependencies": {
+    "@semaphore-protocol/group": "^4.14.3",
+    "@semaphore-protocol/identity": "^4.14.3",
     "@types/node": "^22.7.0",
     "tsx": "^4.19.0",
     "typescript": "^5.6.3"
