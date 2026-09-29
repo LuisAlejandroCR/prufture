@@ -37,10 +37,28 @@ export interface SyncDeps {
   listProofs: () => Promise<QueuedProof[]>;
   markSynced: (id: string) => Promise<void>;
   markAttested: (id: string, attestationCount: number) => Promise<void>;
+  /**
+   * Optional, fire-and-forget: called once a row is accepted by the api. Its result is ignored and
+   * never awaited, so it can never slow, fail or change a sync.
+   */
+  onSynced?: (row: QueuedProof) => unknown;
 }
 
 function errMsg(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
+}
+
+/** Runs deps.onSynced without awaiting it; a throw or a rejected promise is swallowed. */
+function notifySynced(deps: SyncDeps, row: QueuedProof): void {
+  if (!deps.onSynced) return;
+  try {
+    const out = deps.onSynced(row);
+    if (out && typeof (out as Promise<unknown>).catch === "function") {
+      (out as Promise<unknown>).catch(() => {});
+    }
+  } catch {
+    // ignore — a post-sync extra never affects the sync
+  }
 }
 
 /** /sync omits the count; read it from /proof/:hash, fall back to 1 on any failure. */
@@ -106,9 +124,11 @@ export async function syncPending(deps: SyncDeps): Promise<SyncSummary> {
         const count = await resolveAttestedCount(deps, base, row.proofHash, data);
         await deps.markAttested(row.id, count);
         summary.attested += 1;
+        notifySynced(deps, row);
       } else if (data.status === "synced") {
         await deps.markSynced(row.id);
         summary.synced += 1;
+        notifySynced(deps, row);
       } else {
         summary.failed += 1;
         summary.errors.push(`${row.id}: unexpected status ${String(data.status)}`);
