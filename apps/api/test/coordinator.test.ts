@@ -225,3 +225,13 @@ test("gate: secret key set but REVENUECAT_PROJECT_ID missing => 503, never 402",
   const res = await get("/coordinator/reports", asCoordinator);
   assert.equal(res.status, 503, "a misconfigured server must not look like an unpaid customer");
 });
+
+test("/health reports whether coordinator billing is configured, never the secret", async () => {
+  revenuecat("entitled");
+  const on = await (await get("/health")).text();
+  assert.equal(JSON.parse(on).coordinatorBilling, true);
+  assert.ok(!on.includes(SECRET));
+  process.env.REVENUECAT_SECRET_KEY = "";
+  const off = (await (await get("/health")).json()) as { coordinatorBilling: boolean };
+  assert.equal(off.coordinatorBilling, false);
+});
