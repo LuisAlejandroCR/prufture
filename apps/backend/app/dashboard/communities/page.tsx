@@ -65,7 +65,7 @@ export default async function CommunitiesPage() {
                       {r.region === "(none)" ? (
                         <AreaChip region="" />
                       ) : (
-                        <AreaChip region={r.region} href={reportsHref({ q: r.region })} />
+                        <AreaChip region={r.region} href={reportsHref({ area: r.region })} />
                       )}
                     </td>
                     <td>
@@ -81,7 +81,7 @@ export default async function CommunitiesPage() {
                       {r.needsAnother > 0 && r.region !== "(none)" ? (
                         <Link
                           className="pill wait is-link"
-                          href={reportsHref({ q: r.region, status: "needs-another" })}
+                          href={reportsHref({ area: r.region, status: "needs-another" })}
                           aria-label={`${r.needsAnother} in ${r.region} need another report`}
                         >
                           <span className="dot" aria-hidden />

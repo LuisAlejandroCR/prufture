@@ -55,7 +55,7 @@ export default async function CoverageMapPage() {
                 {cells.map((c) => (
                   <tr key={c.region}>
                     <td>
-                      <AreaChip region={c.region} href={reportsHref({ q: c.region })} />
+                      <AreaChip region={c.region} href={reportsHref({ area: c.region })} />
                     </td>
                     <td>{c.count}</td>
                     <td>{c.confirmed}</td>

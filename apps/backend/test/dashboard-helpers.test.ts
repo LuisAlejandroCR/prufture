@@ -76,9 +76,9 @@ test("sortReports: oldest keeps bad dates last; status puts attention first", ()
 
 test("parseReportFilters: keeps valid values, drops unknown status, sort and bad dates", () => {
   const ok = parseReportFilters(new URLSearchParams("status=attention&sort=oldest&from=2026-09-01&q=pump&programme=Health"));
-  assert.deepEqual(ok, { status: "attention", sort: "oldest", from: "2026-09-01", to: "", q: "pump", programme: "Health" });
+  assert.deepEqual(ok, { status: "attention", sort: "oldest", from: "2026-09-01", to: "", q: "pump", programme: "Health", area: "" });
   const bad = parseReportFilters(new URLSearchParams("status=hacked&sort=evil&from=yesterday&to=2026-9-1"));
-  assert.deepEqual(bad, { status: "", sort: "newest", from: "", to: "", q: "", programme: "" });
+  assert.deepEqual(bad, { status: "", sort: "newest", from: "", to: "", q: "", programme: "", area: "" });
 });
 
 test("reportsHref: round-trips through parseReportFilters and omits defaults", () => {
@@ -166,4 +166,26 @@ test("weekTrend: plain words for more, fewer, same and up-from-none", () => {
 test("alerts: stale-report alert links to the pre-filtered, oldest-first workspace", () => {
   const list = alerts([p("2026-01-01T00:00:00Z")], false);
   assert.equal(list[0]?.link?.href, "/dashboard/reports?status=attention&sort=oldest");
+});
+
+test("area filter: exact cell match, validated from the URL, round-trips", () => {
+  const mk = (proofHash: string, geohashRegion: string): ProofSummary => ({
+    proofHash,
+    taskId: "water-pump-repair",
+    geohashRegion,
+    capturedAt: "2026-09-28T10:00:00Z",
+    attestationCount: 0,
+  });
+  const list = [mk("a", "d2g62"), mk("b", "d2g6"), mk("c", "u6sce")];
+  // Exact match: d2g6 must not pull in d2g62, which a text search would.
+  assert.deepEqual(applyReportFilters(list, { area: "d2g6" }).map((p) => p.proofHash), ["b"]);
+  assert.deepEqual(applyReportFilters(list, { area: "d2g62" }).map((p) => p.proofHash), ["a"]);
+  assert.equal(parseReportFilters(new URLSearchParams("area=d2g62")).area, "d2g62");
+  // Too long (a finer cell), invalid base-32 letters and markup are dropped.
+  for (const bad of ["d2g62x", "d2ga!", "<b>", "aiilo"]) {
+    assert.equal(parseReportFilters(new URLSearchParams(`area=${encodeURIComponent(bad)}`)).area, "", bad);
+  }
+  const href = reportsHref({ area: "d2g62", status: "needs-another" });
+  assert.equal(href, "/dashboard/reports?status=needs-another&area=d2g62");
+  assert.equal(parseReportFilters(new URL(href, "http://x").searchParams).area, "d2g62");
 });

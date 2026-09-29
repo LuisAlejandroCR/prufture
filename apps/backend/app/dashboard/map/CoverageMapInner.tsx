@@ -35,7 +35,7 @@ function popupNode(c: CoverageCell): HTMLElement {
   const meta = document.createElement("span");
   meta.textContent = `${countLabel(c.count)} · ${c.confirmed} confirmed`;
   const link = document.createElement("a");
-  link.href = reportsHref({ q: c.region });
+  link.href = reportsHref({ area: c.region });
   link.textContent = "View reports in this area →";
   root.append(title, meta, link);
   return root;

@@ -26,6 +26,7 @@ import {
 import { Icon } from "../_components/brand";
 import { downloadCsv } from "./exports/ExportButton";
 import { AreaChip, StatusPill } from "./ui";
+import { placeLabel } from "../../lib/places";
 
 function day(iso: string): string {
   const d = new Date(iso);
@@ -33,7 +34,7 @@ function day(iso: string): string {
 }
 
 const PAGE = 15;
-const EMPTY: Required<ReportFilters> = { status: "", programme: "", q: "", from: "", to: "", sort: "newest" };
+const EMPTY: Required<ReportFilters> = { status: "", programme: "", area: "", q: "", from: "", to: "", sort: "newest" };
 
 type SortColumn = "activity" | "submitted" | "status";
 
@@ -86,6 +87,14 @@ export function DashboardTable({
     () => [...new Set(proofs.map((p) => programmeName(p.taskId)))].sort(),
     [proofs],
   );
+  // Areas by report count, named when a listed city is near ("Near Bogotá · d2g62").
+  const areaList = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const p of proofs) if (p.geohashRegion) counts.set(p.geohashRegion, (counts.get(p.geohashRegion) ?? 0) + 1);
+    return [...counts.entries()]
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .map(([region]) => ({ region, label: placeLabel(region) ? `${placeLabel(region)} · ${region}` : region }));
+  }, [proofs]);
   const statusCounts = useMemo(() => {
     const m = new Map<ReviewStatus, number>();
     for (const p of proofs) m.set(reviewStatus(p), (m.get(reviewStatus(p)) ?? 0) + 1);
@@ -128,10 +137,10 @@ export function DashboardTable({
   // Row links carry the view, so the review page can offer Back / Previous / Next inside it.
   const viewQuery = compact ? "" : reportsQuery(f);
 
-  const active = Boolean(f.programme || f.status || f.from || f.to || f.q);
+  const active = Boolean(f.programme || f.area || f.status || f.from || f.to || f.q);
   const limit = compact ? 6 : shown;
   const visible = rows.slice(0, limit);
-  const reset = () => update({ status: "", programme: "", q: "", from: "", to: "" });
+  const reset = () => update({ status: "", programme: "", area: "", q: "", from: "", to: "" });
 
   return (
     <div className="workspace">
@@ -177,6 +186,19 @@ export function DashboardTable({
                 {programmeList.map((p) => (
                   <option key={p} value={p}>
                     {p}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Area
+              <select className="field" value={f.area} onChange={(e) => update({ area: e.target.value })}>
+                <option value="">All areas</option>
+                {/* A linked area missing from the data still shows, so the select never lies about the filter. */}
+                {f.area && !areaList.some((a) => a.region === f.area) ? <option value={f.area}>{f.area}</option> : null}
+                {areaList.map((a) => (
+                  <option key={a.region} value={a.region}>
+                    {a.label}
                   </option>
                 ))}
               </select>
