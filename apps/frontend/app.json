@@ -28,7 +28,8 @@
         "ITSAppUsesNonExemptEncryption": false,
         "NSCameraUsageDescription": "Prufture uses the camera to photograph the field activity you are reporting on and to run a short selfie liveness check.",
         "NSLocationWhenInUseUsageDescription": "Prufture records an approximate area for the report, not your exact location, plus an encrypted precise point that only the programme team can open for audit.",
-        "NSPhotoLibraryUsageDescription": "Prufture never opens your photo library; a report photo is taken in the app and stays on the device."
+        "NSPhotoLibraryUsageDescription": "Prufture never opens your photo library; a report photo is taken in the app and stays on the device.",
+        "NSSpeechRecognitionUsageDescription": "Prufture does not use speech recognition and never asks for it. A bundled identity-check library can reference it, so iOS requires this notice."
       }
     },
     "android": {
