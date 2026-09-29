@@ -72,7 +72,8 @@ test("fuzz: hostile inputs never throw and keep the source tag", async () => {
 
 test("invariant: the wire body carries the url and no PII / payload field", async () => {
   configureAll();
-  const forbidden = ["signature", "publicKey", "mediaUri", "privateKey", "lat", "lng", "0xdeadbeef"];
+  // Short coordinate names are checked as JSON keys: as bare substrings "lat" matches "template".
+  const forbidden = ["signature", "publicKey", "mediaUri", "privateKey", '"lat"', '"lng"', "0xdeadbeef"];
   try {
     for (let i = 0; i < 120; i++) {
       const channel = CHANNELS[rand(CHANNELS.length)]!;
@@ -105,5 +106,48 @@ test("invariant: provider non-2xx degrades, does not throw", async () => {
   } finally {
     restoreFetch();
     clearEnv();
+  }
+});
+
+test("whatsapp: exact Kapso v24 endpoint, X-API-Key, and the report_ready template with only the url", async () => {
+  configureAll();
+  delete process.env.KAPSO_API_BASE;
+  delete process.env.KAPSO_TEMPLATE_NAME;
+  delete process.env.KAPSO_TEMPLATE_LANG;
+  const calls: { url: string; init?: RequestInit }[] = [];
+  globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
+    calls.push({ url: String(url), init });
+    return new Response(JSON.stringify({ messaging_product: "whatsapp", messages: [{ id: "wamid.X" }] }), { status: 200 });
+  }) as typeof fetch;
+  try {
+    const r = await sendVerifyUrl("whatsapp", "46701234567", "https://prufture.vercel.app/verify/0xabc");
+    assert.equal(calls[0]!.url, "https://api.kapso.ai/meta/whatsapp/v24.0/111/messages");
+    assert.equal((calls[0]!.init?.headers as Record<string, string>)["X-API-Key"], "k");
+    assert.deepEqual(JSON.parse(String(calls[0]!.init?.body)), {
+      messaging_product: "whatsapp",
+      to: "46701234567",
+      type: "template",
+      template: {
+        name: "report_ready",
+        language: { code: "en" },
+        components: [{ type: "body", parameters: [{ type: "text", text: "https://prufture.vercel.app/verify/0xabc" }] }],
+      },
+    });
+    assert.ok(r.available && r.data.providerId === "wamid.X");
+  } finally {
+    restoreFetch();
+  }
+});
+
+test("whatsapp: a Meta error surfaces as a typed unavailable", async () => {
+  configureAll();
+  globalThis.fetch = (async () =>
+    new Response(JSON.stringify({ error: { code: 132001, message: "Template name does not exist" } }), { status: 400 })) as typeof fetch;
+  try {
+    const r = await sendVerifyUrl("whatsapp", "46701234567", "https://x/verify/1");
+    assert.equal(r.available, false);
+    assert.match(r.error ?? "", /kapso 400: .*132001/);
+  } finally {
+    restoreFetch();
   }
 });
