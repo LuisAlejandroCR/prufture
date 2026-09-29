@@ -68,6 +68,25 @@ rectangles with no centre pin (`CellMap`). Mission rows use `CategoryBadge` (sof
 category icon), the first closed question, and "Nearby area" or a rounded distance. A final row
 opens the full catalog.
 
+## Shared report pieces (Alternative C)
+
+Every task and report screen is built from the same `src/components/ui.tsx` pieces, so the flow
+reads as one product: `TaskHeader` (category circle, title, purpose), `EvidenceSteps` (numbered
+round photo slots: dashed camera when empty, photo + sage check when taken, terracotta ring on the
+current step), `AnswerChip` and the toned options in Questions (`src/answer-tone.ts`: sage check =
+works, amber warning = missing / partial / broken, neutral info = could not check, so an unsure
+answer never shows a success tick), and `InfoCard` (round icon, title, body) for offline,
+permission, progress and privacy notes. Completion screens (Saved, Sending, Sent) share the
+sun-and-sprout scene and side-by-side View status / Done actions.
+
+## Maps
+
+`src/map-region.ts` decides where a `CellMap` opens: centred on the reporter's approximate cell at
+city zoom (`CITY_DELTA` about 20 km), never a world view; without a location it fits only cells
+within about 1 degree of the nearest one. The reporter's own area gets one small terracotta dot at
+the **centre of their city** (`cityCentreForCell`, geocoded; falls back to the cell centre offline).
+Task cells never get a dot (`showCentre={false}`), because a point there implies false precision.
+
 ## Report flow
 
 `src/report-draft.ts` holds the in-memory draft (photos, answers, coarse area) for the report
@@ -78,15 +97,27 @@ endpoint or sync-retry change. The auto-sync loop drains the queue exactly as be
 The flow is presented as four steps via `ReportProgress` ("Step X of 4 · label"): 1 Instructions
 (`report/intro`), 2 Capture (`report/capture`), 3 Questions (`report/questions`), 4 Review
 (`report/location` area confirm, then `report/review`). Questions are large Yes / No / "I could
-not confirm" controls, one at a time, no free text, no PII. Review shows only photo count, answer
-count, approximate area, and capture time.
+not confirm" controls, one at a time, no free text, no PII.
+
+Review is the evidence sheet (Alternative C, screen 2): `CategoryBadge` + task title, the
+approximate area on a `CellMap` with the chip "Showing an approximate area (not exact location)",
+numbered round photo slots (tap one to retake just that photo: `capture?retake=1` returns to
+Review), the chosen answers under "Current condition" (tap to change), and **one optional note**.
+The note is capped at 280 characters with a counter from 200, sanitised in `src/report-note.ts`,
+persisted with the draft, and after saving kept on this phone only (`report-notes/notes.json`,
+keyed by the local reportId, shown on `status/[id]` as "Your private note"). It is never passed to
+`captureProof`, so it never reaches the signed payload, the api or the chain. The only action is
+"Save report".
 
 ## Contribution (Pilot 1)
 
 No reward, points, gift, token, cash, or leaderboard wording anywhere (grep-verified: 0 hits).
-The Me screen shows a **private contribution summary** ("Your contribution — N reports confirmed
-· M programme activities supported"), visible only to the reporter and never linked to a public
-report. Full model in `docs/pilot_engagement.md`.
+My reports opens with a **private contribution card** (growth scene, "N reports confirmed", "No
+ranking. Every useful report counts."), and Me repeats the summary. N counts reports, not photos,
+and only once every photo of a report is confirmed (`confirmedReportCount`). Visible only to the
+reporter and never linked to a public report. The status timeline (`status/[id]`) shows Saved on
+this phone / Sent to programme / Community reviewed / Confirmed, each with a one-line
+description. Full model in `docs/pilot_engagement.md`.
 
 ## Feedback and celebration
 
@@ -99,8 +130,11 @@ report (`bump`).
 Two guided moments, both on mount, both gated by `celebrationsAllowed()` (false when the reporter
 turned celebrations off OR the OS reduce-motion setting is on):
 
-- `report/saved` — 2.0s (`MOMENT_SAVED_MS`). `success()` haptic, the card eases up, a small lock
-  icon settles over the check, then the actions fade in. Calm, not a party.
+- `report/saved` — 2.0s (`MOMENT_SAVED_MS`). `success()` haptic, "Report saved safely" eases up
+  under the sun-and-sprout scene (`Illustration scene="saved"`, inline SVG, no image assets), then
+  View status / Done fade in. Assignments also show **Community progress** ("2 of 3
+  confirmations", segmented bar) from structured `confirmations` data in `src/tasks.ts`; the
+  label is derived (`src/progress.ts`), never hand-written. Calm, not a party.
 - `report/sent` — 2.5s (`MOMENT_SENT_MS`). `success()` then `thud()` at 150ms, a top-center
   confetti burst (`react-native-confetti-cannon`, Animated-based, Expo Go safe), and a
   congratulations block that names what the reporter helped document. When celebrations are not

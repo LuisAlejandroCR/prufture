@@ -1,12 +1,12 @@
 // report/permissions.tsx: explicit, honest access screen before any capture. Camera and location are
 // both required (no location, no report); Continue unlocks only when both are granted, and denial
-// shows an open-settings CTA. All permission calls go through src/permissions.ts.
+// shows an open-settings CTA. Cards use the shared InfoCard (Alternative C). All permission calls go
+// through src/permissions.ts.
 
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
-import { Icon } from "../../src/components/icons/Icon";
-import { BackLink, PrimaryButton, Screen, SectionLabel } from "../../src/components/ui";
+import { AnswerChip, BackLink, InfoCard, PrimaryButton, Screen, SectionLabel } from "../../src/components/ui";
 import {
   getPermissionState,
   RATIONALE,
@@ -65,6 +65,7 @@ export default function ReportPermissionsScreen() {
       <Text style={styles.title} accessibilityRole="header">
         Two permissions
       </Text>
+      <Text style={styles.sub}>Both stay on this phone until you finish the report.</Text>
 
       <PermissionCard
         icon="camera"
@@ -100,87 +101,57 @@ function PermissionCard({
   const granted = status === "granted";
   const blocked = status === "denied";
   return (
-    <View style={styles.card}>
-      <View style={styles.cardHead}>
-        <View style={styles.cardIcon}>
-          <Icon name={icon} size={20} color={granted ? color.success : color.muted} />
-        </View>
-        <View style={styles.flex}>
-          <Text style={styles.cardName}>
-            {name} <Text style={styles.tag}>required</Text>
-          </Text>
-          <Text style={styles.cardPurpose}>{purpose}</Text>
-        </View>
-      </View>
-
-      {granted ? (
-        <Text style={styles.ok}>Allowed</Text>
-      ) : blocked ? (
-        <View style={{ gap: space.xs }}>
-          <Text style={styles.blocked}>
-            Blocked. Open Settings to allow {name.toLowerCase()}, then come back.
-          </Text>
-          <Pressable
-            onPress={() => Linking.openSettings()}
-            accessibilityRole="button"
-            accessibilityLabel="Open settings"
-            style={({ pressed }) => [styles.link, pressed && styles.pressed]}
-          >
-            <Text style={styles.linkText}>Open settings</Text>
-          </Pressable>
-        </View>
-      ) : (
-        <View style={styles.actions}>
+    <InfoCard
+      icon={icon}
+      title={`${name} (required)`}
+      body={purpose}
+      tint={granted ? color.success : color.primary}
+      soft={granted ? color.successSoft : color.primarySoft}
+    >
+      <View style={styles.action}>
+        {granted ? (
+          <AnswerChip option="Yes, allowed" />
+        ) : blocked ? (
+          <View style={{ gap: space.xs }}>
+            <Text style={styles.blocked}>Blocked. Open Settings to allow {name.toLowerCase()}, then come back.</Text>
+            <Pressable
+              onPress={() => Linking.openSettings()}
+              accessibilityRole="button"
+              accessibilityLabel="Open settings"
+              style={({ pressed }) => [styles.allow, pressed && styles.pressed]}
+            >
+              <Text style={styles.allowText}>Open settings</Text>
+            </Pressable>
+          </View>
+        ) : (
           <Pressable
             onPress={onAllow}
             accessibilityRole="button"
             accessibilityLabel={`Allow ${name}`}
             style={({ pressed }) => [styles.allow, pressed && styles.pressed]}
           >
-            <Text style={styles.allowText}>Allow</Text>
+            <Text style={styles.allowText}>Allow {name.toLowerCase()}</Text>
           </Pressable>
-        </View>
-      )}
-    </View>
+        )}
+      </View>
+    </InfoCard>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1 },
   title: { ...type.display, color: color.text },
-  card: {
-    gap: space.md,
-    padding: space.lg,
-    borderRadius: radius.md,
-    backgroundColor: color.surface,
-    borderWidth: 1,
-    borderColor: color.border,
-  },
-  cardHead: { flexDirection: "row", gap: space.md, alignItems: "flex-start" },
-  cardIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.sm,
-    backgroundColor: color.surfaceSoft,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  cardName: { ...type.subtitle, color: color.text },
-  tag: { ...type.meta, color: color.muted, fontWeight: "600" },
-  cardPurpose: { ...type.meta, color: color.muted },
-  actions: { flexDirection: "row", alignItems: "center", gap: space.md, flexWrap: "wrap" },
+  sub: { ...type.body, color: color.muted },
+  action: { marginTop: space.sm },
   allow: {
+    alignSelf: "flex-start",
     minHeight: target.min,
     paddingHorizontal: space.lg,
     borderRadius: radius.md,
-    backgroundColor: color.primarySoft,
+    backgroundColor: color.primary,
     alignItems: "center",
     justifyContent: "center",
   },
-  allowText: { ...type.subtitle, color: color.primary, fontWeight: "700" },
-  link: { minHeight: target.min, justifyContent: "center" },
-  linkText: { ...type.meta, color: color.primary, fontWeight: "700" },
-  ok: { ...type.meta, color: color.success, fontWeight: "700" },
-  blocked: { ...type.meta, color: color.attention, fontWeight: "600" },
+  allowText: { ...type.subtitle, color: color.onPrimary, fontWeight: "700" },
+  blocked: { ...type.meta, color: color.text, fontWeight: "600" },
   pressed: { opacity: 0.7 },
 });

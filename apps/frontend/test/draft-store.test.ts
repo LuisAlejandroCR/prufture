@@ -50,6 +50,7 @@ function draft(over: Partial<ReportDraft> = {}): ReportDraft {
     reportId: "reportid-1",
     photos: [{ uri: "file:///cam0.jpg", bytes: new Uint8Array([1, 2]), stepIndex: 0 }],
     answers: { "all-panels": "Yes" },
+    note: "Two panels are shaded by a tree",
     geohash: "abcde",
     areaLabel: "Kalama District",
     preciseLocationCipher: "",
@@ -78,6 +79,7 @@ test("round-trips a draft: persist -> load -> deep-equal minus hydrated bytes", 
   assert.equal(loaded.taskId, d.taskId);
   assert.equal(loaded.reportId, d.reportId);
   assert.deepEqual(loaded.answers, d.answers);
+  assert.equal(loaded.note, "Two panels are shaded by a tree");
   assert.equal(loaded.geohash, "abcde");
   assert.equal(loaded.areaLabel, "Kalama District");
   assert.equal(loaded.livenessChecked, true);

@@ -1,6 +1,7 @@
 // report/capture.tsx: one required photo at a time — instruction, progress, camera, preview with
 // Use photo / Take again, and designed permission-denied and camera-error states.
-// Wired to expo-camera and src/report-draft; nothing uploads here.
+// Wired to expo-camera and src/report-draft; nothing uploads here. `retake=1` (from Review) replaces
+// one photo and returns to Review instead of walking the remaining steps.
 
 import { CameraView, useCameraPermissions } from "expo-camera";
 import * as FileSystem from "expo-file-system";
@@ -9,17 +10,25 @@ import { useRef, useState } from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { base64ToBytes } from "../../src/capture";
 import { Icon } from "../../src/components/icons/Icon";
-import { BackLink, Notice, PrimaryButton, ReportProgress, Screen, SecondaryButton } from "../../src/components/ui";
+import {
+  BackLink,
+  EvidenceSteps,
+  Notice,
+  PrimaryButton,
+  ReportProgress,
+  Screen,
+  SecondaryButton,
+} from "../../src/components/ui";
 import { tap } from "../../src/feedback";
 import { identityStepEnabled } from "../../src/flags";
-import { addPhoto, ensureDraft } from "../../src/report-draft";
+import { addPhoto, ensureDraft, getDraft } from "../../src/report-draft";
 import { getTask } from "../../src/tasks";
 import { color, radius, space, target, type } from "../../src/theme";
 
 type Shot = { uri: string; bytes: Uint8Array };
 
 export default function ReportCaptureScreen() {
-  const { id, step } = useLocalSearchParams<{ id: string; step: string }>();
+  const { id, step, retake } = useLocalSearchParams<{ id: string; step: string; retake?: string }>();
   const router = useRouter();
   const task = getTask(id ?? "");
   const stepIndex = Math.max(0, Math.min(task.photos.length - 1, Number(step ?? "0") || 0));
@@ -38,7 +47,9 @@ export default function ReportCaptureScreen() {
   ensureDraft(task.id);
 
   const next = () => {
-    if (stepIndex + 1 < total) {
+    if (retake === "1") {
+      router.replace({ pathname: "/report/review", params: { id: task.id } });
+    } else if (stepIndex + 1 < total) {
       router.replace({ pathname: "/report/capture", params: { id: task.id, step: String(stepIndex + 1) } });
     } else if (task.questions.length > 0) {
       router.replace({ pathname: "/report/questions", params: { id: task.id } });
@@ -110,10 +121,19 @@ export default function ReportCaptureScreen() {
         }
       >
         <ReportProgress step={progressStep} total={totalSteps} label="Capture" />
+        <EvidenceSteps
+          prompts={task.photos.map((p) => p.prompt)}
+          photos={task.photos.map((_, i) =>
+            i === stepIndex ? shot.uri : getDraft()?.photos.find((p) => p.stepIndex === i)?.uri,
+          )}
+          current={stepIndex}
+          size={56}
+        />
         <Text style={styles.stepLabel}>
           Photo {stepIndex + 1} of {total}
         </Text>
         <Text style={styles.instruction}>{spec?.prompt}</Text>
+        {spec?.hint ? <Text style={styles.hint}>{spec.hint}</Text> : null}
         <Image source={{ uri: shot.uri }} style={styles.previewImage} accessibilityLabel="Photo you just took" />
       </Screen>
     );
@@ -170,6 +190,7 @@ const styles = StyleSheet.create({
   gateBody: { ...type.body, color: color.muted, textAlign: "center" },
   stepLabel: { ...type.meta, color: color.primary, fontWeight: "700" },
   instruction: { ...type.title, color: color.text },
+  hint: { ...type.meta, color: color.muted },
   previewImage: {
     width: "100%",
     aspectRatio: 3 / 4,

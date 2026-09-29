@@ -13,6 +13,7 @@ import {
   readPersistedPhotoBytes,
 } from "./draft-store";
 import { attachLiveness } from "./liveness";
+import { sanitizeNote, saveLocalNote } from "./report-note";
 import { attachPreciseLocation } from "./sync";
 import type { TaskDef } from "./tasks";
 
@@ -49,6 +50,8 @@ export interface ReportDraft {
   reportId: string;
   photos: DraftPhoto[];
   answers: Record<string, string>;
+  /** Optional private note (<=280 chars). Local only: never signed, synced or passed to captureProof. */
+  note: string;
   /** Coarse geohash (<=5 chars). Location is mandatory, so this is set before review. */
   geohash: string;
   /** Area label shown back to the reporter. */
@@ -91,6 +94,7 @@ export function startDraft(taskId: string): ReportDraft {
     reportId: newReportId(),
     photos: [],
     answers: {},
+    note: "",
     geohash: "",
     areaLabel: "",
     preciseLocationCipher: "",
@@ -131,6 +135,12 @@ export function addPhoto(photo: DraftPhoto): void {
 export function setAnswer(questionId: string, value: string): void {
   if (!current) return;
   current.answers = { ...current.answers, [questionId]: value };
+  void persistDraft(current);
+}
+
+export function setNote(text: string): void {
+  if (!current) return;
+  current.note = sanitizeNote(text);
   void persistDraft(current);
 }
 
@@ -238,6 +248,10 @@ export async function saveDraft(): Promise<SaveResult> {
   // The payload is unchanged. Separately — and only if a liveness check ran — tell the
   // api to store the verified-person boolean against the first proofHash. Fire-and-forget:
   // it never blocks the "saved" screen and retries on the next sync pass if offline.
+  // The note stays on this phone, next to the report it describes. Awaited so it lands before
+  // clearDraft() wipes the draft; saveLocalNote never throws.
+  if (saved > 0 && draft.note) await saveLocalNote(draft.reportId, draft.note);
+
   if (firstProofHash) {
     const apiUrl = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8787";
     if (draft.livenessChecked && draft.livenessTicket) {

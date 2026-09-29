@@ -30,7 +30,7 @@ type View_ = "list" | "map";
 export default function MissionsScreen() {
   const router = useRouter();
   const online = useOnline();
-  const { cell } = useApproxArea();
+  const { cell, centre } = useApproxArea();
   const [pending, setPending] = useState(0);
   const [confirmed, setConfirmed] = useState(0);
   const [reachError, setReachError] = useState(false);
@@ -177,7 +177,9 @@ export default function MissionsScreen() {
 
       <CellMap
         cells={mapCells}
-        height={view === "map" ? 340 : 150}
+        height={view === "map" ? 340 : 170}
+        focusCell={cell}
+        cityCentre={centre}
         offlineLabel="Map available when online. Your missions are listed below and work offline."
       />
 

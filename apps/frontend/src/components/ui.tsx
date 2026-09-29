@@ -1,11 +1,13 @@
 // ui.tsx: shared presentational primitives for the reporter app — screen frame, card, buttons,
 // status pill, reassurance line, chevron row, section label, progress dots, notice box, category
-// badge, brand mark and the Offline pill.
+// badge, brand mark, Offline pill, and the Alternative C pieces every report screen shares: task
+// header, numbered evidence slots, answer chip and info card.
 // Token-driven only (src/theme.ts); screens compose these.
 
 import type { ReactNode } from "react";
 import {
   AccessibilityRole,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -14,6 +16,7 @@ import {
   ViewStyle,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { answerTone } from "../answer-tone";
 import { categoryAccent, categoryIcon, type Category } from "../tasks";
 import {
   categorySoft,
@@ -327,7 +330,183 @@ export function OfflinePill({ online }: { online: boolean }) {
   );
 }
 
+/** Category circle + large title + one-line purpose: the top of every task and report screen. */
+export function TaskHeader({ category, title, subtitle }: { category: Category; title: string; subtitle?: string }) {
+  return (
+    <View style={s.taskHeader}>
+      <CategoryBadge category={category} size={52} />
+      <View style={s.flex}>
+        <Text style={s.title} accessibilityRole="header">
+          {title}
+        </Text>
+        {subtitle ? <Text style={s.taskSub}>{subtitle}</Text> : null}
+      </View>
+    </View>
+  );
+}
+
+/**
+ * Numbered round evidence slots ("1 2 3"). A slot shows its photo when taken, a camera outline
+ * otherwise; `current` rings the step being captured. Pressable only when `onPress` is given.
+ */
+export function EvidenceSteps({
+  prompts,
+  photos = [],
+  current,
+  onPress,
+  size = 84,
+}: {
+  prompts: string[];
+  photos?: (string | undefined)[];
+  current?: number;
+  onPress?: (index: number) => void;
+  size?: number;
+}) {
+  return (
+    <View style={s.steps}>
+      {prompts.map((prompt, i) => {
+        const uri = photos[i];
+        const slot = (
+          <>
+            <View>
+              {uri ? (
+                <Image source={{ uri }} style={[s.slot, { width: size, height: size }]} />
+              ) : (
+                <View
+                  style={[
+                    s.slot,
+                    s.slotEmpty,
+                    { width: size, height: size },
+                    current === i && s.slotCurrent,
+                  ]}
+                >
+                  <Icon name="camera" size={Math.round(size * 0.3)} color={current === i ? color.primary : color.muted} />
+                </View>
+              )}
+              <View style={[s.slotNum, uri ? s.slotNumDone : current === i ? s.slotNumCurrent : null]}>
+                {uri ? <Icon name="check" size={12} color={color.onPrimary} /> : <Text style={s.slotNumText}>{i + 1}</Text>}
+              </View>
+            </View>
+            <Text style={s.slotText} numberOfLines={3}>
+              {prompt}
+            </Text>
+          </>
+        );
+        const label = `Photo ${i + 1}: ${prompt}. ${uri ? "Taken." : "Not taken yet."}`;
+        return onPress ? (
+          <Pressable
+            key={i}
+            onPress={() => onPress(i)}
+            accessibilityRole="button"
+            accessibilityLabel={`${label} ${uri ? "Tap to take again." : "Tap to take it."}`}
+            style={({ pressed }) => [s.step, pressed && s.pressed]}
+          >
+            {slot}
+          </Pressable>
+        ) : (
+          <View key={i} style={s.step} accessibilityLabel={label}>
+            {slot}
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+/** A chosen answer, toned by meaning: sage check (works), amber warning (problem), neutral (unsure). */
+export function AnswerChip({ option }: { option: string }) {
+  const tone = answerTone(option);
+  const map = {
+    good: { bg: color.successSoft, fg: color.success, icon: "check" as const },
+    bad: { bg: color.warningSoft, fg: color.warning, icon: "warning" as const },
+    neutral: { bg: color.surfaceSoft, fg: color.muted, icon: "info" as const },
+  }[tone];
+  return (
+    <View style={[s.chip, { backgroundColor: map.bg }]}>
+      <Icon name={map.icon} size={16} color={map.fg} />
+      <Text style={s.chipText}>{option}</Text>
+    </View>
+  );
+}
+
+/** Round icon + title + body on a white card: offline, permission and outcome notes. */
+export function InfoCard({
+  icon,
+  title,
+  body,
+  tint = color.primary,
+  soft = color.primarySoft,
+  children,
+}: {
+  icon: IconName;
+  title: string;
+  body?: string;
+  tint?: string;
+  soft?: string;
+  children?: ReactNode;
+}) {
+  return (
+    <View style={s.info} accessibilityRole="text">
+      <View style={[s.infoIcon, { backgroundColor: soft }]}>
+        <Icon name={icon} size={22} color={tint} />
+      </View>
+      <View style={[s.flex, { gap: 2 }]}>
+        <Text style={s.infoTitle}>{title}</Text>
+        {body ? <Text style={s.infoBody}>{body}</Text> : null}
+        {children}
+      </View>
+    </View>
+  );
+}
+
 const s = StyleSheet.create({
+  taskHeader: { flexDirection: "row", alignItems: "center", gap: space.md },
+  taskSub: { ...type.meta, color: color.muted },
+  steps: { flexDirection: "row", gap: space.md },
+  step: { flex: 1, alignItems: "center", gap: space.sm },
+  slot: { borderRadius: radius.pill, backgroundColor: color.surfaceSoft },
+  slotEmpty: { alignItems: "center", justifyContent: "center", borderWidth: 1.5, borderStyle: "dashed", borderColor: color.border },
+  slotCurrent: { borderColor: color.primary, borderStyle: "solid", backgroundColor: color.primarySoft },
+  slotNum: {
+    position: "absolute",
+    top: -2,
+    left: -2,
+    width: 26,
+    height: 26,
+    borderRadius: radius.pill,
+    backgroundColor: color.muted,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: color.background,
+  },
+  slotNumDone: { backgroundColor: color.success },
+  slotNumCurrent: { backgroundColor: color.primary },
+  slotNumText: { ...type.meta, fontWeight: "700", color: color.onPrimary },
+  slotText: { ...type.meta, color: color.text, textAlign: "center" },
+  chip: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    gap: space.sm,
+    minHeight: target.min - space.xs,
+    paddingHorizontal: space.md,
+    borderRadius: radius.sm,
+  },
+  chipText: { ...type.subtitle, color: color.text },
+  info: {
+    flexDirection: "row",
+    gap: space.md,
+    alignItems: "flex-start",
+    padding: space.md,
+    borderRadius: radius.md,
+    backgroundColor: color.surface,
+    borderWidth: 1,
+    borderColor: color.border,
+  },
+  infoIcon: { width: 44, height: 44, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
+  infoTitle: { ...type.subtitle, color: color.text },
+  infoBody: { ...type.meta, color: color.muted },
   badge: { borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
   brand: { flexDirection: "row", alignItems: "center", gap: space.xs },
   brandText: { ...type.title, color: color.text },

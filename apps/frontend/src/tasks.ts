@@ -3,6 +3,7 @@
 // located by the phone. Display metadata only: the signed proof still carries just the raw taskId.
 
 import { decodeGeohashBounds } from "./geohash";
+import { progressLabelFor } from "./progress";
 import { getItem, type CaptureStep, type Category, type ItemDef, type Question } from "./items";
 
 export type { CaptureStep, Category, Question } from "./items";
@@ -26,8 +27,10 @@ export interface TaskDef {
   minutes: number;
   /** Can the whole report be finished with no signal. Always true here. */
   offlineOk: boolean;
-  /** Shown as a light urgency or progress label. */
+  /** Shown as a light urgency or progress label. Derived from `confirmations`. */
   progressLabel?: string;
+  /** Community confirmations the programme asked for, and how many it has. Assignments only. */
+  confirmations?: { have: number; need: number };
   /** True when people, faces, or documents may appear and a warning is needed. */
   peopleRisk: boolean;
   /** True for a report the reporter started from the item catalog. */
@@ -43,7 +46,7 @@ interface Assignment {
   title: string;
   area: string;
   cell: string;
-  progressLabel?: string;
+  confirmations?: { have: number; need: number };
 }
 
 // Example programme assignments. In a pilot these come from the programme team; ids are stable
@@ -55,7 +58,7 @@ const ASSIGNMENTS: Assignment[] = [
     title: "Check solar panels at Kalama Primary School",
     area: "Kalama, Machakos",
     cell: "kzdwb",
-    progressLabel: "2 more reports needed",
+    confirmations: { have: 1, need: 3 },
   },
   {
     id: "water-pump-repair",
@@ -63,7 +66,7 @@ const ASSIGNMENTS: Assignment[] = [
     title: "Confirm the repaired hand pump is working",
     area: "Kakuma, Turkana West",
     cell: "sb8v1",
-    progressLabel: "1 more report needed",
+    confirmations: { have: 2, need: 3 },
   },
   {
     id: "latrine-construction",
@@ -78,7 +81,7 @@ const ASSIGNMENTS: Assignment[] = [
     title: "Check the new vaccine fridge at the health centre",
     area: "Ciudad Bolívar, Bogotá",
     cell: "d2g38",
-    progressLabel: "1 more report needed",
+    confirmations: { have: 2, need: 3 },
   },
   {
     id: "handwashing-lima",
@@ -121,7 +124,15 @@ function fromItem(item: ItemDef, id: string): TaskDef {
 
 function fromAssignment(a: Assignment): TaskDef {
   const item = getItem(a.itemId) ?? FALLBACK_ITEM;
-  return { ...fromItem(item, a.id), title: a.title, area: a.area, cell: a.cell, progressLabel: a.progressLabel, selfStarted: false };
+  return {
+    ...fromItem(item, a.id),
+    title: a.title,
+    area: a.area,
+    cell: a.cell,
+    confirmations: a.confirmations,
+    progressLabel: a.confirmations ? progressLabelFor(a.confirmations) : undefined,
+    selfStarted: false,
+  };
 }
 
 /** taskId for a report the reporter starts from the catalog. */

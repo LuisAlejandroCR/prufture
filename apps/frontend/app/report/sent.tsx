@@ -1,5 +1,6 @@
-// report/sent.tsx: closes the loop with a real celebration — haptics, confetti and a block naming what
-// the reporter helped document. No claim of final approval, no crypto words. Motion and confetti honor
+// report/sent.tsx: closes the loop with a real celebration in the Alternative C completion style —
+// scene, haptics, confetti, community progress and what was documented. No claim of final approval,
+// no crypto words. Motion and confetti honor
 // reduce-motion via src/feedback; the haptics always fire.
 
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -7,14 +8,16 @@ import { useEffect, useRef, useState } from "react";
 import { Animated, Dimensions, Easing, StyleSheet, Text, View } from "react-native";
 import ConfettiCannon from "react-native-confetti-cannon";
 import { assuranceFromProof, assuranceLabel, countsAsParticipantConfirmed, type Assurance } from "../../src/assurance";
-import { Icon } from "../../src/components/icons/Icon";
-import { PrimaryButton, Screen, SecondaryButton } from "../../src/components/ui";
+import { savedReportCount } from "../../src/answer-tone";
+import { Illustration } from "../../src/components/Illustration";
+import { InfoCard, PrimaryButton, Screen, SecondaryButton } from "../../src/components/ui";
+import { communityProgress } from "../../src/progress";
 import { identityStepEnabled } from "../../src/flags";
 import { MOMENT_SENT_MS, celebrationsAllowed, success, thud } from "../../src/feedback";
 import { listProofs } from "../../src/queue";
 import { getTask } from "../../src/tasks";
 import { API_URL } from "../../src/useAutoSync";
-import { color, radius, space, type } from "../../src/theme";
+import { color, space, type } from "../../src/theme";
 
 const { width } = Dimensions.get("window");
 
@@ -22,6 +25,7 @@ export default function ReportSentScreen() {
   const { id, hash } = useLocalSearchParams<{ id: string; hash: string }>();
   const router = useRouter();
   const task = getTask(id ?? "");
+  const progress = communityProgress(task);
 
   const [rowId, setRowId] = useState<string | null>(null);
   const [count, setCount] = useState(0);
@@ -39,7 +43,7 @@ export default function ReportSentScreen() {
           setRowId(mine.id);
           setCount(mine.attestationCount);
         }
-        setSavedTotal(rows.length || null);
+        setSavedTotal(savedReportCount(rows) || null);
       })
       .catch(() => undefined);
   }, [hash]);
@@ -101,17 +105,21 @@ export default function ReportSentScreen() {
   return (
     <Screen
       footer={
-        <>
-          <PrimaryButton label="Done" onPress={() => router.replace("/(tabs)")} />
-          <SecondaryButton
-            label="View status"
-            onPress={() =>
-              rowId
-                ? router.replace({ pathname: "/status/[id]", params: { id: rowId } })
-                : router.replace("/updates")
-            }
-          />
-        </>
+        <View style={styles.actions}>
+          <View style={styles.flex}>
+            <SecondaryButton
+              label="View status"
+              onPress={() =>
+                rowId
+                  ? router.replace({ pathname: "/status/[id]", params: { id: rowId } })
+                  : router.replace("/updates")
+              }
+            />
+          </View>
+          <View style={styles.flex}>
+            <PrimaryButton label="Done" onPress={() => router.replace("/(tabs)")} />
+          </View>
+        </View>
       }
     >
       {celebrate ? (
@@ -126,63 +134,64 @@ export default function ReportSentScreen() {
         />
       ) : null}
 
+      <View style={styles.scene}>
+        <Illustration scene="saved" height={170} />
+      </View>
+
       <Animated.View style={[styles.hero, blockStyle]}>
-        <View style={styles.badge}>
-          <Icon name="check" size={40} color={color.information} />
-        </View>
         <Text style={styles.title} accessibilityRole="header">
-          Thank you, reporter
+          Report sent
         </Text>
-        <Text style={styles.body}>Your report is on its way to the programme team.</Text>
-
-        <View style={styles.outcome}>
-          <Icon name="programme" size={16} color={color.muted} />
-          <Text style={styles.outcomeText}>You helped document: {task.title}</Text>
-        </View>
-
-        <View style={styles.outcome}>
-          <Icon name="privacy" size={16} color={assurance === "verified" ? color.success : color.muted} />
-          <Text
-            style={[styles.outcomeText, assurance === "verified" && { color: color.success }]}
-          >
-            {assuranceLabel(assurance)}
-          </Text>
-        </View>
-
-        <View style={styles.communityLine}>
-          <Icon name="community" size={16} color={color.muted} />
-          <Text style={styles.community}>
-            {countsAsParticipantConfirmed(assurance) && count > 0
-              ? `Confirmed by ${count} community ${count === 1 ? "member" : "members"}`
-              : "Waiting for another community report"}
-          </Text>
-        </View>
-
+        <Text style={styles.body}>Thank you. Your report is on its way to the programme team.</Text>
         {savedTotal && savedTotal > 0 ? (
           <Text style={styles.nudge}>
-            That is report #{savedTotal} you have saved.
+            That is {savedTotal === 1 ? "your first report" : `report ${savedTotal} from this phone`}.
           </Text>
         ) : null}
       </Animated.View>
+
+      {progress ? (
+        <InfoCard
+          icon="community"
+          tint={color.success}
+          soft={color.successSoft}
+          title={
+            countsAsParticipantConfirmed(assurance) && count > 0
+              ? `Confirmed by ${count} community ${count === 1 ? "member" : "members"}`
+              : `Community progress: ${progress.have} of ${progress.need} confirmations`
+          }
+          body="More confirmations help build a clearer picture for the community."
+        />
+      ) : (
+        <InfoCard
+          icon="community"
+          tint={color.success}
+          soft={color.successSoft}
+          title={
+            countsAsParticipantConfirmed(assurance) && count > 0
+              ? `Confirmed by ${count} community ${count === 1 ? "member" : "members"}`
+              : "Waiting for another community report"
+          }
+        />
+      )}
+
+      <InfoCard icon="programme" title="You documented" body={task.title} tint={color.information} soft={color.informationSoft} />
+      <InfoCard
+        icon="privacy"
+        title={assuranceLabel(assurance)}
+        tint={assurance === "verified" ? color.success : color.muted}
+        soft={assurance === "verified" ? color.successSoft : color.surfaceSoft}
+      />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  hero: { alignItems: "center", gap: space.md, paddingVertical: space.xxl },
-  badge: {
-    width: 88,
-    height: 88,
-    borderRadius: radius.pill,
-    backgroundColor: color.informationSoft,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  title: { ...type.display, color: color.text },
+  flex: { flex: 1 },
+  actions: { flexDirection: "row", gap: space.sm },
+  scene: { marginHorizontal: -space.lg, marginTop: -space.lg },
+  hero: { alignItems: "center", gap: space.sm },
+  title: { ...type.display, color: color.text, textAlign: "center" },
   body: { ...type.body, color: color.muted, textAlign: "center" },
-  outcome: { flexDirection: "row", alignItems: "center", gap: space.sm, marginTop: space.xs },
-  outcomeText: { ...type.meta, color: color.text, fontWeight: "600", flexShrink: 1, textAlign: "center" },
-  communityLine: { flexDirection: "row", alignItems: "center", gap: space.sm, marginTop: space.sm },
-  community: { ...type.meta, color: color.muted, fontWeight: "600" },
   nudge: { ...type.meta, color: color.muted },
 });

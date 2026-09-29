@@ -4,9 +4,9 @@
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import { StyleSheet, Switch, Text, View } from "react-native";
-import type { QueuedProof } from "@proof/core";
 import { Icon, type IconName } from "../../src/components/icons/Icon";
-import { Row, Screen, ScreenTitle, SectionLabel } from "../../src/components/ui";
+import { Illustration } from "../../src/components/Illustration";
+import { BrandMark, Row, Screen, ScreenTitle, SectionLabel } from "../../src/components/ui";
 import {
   hydrateFeedbackSettings,
   isCelebrationsEnabled,
@@ -14,6 +14,7 @@ import {
   setCelebrationsEnabled,
   setHapticsEnabled,
 } from "../../src/feedback";
+import { confirmedReportCount } from "../../src/home";
 import { listProofs } from "../../src/queue";
 import { color, radius, space, target, type } from "../../src/theme";
 
@@ -32,11 +33,9 @@ export default function MeScreen() {
         setCelebrations(isCelebrationsEnabled());
       });
       listProofs()
-        .then((rows: QueuedProof[]) => {
+        .then((rows) => {
           setPending(rows.filter((r) => r.status === "pending_sync").length);
-          setConfirmed(
-            rows.filter((r) => r.status === "attested" || r.attestationCount > 0).length,
-          );
+          setConfirmed(confirmedReportCount(rows));
           setActivities(new Set(rows.map((r) => r.taskId)).size);
         })
         .catch(() => {
@@ -49,17 +48,21 @@ export default function MeScreen() {
 
   return (
     <Screen>
+      <BrandMark />
       <ScreenTitle>Me</ScreenTitle>
 
       <View style={styles.contribution}>
-        <Text style={styles.contributionLabel}>Your contribution</Text>
-        <Text style={styles.contributionText}>
-          {confirmed} {confirmed === 1 ? "report" : "reports"} confirmed ·{" "}
-          {activities} programme {activities === 1 ? "activity" : "activities"} supported
-        </Text>
-        <Text style={styles.contributionNote}>
-          Only you see this. It is never linked to a public report.
-        </Text>
+        <Illustration scene="growth" height={96} />
+        <View style={styles.contributionBody}>
+          <Text style={styles.contributionLabel}>Your contribution</Text>
+          <Text style={styles.contributionText}>
+            {confirmed} {confirmed === 1 ? "report" : "reports"} confirmed ·{" "}
+            {activities} programme {activities === 1 ? "activity" : "activities"} supported
+          </Text>
+          <Text style={styles.contributionNote}>
+            No ranking. Every useful report counts. Only you see this.
+          </Text>
+        </View>
       </View>
 
       <View style={styles.storage}>
@@ -183,12 +186,14 @@ const styles = StyleSheet.create({
   toggleTitle: { ...type.subtitle, color: color.text },
   toggleSub: { ...type.meta, color: color.muted },
   contribution: {
-    padding: space.lg,
     borderRadius: radius.md,
-    backgroundColor: color.primarySoft,
-    gap: space.xs,
+    overflow: "hidden",
+    backgroundColor: color.surface,
+    borderWidth: 1,
+    borderColor: color.border,
   },
-  contributionLabel: { ...type.label, color: color.primary, textTransform: "uppercase" },
+  contributionBody: { padding: space.md, gap: space.xs },
+  contributionLabel: { ...type.meta, color: color.muted, fontWeight: "700" },
   contributionText: { ...type.subtitle, color: color.text },
   contributionNote: { ...type.meta, color: color.muted },
   storage: {
