@@ -1,5 +1,5 @@
 // feedback.ts: the single haptics + celebration-gating module for the report flow — tap/bump/thud/
-// success/warn, a persisted hapticsEnabled flag, reduce-motion-aware celebrationsAllowed() and moment
+// success/warn/select, a persisted hapticsEnabled flag, reduce-motion-aware celebrationsAllowed() and moment
 // timings. expo-haptics and AccessibilityInfo load lazily so tests and haptic-less devices never break.
 
 /** How long each guided "moment" holds before the actions settle in. */
@@ -137,6 +137,18 @@ async function notify(kind: "Success" | "Warning"): Promise<void> {
     if (mod?.notificationAsync && mod.NotificationFeedbackType) {
       await mod.notificationAsync(mod.NotificationFeedbackType[kind]);
     }
+  } catch {
+    // Never break the flow.
+  }
+}
+
+/** The iOS selection tick (UISelectionFeedbackGenerator); Android maps it to a light click. */
+export async function select(): Promise<void> {
+  await hydrateFeedbackSettings();
+  if (!hapticsEnabled) return;
+  try {
+    const mod = await loadHaptics();
+    if (mod?.selectionAsync) await mod.selectionAsync();
   } catch {
     // Never break the flow.
   }

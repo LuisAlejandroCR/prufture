@@ -8,6 +8,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { CellMap, type MapCell } from "../../src/components/CellMap";
 import { Icon, type IconName } from "../../src/components/icons/Icon";
 import { BrandMark, CategoryBadge, OfflinePill, Screen } from "../../src/components/ui";
+import { select } from "../../src/feedback";
 import { confirmedReportCount, greeting, missionPlace, missionQuestion } from "../../src/home";
 import { listProofs } from "../../src/queue";
 import type { LocalProof } from "../../src/queue-row";
@@ -171,7 +172,10 @@ export default function MissionsScreen() {
 
       <View style={styles.toggle} accessibilityRole="tablist">
         {(["list", "map"] as const).map((v) => (
-          <ToggleItem key={v} value={v} active={view === v} onPress={() => setView(v)} />
+          <ToggleItem key={v} value={v} active={view === v} onPress={() => {
+              if (view !== v) void select();
+              setView(v);
+            }} />
         ))}
       </View>
 

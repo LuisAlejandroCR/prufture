@@ -122,10 +122,12 @@ description. Full model in `docs/pilot_engagement.md`.
 ## Feedback and celebration
 
 `src/feedback.ts` is the only module that touches `expo-haptics`. It exposes `tap` / `bump` /
-`thud` (impact) and `success` / `warn` (notification); every call checks the persisted
+`thud` (impact), `success` / `warn` (notification) and `select` (the iOS selection tick); every call checks the persisted
 `hapticsEnabled` flag and swallows any throw so a device with no haptic engine never breaks the
 flow. Micro-haptics are one call per action, never in a loop: photo accepted (`tap`), Finish
-report (`bump`).
+report (`bump`), a failed save on Review (`warn`). `select` follows the iOS rule of ticking only
+when a choice changes: a different answer in Questions, another bottom tab, the List / Map toggle
+and a category tile in the item picker. Re-tapping the current choice stays silent.
 
 Two guided moments, both on mount, both gated by `celebrationsAllowed()` (false when the reporter
 turned celebrations off OR the OS reduce-motion setting is on):

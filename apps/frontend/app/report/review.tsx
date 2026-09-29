@@ -18,7 +18,7 @@ import {
   TaskHeader,
 } from "../../src/components/ui";
 import { captureProof } from "../../src/capture";
-import { bump } from "../../src/feedback";
+import { bump, warn } from "../../src/feedback";
 import { identityStepEnabled } from "../../src/flags";
 import { getDraft, saveDraft, setCaptureProof, setNote } from "../../src/report-draft";
 import { NOTE_MAX, noteCounter } from "../../src/report-note";
@@ -52,6 +52,7 @@ export default function ReportReviewScreen() {
     const result = await saveDraft();
     setBusy(false);
     if (result.saved === 0) {
+      void warn();
       setError("The report could not be saved on this phone. Please try again.");
       return;
     }
