@@ -75,12 +75,18 @@ export default function MeScreen() {
 
       <View style={{ gap: space.sm }}>
         <SectionLabel>Settings</SectionLabel>
-        <Row icon="language" title="Language" subtitle="English" onPress={() => undefined} />
+        <View style={styles.valueRow} accessible accessibilityLabel="Language. English">
+          <View style={styles.toggleIcon}><Icon name="language" size={20} color={color.text} /></View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.toggleTitle}>Language</Text>
+            <Text style={styles.toggleSub}>English</Text>
+          </View>
+        </View>
         <Row
           icon="privacy"
           title="Data and privacy"
           subtitle="What we ask for and why"
-          onPress={() => router.push("/help")}
+          onPress={() => router.push("/data-privacy")}
         />
         <Row
           icon="offline"
@@ -118,7 +124,7 @@ export default function MeScreen() {
       <View style={{ gap: space.sm }}>
         <SectionLabel>Support</SectionLabel>
         <Row icon="help" title="Help" subtitle="How the app works" onPress={() => router.push("/help")} />
-        <Row icon="info" title="About Prufture" subtitle="Version and open-source notes" onPress={() => undefined} />
+        <Row icon="info" title="About Prufture" subtitle="Purpose and open-source notes" onPress={() => router.push("/about")} />
       </View>
 
       <Text style={styles.about}>
@@ -165,6 +171,17 @@ function ToggleRow({
 const styles = StyleSheet.create({
   groupNote: { ...type.meta, color: color.muted },
   toggleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.md,
+    padding: space.md,
+    borderRadius: radius.md,
+    backgroundColor: color.surface,
+    borderWidth: 1,
+    borderColor: color.border,
+    minHeight: target.min + 12,
+  },
+  valueRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: space.md,

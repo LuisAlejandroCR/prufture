@@ -92,9 +92,14 @@ sun-and-sprout scene and side-by-side View status / Done actions.
 
 `src/map-region.ts` decides where a `CellMap` opens: centred on the reporter's approximate cell at
 city zoom (`CITY_DELTA` about 20 km), never a world view; without a location it fits only cells
-within about 1 degree of the nearest one. The reporter's own area gets one small terracotta dot at
-the **centre of their city** (`cityCentreForCell`, geocoded; falls back to the cell centre offline).
-Task cells never get a dot (`showCentre={false}`), because a point there implies false precision.
+within about 1 degree of the nearest one. The city centre (`cityCentreForCell`, geocoded) only
+helps frame that view. No map draws a pin or dot, not even for the reporter's own area: a point at
+a cell centre implies a precision the data does not have (`test/cell-map-privacy.test.ts`). Cells
+stay tappable polygons.
+
+`Data and privacy` (from Me) is the one place that lists what a report keeps and shares, including
+the precise point sealed on-device to the programme key when one is configured
+(`src/location-seal.ts`); Help links there instead of repeating it. `About` holds purpose and version.
 
 ## Report flow
 

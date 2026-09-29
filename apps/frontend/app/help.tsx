@@ -38,25 +38,11 @@ const TOPICS: Topic[] = [
       "You can browse tasks, capture photos, answer questions, and finish a report with no connection. The report is saved on your phone and sends itself when you have signal again.",
   },
   {
-    icon: "location",
-    title: "Why approximate location is used",
-    line: "We keep only a rough area, never your exact spot.",
-    detail:
-      "A report carries an approximate area so the programme team knows the region. Your exact position is never stored or shared.",
-  },
-  {
     icon: "check",
     title: "What happens after I send",
     line: "The programme team reviews it, and other reports can confirm it.",
     detail:
       "After a report is sent it is reviewed by the programme team. When another community member reports the same activity, it is marked confirmed.",
-  },
-  {
-    icon: "privacy",
-    title: "My privacy",
-    line: "Your name and identity are never in a report.",
-    detail:
-      "Reports never include your name, phone number, or any identity document. The original photo stays on your phone unless you choose to share it.",
   },
   {
     icon: "warning",
