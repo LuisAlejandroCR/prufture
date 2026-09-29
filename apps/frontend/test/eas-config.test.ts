@@ -92,7 +92,7 @@ test("app.json: android.package + versionCode set, eas.projectId is a real UUID"
 });
 
 test("app.json: EAS Update wiring matches the projectId (needed for channel:preview builds)", () => {
-  assert.equal(app.expo.owner, "alejoo_oo");
+  assert.equal(app.expo.owner, "alejoooo-team");
   assert.equal(app.expo.runtimeVersion.policy, "appVersion");
   assert.equal(app.expo.updates.url, `https://u.expo.dev/${app.expo.extra.eas.projectId}`);
 });
@@ -189,7 +189,7 @@ test("app.json: plugins include the native modules we ship and nothing we do not
 });
 
 test("app.json: EAS projectId is untouched (eas init owns it)", () => {
-  assert.equal(app.expo.extra.eas.projectId, "ff9cdaeb-a7be-4a1c-a76f-7594b2b51aef");
+  assert.equal(app.expo.extra.eas.projectId, "dbb8e72c-5bed-4676-8d04-3805ecacc2e7");
   assert.equal(app.expo.updates.url, `https://u.expo.dev/${app.expo.extra.eas.projectId}`);
 });
 

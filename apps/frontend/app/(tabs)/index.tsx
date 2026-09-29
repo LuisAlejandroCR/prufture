@@ -4,12 +4,12 @@
 
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import { CellMap, type MapCell } from "../../src/components/CellMap";
 import { Icon, type IconName } from "../../src/components/icons/Icon";
 import { BrandMark, CategoryBadge, OfflinePill, Screen } from "../../src/components/ui";
 import { select } from "../../src/feedback";
-import { confirmedReportCount, greeting, missionPlace, missionQuestion } from "../../src/home";
+import { confirmedReportCount, greeting, missionPlace, missionQuestion, nearMePrompt } from "../../src/home";
 import { listProofs } from "../../src/queue";
 import type { LocalProof } from "../../src/queue-row";
 import {
@@ -31,7 +31,7 @@ type View_ = "list" | "map";
 export default function MissionsScreen() {
   const router = useRouter();
   const online = useOnline();
-  const { cell, centre } = useApproxArea();
+  const { cell, centre, status, canAskAgain, requestArea } = useApproxArea();
   const [pending, setPending] = useState(0);
   const [confirmed, setConfirmed] = useState(0);
   const [reachError, setReachError] = useState(false);
@@ -179,13 +179,17 @@ export default function MissionsScreen() {
         ))}
       </View>
 
-      <CellMap
-        cells={mapCells}
-        height={view === "map" ? 340 : 170}
-        focusCell={cell}
-        cityCentre={centre}
-        offlineLabel="Map available when online. Your missions are listed below and work offline."
-      />
+      {cell ? (
+        <CellMap
+          cells={mapCells}
+          height={view === "map" ? 340 : 170}
+          focusCell={cell}
+          cityCentre={centre}
+          offlineLabel="Map available when online. Your missions are listed below and work offline."
+        />
+      ) : (
+        <NearMeCard prompt={nearMePrompt(status, canAskAgain)} onAsk={requestArea} />
+      )}
 
       <View style={{ gap: space.sm }}>
         {missions.map((t) => (
@@ -234,6 +238,34 @@ function MissionRow({ task, place, onPress }: { task: TaskDef; place: string; on
       </View>
       <Icon name="chevron" size={18} color={color.faint} />
     </Pressable>
+  );
+}
+
+// Without the reporter's area the map would open on another continent's mission, so it waits until
+// the reporter chooses to share an approximate area. The list below stays usable either way.
+function NearMeCard({ prompt, onAsk }: { prompt: ReturnType<typeof nearMePrompt>; onAsk: () => Promise<void> }) {
+  const onPress = () => {
+    if (prompt.action === "settings") void Linking.openSettings();
+    else if (prompt.action !== "none") void onAsk();
+  };
+  return (
+    <View style={styles.nearMe}>
+      <View style={styles.inline}>
+        <Icon name="location" size={20} color={color.primary} />
+        <Text style={styles.stripTitle}>See missions near you</Text>
+      </View>
+      <Text style={styles.stripBody}>
+        Prufture uses an approximate area of about 5 km, never your exact position. You can still pick any
+        mission from the list below.
+      </Text>
+      {prompt.action === "none" ? (
+        <Text style={styles.stripBody}>{prompt.label}</Text>
+      ) : (
+        <View style={styles.resumeActions}>
+          <SmallButton label={prompt.label} primary onPress={onPress} hint={prompt.label} />
+        </View>
+      )}
+    </View>
   );
 }
 
@@ -297,6 +329,14 @@ const styles = StyleSheet.create({
     backgroundColor: color.successSoft,
   },
   queueText: { ...type.meta, flex: 1, color: color.text, fontWeight: "600" },
+  nearMe: {
+    gap: space.sm,
+    padding: space.md,
+    borderRadius: radius.md,
+    backgroundColor: color.surface,
+    borderWidth: 1,
+    borderColor: color.border,
+  },
   resume: { gap: space.sm, padding: space.md, borderRadius: radius.md, backgroundColor: color.primarySoft },
   resumeTitle: { ...type.meta, color: color.primary, fontWeight: "700" },
   resumeBody: { ...type.body, color: color.text },

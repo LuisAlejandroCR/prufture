@@ -5,7 +5,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { LocalProof } from "../src/queue-row.js";
-import { confirmedReportCount, greeting, missionPlace, missionQuestion } from "../src/home.js";
+import { confirmedReportCount, greeting, missionPlace, missionQuestion, nearMePrompt } from "../src/home.js";
 import { categoryIcon, getTask, itemTaskId, listTasks } from "../src/tasks.js";
 import { CATEGORIES } from "../src/items.js";
 
@@ -67,4 +67,12 @@ test("mission place never invents precision", () => {
 test("every category has an icon, so no mission row renders a blank circle", () => {
   for (const c of CATEGORIES) assert.ok(categoryIcon[c], `no icon for ${c}`);
   for (const t of [...listTasks(), getTask(itemTaskId("water-point"))]) assert.ok(categoryIcon[t.category]);
+});
+
+test("nearMePrompt: asks first, sends to Settings only when iOS will not ask again", () => {
+  assert.deepEqual(nearMePrompt("undetermined", true), { action: "ask", label: "Show missions near me" });
+  assert.deepEqual(nearMePrompt("denied", true), { action: "ask", label: "Show missions near me" });
+  assert.deepEqual(nearMePrompt("denied", false), { action: "settings", label: "Turn on location in Settings" });
+  assert.equal(nearMePrompt("granted", true).action, "retry");
+  assert.equal(nearMePrompt("checking", true).action, "none");
 });
