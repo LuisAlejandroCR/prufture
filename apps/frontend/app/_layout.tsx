@@ -75,6 +75,7 @@ export default function RootLayout() {
         <Stack.Screen name="help" />
         <Stack.Screen name="data-privacy" />
         <Stack.Screen name="about" />
+        <Stack.Screen name="zk-bench" />
       </Stack>
     </SafeAreaProvider>
   );

@@ -4,12 +4,10 @@
 
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, resolve } from "node:path";
-import { Group } from "@semaphore-protocol/group";
 import { Identity } from "@semaphore-protocol/identity";
 import { verifyProof, type SemaphoreProof } from "@semaphore-protocol/proof";
-import { keccak256, toHex } from "viem";
 import {
   closePersonhoodVerifier,
   enrolCommitment,
@@ -18,30 +16,33 @@ import {
   verifyMembership,
 } from "../src/personhood.js";
 
-const DEPTH = 10;
+const DEPTH = 10; // must equal CIRCUIT_DEPTH in apps/frontend/src/personhood-inputs.ts
 const here = dirname(fileURLToPath(import.meta.url));
 const crateDir = resolve(here, "../../../packages/zk-prover");
 const fx = JSON.parse(readFileSync(resolve(here, "../test/fixtures/semaphore-proofs.json"), "utf8"));
 
-/** Semaphore's field hash for message and scope: keccak256(32-byte big-endian) >> 8. */
-const semaphoreHash = (x: bigint) => (BigInt(keccak256(toHex(x, { size: 32 }))) >> 8n).toString();
+// Loaded at runtime: the app's builder lives outside this workspace's tsconfig rootDir.
+type BuildCircuitInputs = (a: {
+  secretScalar: bigint;
+  commitment: bigint;
+  commitments: readonly string[];
+  message: bigint;
+  scope: bigint;
+}) => { inputs: object; root: string };
+const builderPath = pathToFileURL(resolve(here, "../../frontend/src/personhood-inputs.ts")).href;
+const { buildCircuitInputs } = (await import(builderPath)) as { buildCircuitInputs: BuildCircuitInputs };
 
 const identity = new Identity("prufture-test-alpha"); // fixture member 0
-const group = new Group(fx.commitments.map(BigInt));
-const merkle = group.generateMerkleProof(group.indexOf(identity.commitment));
 const scope = expectedScope({ ...fx.scopes.A, epoch: 1n, policyVersion: 1n });
 const message = BigInt(fx.hashes.one);
-
-const siblings = [...merkle.siblings.map(String)];
-while (siblings.length < DEPTH) siblings.push("0");
-const inputs = {
-  secret: identity.secretScalar.toString(),
-  merkleProofLength: merkle.siblings.length,
-  merkleProofIndex: merkle.index,
-  merkleProofSiblings: siblings,
-  scope: semaphoreHash(scope),
-  message: semaphoreHash(message),
-};
+// The app's own builder: this gate also proves its inputs are what the circuit expects.
+const { inputs, root } = buildCircuitInputs({
+  secretScalar: identity.secretScalar,
+  commitment: identity.commitment,
+  commitments: fx.commitments,
+  message,
+  scope,
+});
 
 const t0 = Date.now();
 const out = execFileSync(
@@ -60,7 +61,7 @@ const { points, publicSignals } = JSON.parse(out.trim().split(/\r?\n/).at(-1)!) 
 
 const proof: SemaphoreProof = {
   merkleTreeDepth: DEPTH,
-  merkleTreeRoot: merkle.root.toString() as `${number}`,
+  merkleTreeRoot: root as `${number}`,
   nullifier: publicSignals[1] as `${number}`,
   message: message.toString() as `${number}`,
   scope: scope.toString() as `${number}`,

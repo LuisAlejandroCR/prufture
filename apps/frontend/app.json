@@ -28,7 +28,8 @@
         "ITSAppUsesNonExemptEncryption": false,
         "NSCameraUsageDescription": "Prufture uses the camera to photograph the field activity you are reporting on and to run a short selfie liveness check.",
         "NSLocationWhenInUseUsageDescription": "Prufture records an approximate area for the report, not your exact location, plus an encrypted precise point that only the programme team can open for audit.",
-        "NSPhotoLibraryUsageDescription": "Prufture never opens your photo library; a report photo is taken in the app and stays on the device."
+        "NSPhotoLibraryUsageDescription": "Prufture never opens your photo library; a report photo is taken in the app and stays on the device.",
+        "NSSpeechRecognitionUsageDescription": "Prufture does not use speech recognition and never asks for it. A bundled identity-check library can reference it, so iOS requires this notice."
       }
     },
     "android": {
@@ -55,11 +56,11 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "owner": "alejoo_oo",
+    "owner": "alejoooo-team",
     "runtimeVersion": { "policy": "appVersion" },
-    "updates": { "url": "https://u.expo.dev/ff9cdaeb-a7be-4a1c-a76f-7594b2b51aef" },
+    "updates": { "url": "https://u.expo.dev/dbb8e72c-5bed-4676-8d04-3805ecacc2e7" },
     "extra": {
-      "eas": { "projectId": "ff9cdaeb-a7be-4a1c-a76f-7594b2b51aef" },
+      "eas": { "projectId": "dbb8e72c-5bed-4676-8d04-3805ecacc2e7" },
       "router": {},
       "privacyPolicyUrl": "https://prufture.vercel.app/privacy",
       "supportUrl": "https://prufture.vercel.app/support"

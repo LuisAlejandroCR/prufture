@@ -1,0 +1,2 @@
+# .gitattributes: shell scripts run on the EAS macOS builder and must keep LF endings.
+*.sh text eol=lf
