@@ -104,6 +104,16 @@ near); `area=` is an exact cell match validated as 1-5 base-32 chars, and Commun
 table and map popups link with it instead of a text search, so `d2g6` never pulls in `d2g62`. All day labels, including the Overview date line, are UTC. Every dashboard route has a `loading.tsx` skeleton and
 an `error.tsx` boundary that never prints raw error text; the site has a branded `not-found.tsx`.
 
+## Staff invitation code
+
+With Clerk on and `STAFF_INVITE_CODES` set, a signed-in account reaches /dashboard only after
+redeeming a code at `/invite` (same split layout as /sign-in, a "Sign out" escape for the wrong
+account). Middleware enforces it, not a layout, so no page request skips it. The redemption is a
+SHA-256 of the code in the Clerk user's `privateMetadata` (backend-only), cached in a signed httpOnly
+cookie bound to the user id for 12 h. Removing a code from the env revokes every account that used it
+on the next request. Codes under 8 characters are ignored; a wrong code costs a short delay. With no
+codes set the step is off, so a deploy cannot lock staff out.
+
 ## Rules
 
 - Em-dash is banned in UI copy.

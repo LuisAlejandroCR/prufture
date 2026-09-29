@@ -591,6 +591,9 @@ details.tech { border-radius: var(--radius-md); }
 .signin-brand li { display: flex; align-items: center; gap: 10px; }
 .signin-form { display: grid; place-items: center; align-content: center; gap: 20px; padding: 40px 16px; }
 .staff-signin-note { max-width: 420px; margin: 0; text-align: center; color: var(--text-muted); }
+.invite-form { display: grid; gap: 12px; width: min(420px, 100%); }
+.invite-form .notice { margin: 0; }
+.invite-code { font-family: var(--mono); letter-spacing: .08em; text-transform: uppercase; }
 @media (max-width: 860px) { .staff-signin { grid-template-columns: 1fr; } .signin-brand { min-height: 320px; } }
 
 /* Dashboard shell: persistent sidebar + operational main. */
