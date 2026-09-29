@@ -7,7 +7,7 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import { LayoutAnimation, Pressable, StyleSheet, Text, View } from "react-native";
 import { Icon } from "../../src/components/icons/Icon";
-import { BackLink, Notice, Screen, SecondaryButton, StatusPill } from "../../src/components/ui";
+import { BackLink, Notice, Screen, SecondaryButton, StatusPill, TaskHeader } from "../../src/components/ui";
 import { listProofs } from "../../src/queue";
 import type { LocalProof } from "../../src/queue-row";
 import { openInApp, publicRecordUrl } from "../../src/links";
@@ -73,9 +73,7 @@ export default function ReportStatusScreen() {
   return (
     <Screen>
       <BackLink label="My reports" onPress={() => router.back()} />
-      <Text style={styles.title} accessibilityRole="header">
-        {task.title}
-      </Text>
+      <TaskHeader category={task.category} title={task.title} />
       <View style={styles.metaRow}>
         <Icon name="location" size={15} color={color.faint} />
         <Text style={styles.meta}>{task.area}</Text>

@@ -78,6 +78,16 @@ opens the full catalog.
 - `Appear` fades list rows up with a 40 ms stagger (audit motion table), capped at 8 steps, and
   renders in place under reduce motion or with celebrations off.
 
+## Round 9 details
+
+- Live camera: numbered step circles (sage check done, terracotta current, rails between) above
+  the prompt, and a 260 ms white shutter flash over the viewfinder (skipped under reduce motion).
+- Status opens with the shared `TaskHeader` (category circle + title).
+- My reports: All / In progress / Confirmed chips with counts (`src/report-groups.ts`; "In
+  progress" = ready or waiting; counts always add up to All), with a calm empty line per filter.
+- Missions: pull to refresh re-runs the waiting-report sync; `Screen` takes optional
+  `onRefresh` / `refreshing`.
+
 ## Links open in-app
 
 Public pages never send the reporter out of Prufture. `src/links.ts` builds every URL from the one

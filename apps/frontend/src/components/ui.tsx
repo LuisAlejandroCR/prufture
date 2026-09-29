@@ -11,6 +11,7 @@ import {
   Easing,
   Image,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -49,11 +50,16 @@ export function Screen({
   scroll = true,
   footer,
   padded = true,
+  onRefresh,
+  refreshing = false,
 }: {
   children: ReactNode;
   scroll?: boolean;
   footer?: ReactNode;
   padded?: boolean;
+  /** Pull-to-refresh on scrolling screens. */
+  onRefresh?: () => void;
+  refreshing?: boolean;
 }) {
   const insets = useSafeAreaInsets();
   const pad = padded ? { padding: space.lg } : undefined;
@@ -65,6 +71,9 @@ export function Screen({
       // iOS: scroll the focused field (e.g. the Review note) above the keyboard instead of under it.
       automaticallyAdjustKeyboardInsets
       keyboardDismissMode="interactive"
+      refreshControl={
+        onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={color.primary} /> : undefined
+      }
     >
       {children}
     </ScrollView>

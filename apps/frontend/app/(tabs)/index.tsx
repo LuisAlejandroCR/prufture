@@ -84,6 +84,13 @@ export default function MissionsScreen() {
     void saveMissionsView(v);
   };
 
+  const [refreshing, setRefreshing] = useState(false);
+  const refresh = () => {
+    setRefreshing(true);
+    syncWaiting();
+    setTimeout(() => setRefreshing(false), 700);
+  };
+
   const reachError = showReachError({ online, pending, ...lastSync });
 
   const open = (id: string) => router.push({ pathname: "/task/[id]", params: { id } });
@@ -111,7 +118,7 @@ export default function MissionsScreen() {
   ];
 
   return (
-    <Screen>
+    <Screen onRefresh={refresh} refreshing={refreshing}>
       <View style={styles.top}>
         <BrandMark />
         <OfflinePill online={online} />

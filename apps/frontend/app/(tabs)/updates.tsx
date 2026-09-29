@@ -14,7 +14,14 @@ import { listProofs } from "../../src/queue";
 import type { LocalProof } from "../../src/queue-row";
 import { getTask } from "../../src/tasks";
 import { runPendingSync } from "../../src/useAutoSync";
-import { color, radius, space, type, type FriendlyStatus } from "../../src/theme";
+import {
+  combinedStatus,
+  filterCounts,
+  filterReports,
+  groupReports,
+  type ReportFilter,
+} from "../../src/report-groups";
+import { color, radius, space, target, type } from "../../src/theme";
 
 function relativeTime(iso: string): string {
   const then = new Date(iso).getTime();
@@ -25,35 +32,6 @@ function relativeTime(iso: string): string {
   const hrs = Math.round(mins / 60);
   if (hrs < 24) return `${hrs} h ago`;
   return `${Math.round(hrs / 24)} d ago`;
-}
-
-interface ReportGroup {
-  /** reportId when present, otherwise the single row id (pre-hotfix rows). */
-  key: string;
-  rows: LocalProof[];
-}
-
-/** Group per-photo rows into reports. Rows arrive newest-first and stay that way. */
-export function groupReports(rows: LocalProof[]): ReportGroup[] {
-  const order: string[] = [];
-  const byKey = new Map<string, LocalProof[]>();
-  for (const r of rows) {
-    const key = r.reportId || `row:${r.id}`;
-    const bucket = byKey.get(key);
-    if (bucket) bucket.push(r);
-    else {
-      byKey.set(key, [r]);
-      order.push(key);
-    }
-  }
-  return order.map((key) => ({ key, rows: byKey.get(key) as LocalProof[] }));
-}
-
-/** Combined status of a report: the least-advanced of its rows. */
-export function combinedStatus(rows: LocalProof[]): FriendlyStatus {
-  if (rows.some((r) => r.status === "pending_sync")) return "ready";
-  if (rows.some((r) => r.status === "synced" && r.attestationCount === 0)) return "waiting";
-  return "confirmed";
 }
 
 export default function UpdatesScreen() {
@@ -81,7 +59,10 @@ export default function UpdatesScreen() {
       .finally(() => setChecking(false));
   };
 
+  const [filter, setFilter] = useState<ReportFilter>("all");
   const groups = groupReports(rows);
+  const counts = filterCounts(groups);
+  const shown = filterReports(groups, filter);
   const confirmed = confirmedReportCount(rows);
 
   const contribution = (
@@ -123,7 +104,37 @@ export default function UpdatesScreen() {
           refreshControl={<RefreshControl refreshing={checking} onRefresh={checkNow} tintColor={color.primary} />}
         >
           {contribution}
-          {groups.map((g, gi) => {
+          <View style={styles.chips} accessibilityRole="tablist">
+            {(
+              [
+                ["all", "All"],
+                ["progress", "In progress"],
+                ["confirmed", "Confirmed"],
+              ] as const
+            ).map(([key, label]) => {
+              const active = filter === key;
+              return (
+                <Pressable
+                  key={key}
+                  onPress={() => setFilter(key)}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: active }}
+                  accessibilityLabel={`${label}, ${counts[key]}`}
+                  style={[styles.chip, active && styles.chipActive]}
+                >
+                  <Text style={[styles.chipText, active && styles.chipTextActive]}>
+                    {label} {counts[key]}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          {shown.length === 0 ? (
+            <Text style={styles.filterEmpty}>
+              {filter === "confirmed" ? "No confirmed reports yet." : "Nothing in progress. Every report is confirmed."}
+            </Text>
+          ) : null}
+          {shown.map((g, gi) => {
             const newest = g.rows[0];
             if (!newest) return null;
             const task = getTask(newest.taskId);
@@ -184,6 +195,20 @@ const styles = StyleSheet.create({
   rowMeta: { ...type.meta, color: color.muted, marginTop: 2 },
   pillRow: { marginTop: space.sm },
   count: { ...type.meta, color: color.faint, marginTop: space.xs },
+  chips: { flexDirection: "row", gap: space.sm, flexWrap: "wrap" },
+  chip: {
+    minHeight: target.min - space.xs,
+    justifyContent: "center",
+    paddingHorizontal: space.md,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: color.border,
+    backgroundColor: color.surface,
+  },
+  chipActive: { backgroundColor: color.primary, borderColor: color.primary },
+  chipText: { ...type.meta, color: color.text, fontWeight: "600" },
+  chipTextActive: { color: color.onPrimary, fontWeight: "700" },
+  filterEmpty: { ...type.body, color: color.muted, textAlign: "center", paddingVertical: space.lg },
   contribution: {
     alignSelf: "stretch",
     borderRadius: radius.md,
