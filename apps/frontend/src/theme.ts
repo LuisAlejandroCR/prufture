@@ -89,6 +89,8 @@ export const cameraColor = {
   step: "#F4C9BC",
   hint: "#C9BEB2",
   control: "#E9E1D6",
+  /** Decorative only (inactive progress segments), never text. */
+  track: "#3A342E",
 } as const;
 
 export const radius = { sm: 10, md: 14, lg: 20, pill: 999 } as const;
