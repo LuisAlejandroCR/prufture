@@ -5,6 +5,7 @@
 import { fetchProofs } from "../../../lib/api";
 import { coverage } from "../../../lib/dashboard";
 import { CoverageMap } from "../CoverageMap";
+import { DegradedNotice, EmptyState, Metric, PageHeader } from "../ui";
 
 export const dynamic = "force-dynamic";
 
@@ -12,36 +13,35 @@ export default async function CoverageMapPage() {
   const { proofs, degraded } = await fetchProofs();
   const cells = coverage(proofs);
   const totalReports = cells.reduce((n, c) => n + c.count, 0);
+  const totalConfirmed = cells.reduce((n, c) => n + c.confirmed, 0);
 
   return (
     <section className="fade-in">
-      <header>
-        <h1>Coverage map</h1>
-        <p className="muted">
-          Where reports are coming from, by approximate zone. Exact locations of households,
-          schools, or people are never recorded or shown.
-        </p>
-      </header>
+      <PageHeader
+        eyebrow="Insights"
+        title="Coverage"
+        accent="map"
+        lede="Where reports are coming from, by approximate zone. Exact locations of households, schools, or people are never recorded or shown."
+      />
 
-      {degraded ? (
-        <p className="pill wait" style={{ marginBottom: "var(--sp-4)" }}>
-          The report index is unreachable right now. The map shows what was last available. This is
-          a service degradation, not an empty programme.
-        </p>
-      ) : null}
+      {degraded ? <DegradedNotice /> : null}
 
       {cells.length === 0 ? (
-        <p className="muted">No reports have been placed on the map yet.</p>
+        <EmptyState icon="map" title="No reports have been placed on the map yet" />
       ) : (
         <>
-          <p className="muted">
-            <strong style={{ color: "var(--text)" }}>{cells.length}</strong>{" "}
-            {cells.length === 1 ? "zone" : "zones"} ·{" "}
-            <strong style={{ color: "var(--text)" }}>{totalReports}</strong>{" "}
-            {totalReports === 1 ? "report" : "reports"}
-          </p>
-          <CoverageMap cells={cells} />
-          <div className="table-scroll" style={{ marginTop: "var(--sp-4)" }}>
+          <div className="metrics metrics-3">
+            <Metric icon="pin" value={cells.length} label={cells.length === 1 ? "Zone" : "Zones"} />
+            <Metric icon="inbox" value={totalReports} label={totalReports === 1 ? "Report" : "Reports"} />
+            <Metric icon="check" value={totalConfirmed} label="Confirmed" tone="ok" />
+          </div>
+          <div className="box box-flush">
+            <CoverageMap cells={cells} />
+          </div>
+          <div className="section-head">
+            <h2>Zones by report count</h2>
+          </div>
+          <div className="table-scroll">
             <table className="data">
               <thead>
                 <tr>

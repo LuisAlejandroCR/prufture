@@ -1,15 +1,12 @@
-// programmes/page.tsx: coverage by activity type, not by person. Reports received,
-// confirmed, needing attention, areas touched, and last activity. Region level only.
+// programmes/page.tsx: coverage by activity type, not by person — one card per activity with
+// reports received, the confirmed share, reports needing attention, areas touched and last activity.
+// Region level only.
 
 import { fetchProofs } from "../../../lib/api";
-import { activityLabel, programmes } from "../../../lib/dashboard";
+import { activityLabel, programmeName, programmes, relativeDay } from "../../../lib/dashboard";
+import { DegradedNotice, EmptyState, PageHeader } from "../ui";
 
 export const dynamic = "force-dynamic";
-
-function day(iso: string): string {
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? "not recorded" : d.toISOString().slice(0, 10);
-}
 
 export default async function ProgrammesPage() {
   const { proofs, degraded } = await fetchProofs();
@@ -17,41 +14,59 @@ export default async function ProgrammesPage() {
 
   return (
     <section className="fade-in">
-      <header>
-        <h1>Programmes</h1>
-        <p className="muted">Coverage by activity type. No individual identities.</p>
-      </header>
+      <PageHeader
+        eyebrow="Insights"
+        title="Programmes"
+        lede="Coverage by activity type. No individual identities."
+      />
 
       {degraded ? (
-        <p className="pill wait">The report index is unreachable right now.</p>
+        <DegradedNotice />
       ) : rows.length === 0 ? (
-        <p className="muted">No reports have been received yet.</p>
+        <EmptyState icon="layers" title="No reports have been received yet">
+          Activities appear here as soon as the first community report arrives.
+        </EmptyState>
       ) : (
-        <div className="table-scroll">
-          <table className="data">
-            <thead>
-              <tr>
-                <th>Activity type</th>
-                <th>Reports received</th>
-                <th>Reports confirmed</th>
-                <th>Needing attention</th>
-                <th>Areas</th>
-                <th>Last activity</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.taskId}>
-                  <td>{activityLabel(r.taskId)}</td>
-                  <td>{r.received}</td>
-                  <td>{r.confirmed}</td>
-                  <td>{r.attention}</td>
-                  <td>{r.areas}</td>
-                  <td>{day(r.lastActivity)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="card-grid">
+          {rows.map((r) => {
+            const share = r.received === 0 ? 0 : Math.round((r.confirmed / r.received) * 100);
+            return (
+              <article className="prog-card" key={r.taskId}>
+                <div className="prog-top">
+                  <span className="activity-avatar" aria-hidden>
+                    {activityLabel(r.taskId).charAt(0)}
+                  </span>
+                  <div>
+                    <h3>{activityLabel(r.taskId)}</h3>
+                    <small>{programmeName(r.taskId)}</small>
+                  </div>
+                </div>
+                <p className="prog-count">
+                  <strong>{r.received}</strong> {r.received === 1 ? "report" : "reports"}
+                </p>
+                <div className="meter" role="img" aria-label={`${share}% confirmed`}>
+                  <span style={{ width: `${share}%` }} />
+                </div>
+                <p className="meter-label">
+                  <strong>{r.confirmed}</strong> confirmed · {share}%
+                </p>
+                <dl className="prog-stats">
+                  <div>
+                    <dt>Needing attention</dt>
+                    <dd>{r.attention}</dd>
+                  </div>
+                  <div>
+                    <dt>Areas</dt>
+                    <dd>{r.areas}</dd>
+                  </div>
+                  <div>
+                    <dt>Last activity</dt>
+                    <dd>{relativeDay(r.lastActivity) || "not recorded"}</dd>
+                  </div>
+                </dl>
+              </article>
+            );
+          })}
         </div>
       )}
     </section>

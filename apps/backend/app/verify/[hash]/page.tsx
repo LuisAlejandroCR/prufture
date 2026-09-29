@@ -5,7 +5,8 @@
 import Link from "next/link";
 import { assuranceFromProof, assuranceLabel, isNeutralAssurance } from "../../../lib/assurance";
 import { fetchProof } from "../../../lib/api";
-import { activityLabel } from "../../../lib/dashboard";
+import { activityLabel, programmeName } from "../../../lib/dashboard";
+import { Icon, SiteFooter, SiteHeader, type IconName } from "../../_components/brand";
 import { ShareLink } from "./ShareLink";
 
 const VERIFY_BASE = process.env.NEXT_PUBLIC_VERIFY_BASE_URL ?? "http://localhost:3000";
@@ -36,16 +37,34 @@ const STAGE_COPY: Record<Stage, { pill: string; cls: string; line: string }> = {
   },
 };
 
+const STAGES: { key: Stage; label: string }[] = [
+  { key: "received", label: "Received" },
+  { key: "waiting", label: "Waiting for confirmation" },
+  { key: "confirmed", label: "Confirmed" },
+];
+
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <main className="wrap fade-in">
-      <p style={{ marginBottom: "var(--sp-4)" }}>
-        <Link href="/" className="faint" style={{ fontSize: "0.9rem", textDecoration: "none" }}>
-          Prufture
-        </Link>
-      </p>
-      {children}
-    </main>
+    <div className="site">
+      <SiteHeader />
+      <main className="site-body fade-in">{children}</main>
+      <SiteFooter />
+    </div>
+  );
+}
+
+function StateCard({ icon, title, children }: { icon: IconName; title: string; children: React.ReactNode }) {
+  return (
+    <div className="verify-hero state-card">
+      <div className="state-icon">
+        <Icon name={icon} size={26} />
+      </div>
+      <h1>{title}</h1>
+      <p className="muted">{children}</p>
+      <Link className="btn secondary" href="/">
+        Back to Prufture
+      </Link>
+    </div>
   );
 }
 
@@ -57,11 +76,10 @@ export default async function VerifyPage({ params }: { params: Promise<{ hash: s
   if (result.state === "unreachable") {
     return (
       <Shell>
-        <h1>Verification temporarily unavailable</h1>
-        <p className="muted">
+        <StateCard icon="signal" title="Verification temporarily unavailable">
           The public index could not be reached right now. This report is not lost. Please try again
           shortly.
-        </p>
+        </StateCard>
       </Shell>
     );
   }
@@ -69,11 +87,10 @@ export default async function VerifyPage({ params }: { params: Promise<{ hash: s
   if (result.state === "not_found") {
     return (
       <Shell>
-        <h1>Report not found</h1>
-        <p className="muted">
+        <StateCard icon="reports" title="Report not found">
           No report is on file for this reference yet. If a reporter just finished it, the phone may
           not have had signal to send it.
-        </p>
+        </StateCard>
       </Shell>
     );
   }
@@ -81,6 +98,7 @@ export default async function VerifyPage({ params }: { params: Promise<{ hash: s
   const { proof } = result;
   const stage = stageFor(proof.attestationCount);
   const copy = STAGE_COPY[stage];
+  const stageIndex = STAGES.findIndex((s) => s.key === stage);
   const assurance = assuranceFromProof(proof);
   const captured = new Date(proof.capturedAt);
   const capturedText = Number.isNaN(captured.getTime())
@@ -89,43 +107,75 @@ export default async function VerifyPage({ params }: { params: Promise<{ hash: s
 
   return (
     <Shell>
-      <h1>{copy.pill}</h1>
-      <span className={`pill ${copy.cls}`}>
-        <span className="dot" aria-hidden />
-        {copy.pill}
-      </span>
-      <p className="muted" style={{ marginTop: "var(--sp-3)" }}>
-        {copy.line}
-      </p>
+      <section className="verify-hero">
+        <p className="eyebrow-label">Public field report</p>
+        <span className={`pill ${copy.cls}`}>
+          <span className="dot" aria-hidden />
+          {copy.pill}
+        </span>
+        <h1>{activityLabel(proof.taskId)}</h1>
+        <p className="lede">{copy.line}</p>
+        <ol className="stepper" aria-label="Report progress">
+          {STAGES.map((s, i) => (
+            <li
+              key={s.key}
+              className={i <= stageIndex ? "done" : i === stageIndex + 1 ? "current" : "upcoming"}
+              aria-current={i === stageIndex ? "step" : undefined}
+            >
+              {s.label}
+            </li>
+          ))}
+        </ol>
+      </section>
 
-      <dl className="fields">
-        <dt>Activity</dt>
-        <dd>{activityLabel(proof.taskId)}</dd>
-        <dt>Approximate area</dt>
-        <dd>
-          <code>{proof.geohashRegion || "not recorded"}</code>{" "}
-          <span className="faint">coarse region only</span>
-        </dd>
-        <dt>Captured</dt>
-        <dd>{capturedText}</dd>
-        <dt>Confirmations</dt>
-        <dd>{proof.attestationCount}</dd>
-        <dt>Anonymous pass</dt>
-        <dd className={isNeutralAssurance(assurance) ? "faint" : undefined}>
-          {assuranceLabel(assurance)}
-        </dd>
-        <dt>Public reference</dt>
-        <dd>
-          <code>{proof.proofHash.slice(0, 12)}...</code>
-        </dd>
-      </dl>
+      <div className="fact-grid">
+        <div className="fact">
+          <span className="fact-icon"><Icon name="layers" /></span>
+          <small>Activity</small>
+          <strong>{activityLabel(proof.taskId)}</strong>
+          <span className="fact-note">{programmeName(proof.taskId)}</span>
+        </div>
+        <div className="fact">
+          <span className="fact-icon"><Icon name="pin" /></span>
+          <small>Approximate area</small>
+          <strong><code>{proof.geohashRegion || "not recorded"}</code></strong>
+          <span className="fact-note">coarse region only</span>
+        </div>
+        <div className="fact">
+          <span className="fact-icon"><Icon name="clock" /></span>
+          <small>Captured</small>
+          <strong>{capturedText}</strong>
+        </div>
+        <div className="fact">
+          <span className="fact-icon"><Icon name="users" /></span>
+          <small>Confirmations</small>
+          <strong>{proof.attestationCount}</strong>
+        </div>
+        <div className={`fact ${isNeutralAssurance(assurance) ? "is-neutral" : ""}`}>
+          <span className="fact-icon"><Icon name="shield" /></span>
+          <small>Anonymous pass</small>
+          <strong>{assuranceLabel(assurance)}</strong>
+        </div>
+        <div className="fact">
+          <span className="fact-icon"><Icon name="link" /></span>
+          <small>Public reference</small>
+          <strong><code>{proof.proofHash.slice(0, 12)}...</code></strong>
+        </div>
+      </div>
 
-      <h2>Share this report</h2>
-      <p className="muted">
-        This link carries only the public reference. No reporter identity, photo, or exact location
-        is stored or shown, so it is safe to send over a chat or email.
-      </p>
-      <ShareLink url={shareUrl} />
+      <section className="share-card">
+        <h2>Share this report</h2>
+        <p className="muted" style={{ margin: 0 }}>
+          This link carries only the public reference. No reporter identity, photo, or exact location
+          is stored or shown, so it is safe to send over a chat or email.
+        </p>
+        <ShareLink url={shareUrl} />
+        <ul className="privacy-list">
+          <li><Icon name="eyeOff" size={16} /> No name or face</li>
+          <li><Icon name="pin" size={16} /> No exact location</li>
+          <li><Icon name="lock" size={16} /> No account needed</li>
+        </ul>
+      </section>
 
       <details className="tech">
         <summary>Technical details</summary>
