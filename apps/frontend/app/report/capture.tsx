@@ -6,8 +6,11 @@
 import { CameraView, useCameraPermissions } from "expo-camera";
 import * as FileSystem from "expo-file-system";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import { useRef, useState } from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { cameraFramePadding } from "../../src/camera-frame";
 import { base64ToBytes } from "../../src/capture";
 import { Icon } from "../../src/components/icons/Icon";
 import {
@@ -23,7 +26,7 @@ import { tap } from "../../src/feedback";
 import { identityStepEnabled } from "../../src/flags";
 import { addPhoto, ensureDraft, getDraft } from "../../src/report-draft";
 import { getTask } from "../../src/tasks";
-import { color, radius, space, target, type } from "../../src/theme";
+import { cameraColor, color, radius, space, target, type } from "../../src/theme";
 
 type Shot = { uri: string; bytes: Uint8Array };
 
@@ -43,6 +46,8 @@ export default function ReportCaptureScreen() {
   const [busy, setBusy] = useState(false);
   const [shot, setShot] = useState<Shot | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const insets = useSafeAreaInsets();
+  const frame = cameraFramePadding(insets);
 
   ensureDraft(task.id);
 
@@ -143,8 +148,10 @@ export default function ReportCaptureScreen() {
   // Live camera.
   return (
     <View style={styles.cameraScreen}>
-      <View style={styles.topBar}>
-        <BackLink label="Cancel" onPress={() => router.back()} />
+      {/* The one dark screen: light status bar on iOS; the root dark style returns on unmount. */}
+      <StatusBar style="light" />
+      <View style={[styles.topBar, { paddingTop: frame.top }]}>
+        <BackLink label="Cancel" tone="onDark" onPress={() => router.back()} />
         <Pressable
           onPress={() => setFlash((f) => (f === "off" ? "on" : "off"))}
           accessibilityRole="button"
@@ -160,7 +167,7 @@ export default function ReportCaptureScreen() {
         <CameraView ref={cameraRef} style={StyleSheet.absoluteFill} facing="back" flash={flash} />
       </View>
 
-      <View style={styles.cameraControls}>
+      <View style={[styles.cameraControls, { paddingBottom: frame.bottom }]}>
         <Text style={styles.stepLabelLight}>
           Photo {stepIndex + 1} of {total}
         </Text>
@@ -198,13 +205,12 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     backgroundColor: color.surfaceSoft,
   },
-  cameraScreen: { flex: 1, backgroundColor: "#141210" },
+  cameraScreen: { flex: 1, backgroundColor: cameraColor.ground },
   topBar: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: space.lg,
-    paddingTop: space.xxl,
     paddingBottom: space.sm,
   },
   flashBtn: {
@@ -219,20 +225,19 @@ const styles = StyleSheet.create({
   viewport: { flex: 1, overflow: "hidden" },
   cameraControls: {
     padding: space.lg,
-    paddingBottom: space.xxl,
     gap: space.sm,
-    backgroundColor: "#141210",
+    backgroundColor: cameraColor.ground,
   },
-  stepLabelLight: { ...type.meta, color: "#F4C9BC", fontWeight: "700" },
-  instructionLight: { ...type.subtitle, color: "#FFFFFF" },
-  hintLight: { ...type.meta, color: "#C9BEB2" },
+  stepLabelLight: { ...type.meta, color: cameraColor.step, fontWeight: "700" },
+  instructionLight: { ...type.subtitle, color: cameraColor.text },
+  hintLight: { ...type.meta, color: cameraColor.hint },
   shutter: {
     alignSelf: "center",
     width: 72,
     height: 72,
     borderRadius: radius.pill,
     borderWidth: 4,
-    borderColor: "#FFFFFF",
+    borderColor: cameraColor.text,
     alignItems: "center",
     justifyContent: "center",
     marginTop: space.sm,

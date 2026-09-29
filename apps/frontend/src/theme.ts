@@ -81,6 +81,16 @@ export const navSelectedTint = color.primarySoft;
 
 export const space = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 40 } as const;
 
+// The live camera is the app's one dark screen. Every text colour here passes AA (4.5:1) on `ground`
+// (test/camera-frame.test.ts); `control` replaces `muted`, which is only 3.9:1 on it.
+export const cameraColor = {
+  ground: "#141210",
+  text: "#FFFFFF",
+  step: "#F4C9BC",
+  hint: "#C9BEB2",
+  control: "#E9E1D6",
+} as const;
+
 export const radius = { sm: 10, md: 14, lg: 20, pill: 999 } as const;
 
 export const shadow = {

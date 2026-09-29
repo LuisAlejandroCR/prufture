@@ -159,6 +159,13 @@ turned celebrations off OR the OS reduce-motion setting is on):
 
 The "Celebrations and motion" and "Haptics" toggles live on the Me screen under Accessibility.
 
+The live camera (`report/capture`) is the one dark screen. It draws its own chrome, so it sets
+`<StatusBar style="light" />` while mounted (the root dark style returns when it unmounts), pads its
+top bar and shutter with the real safe-area insets (`src/camera-frame.ts`, clearing the notch /
+Dynamic Island and the home indicator), and takes every colour from `cameraColor` in
+`src/theme.ts`, each at least 4.5:1 on its ground. `BackLink tone="onDark"` replaces `muted`, which
+is only 3.9:1 there.
+
 Reporters capture outdoors in daylight; the app commits to a single high-contrast light theme.
 `app.json` sets `userInterfaceStyle: "light"`, `_layout.tsx` sets `<StatusBar style="dark" />`,
 and `src/theme.ts` carries one light-only token set. Dark mode is a post-hackathon item.
