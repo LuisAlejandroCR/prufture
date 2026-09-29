@@ -24,6 +24,7 @@ import { categoryAccent, categoryIcon, type Category } from "../tasks";
 import {
   categorySoft,
   color,
+  maxTextScale,
   radius,
   shadow,
   space,
@@ -393,7 +394,7 @@ export function EvidenceSteps({
                 </View>
               )}
               <View style={[s.slotNum, uri ? s.slotNumDone : current === i ? s.slotNumCurrent : null]}>
-                {uri ? <Icon name="check" size={12} color={color.onPrimary} /> : <Text style={s.slotNumText}>{i + 1}</Text>}
+                {uri ? <Icon name="check" size={12} color={color.onPrimary} /> : <Text style={s.slotNumText} maxFontSizeMultiplier={maxTextScale.badge}>{i + 1}</Text>}
               </View>
             </View>
             <Text style={s.slotText} numberOfLines={3}>
