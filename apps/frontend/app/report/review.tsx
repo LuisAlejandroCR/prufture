@@ -17,6 +17,7 @@ import {
   Screen,
   TaskHeader,
 } from "../../src/components/ui";
+import { announce, failure } from "../../src/announce";
 import { captureProof } from "../../src/capture";
 import { bump, warn } from "../../src/feedback";
 import { identityStepEnabled } from "../../src/flags";
@@ -55,8 +56,10 @@ export default function ReportReviewScreen() {
     const result = await saveDraft();
     setBusy(false);
     if (result.saved === 0) {
+      const message = "The report could not be saved on this phone. Please try again.";
       void warn();
-      setError("The report could not be saved on this phone. Please try again.");
+      setError(message);
+      void announce(failure(message));
       return;
     }
     router.replace({

@@ -8,6 +8,7 @@ import { useCallback, useState } from "react";
 import { Linking, LayoutAnimation, Pressable, StyleSheet, Text, View } from "react-native";
 import { Icon } from "../../src/components/icons/Icon";
 import { BackLink, Notice, Screen, SecondaryButton, StatusPill, TaskHeader } from "../../src/components/ui";
+import { announce, stageSpoken, syncResult } from "../../src/announce";
 import { listProofs } from "../../src/queue";
 import type { LocalProof } from "../../src/queue-row";
 import { findReport, reportStages } from "../../src/progress";
@@ -43,7 +44,10 @@ export default function ReportStatusScreen() {
   const checkNow = () => {
     setChecking(true);
     runPendingSync()
-      .then(() => load())
+      .then((s) => {
+        load();
+        void announce(syncResult(s, true));
+      })
       .catch(() => undefined)
       .finally(() => setChecking(false));
   };
@@ -98,7 +102,7 @@ export default function ReportStatusScreen() {
         <Text style={styles.sectionTitle} accessibilityRole="header">Report progress</Text>
         <View style={styles.timeline}>
           {stages.map((s, i, arr) => (
-            <View key={s.label} style={styles.stageRow}>
+            <View key={s.label} style={styles.stageRow} accessible accessibilityLabel={stageSpoken(s)}>
               <View style={styles.stageMarker}>
                 <View style={[styles.node, s.done && styles.nodeDone, s.current && styles.nodeCurrent]}>
                   {s.done ? <Icon name="check" size={12} color={color.onPrimary} /> : null}

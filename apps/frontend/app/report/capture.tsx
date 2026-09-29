@@ -11,6 +11,7 @@ import { useRef, useState } from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { cameraFramePadding } from "../../src/camera-frame";
+import { announce, failure, photoTaken } from "../../src/announce";
 import { base64ToBytes } from "../../src/capture";
 import { Icon } from "../../src/components/icons/Icon";
 import {
@@ -74,8 +75,11 @@ export default function ReportCaptureScreen() {
         photo.base64 ??
         (await FileSystem.readAsStringAsync(photo.uri, { encoding: FileSystem.EncodingType.Base64 }));
       setShot({ uri: photo.uri, bytes: base64ToBytes(b64) });
+      void announce(photoTaken(stepIndex, total));
     } catch {
-      setError("The camera did not return a photo. Try again, or move to better light.");
+      const message = "The camera did not return a photo. Try again, or move to better light.";
+      setError(message);
+      void announce(failure(message));
     } finally {
       setBusy(false);
     }
@@ -105,7 +109,9 @@ export default function ReportCaptureScreen() {
         <BackLink label="Cancel" onPress={() => router.back()} />
         <View style={styles.gate}>
           <Icon name="camera" size={36} color={color.muted} />
-          <Text style={styles.gateTitle}>Camera access is needed</Text>
+          <Text style={styles.gateTitle} accessibilityRole="header">
+            Camera access is needed
+          </Text>
           <Text style={styles.gateBody}>
             Prufture uses the camera to photograph the work. Nothing is uploaded. The photo stays on
             this phone.
@@ -138,9 +144,16 @@ export default function ReportCaptureScreen() {
         <Text style={styles.stepLabel}>
           Photo {stepIndex + 1} of {total}
         </Text>
-        <Text style={styles.instruction}>{spec?.prompt}</Text>
+        <Text style={styles.instruction} accessibilityRole="header">
+          {spec?.prompt}
+        </Text>
         {spec?.hint ? <Text style={styles.hint}>{spec.hint}</Text> : null}
-        <Image source={{ uri: shot.uri }} style={styles.previewImage} accessibilityLabel="Photo you just took" />
+        <Image
+          source={{ uri: shot.uri }}
+          style={styles.previewImage}
+          accessibilityLabel="Photo you just took"
+          accessibilityIgnoresInvertColors
+        />
       </Screen>
     );
   }
@@ -171,7 +184,9 @@ export default function ReportCaptureScreen() {
         <Text style={styles.stepLabelLight}>
           Photo {stepIndex + 1} of {total}
         </Text>
-        <Text style={styles.instructionLight}>{spec?.prompt}</Text>
+        <Text style={styles.instructionLight} accessibilityRole="header">
+          {spec?.prompt}
+        </Text>
         {spec?.hint ? <Text style={styles.hintLight}>{spec.hint}</Text> : null}
 
         {error ? <Notice tone="attention" icon="warning">{error}</Notice> : null}

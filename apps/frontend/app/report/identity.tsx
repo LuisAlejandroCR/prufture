@@ -8,6 +8,7 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Animated, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { announce, gesturePrompt, note } from "../../src/announce";
 import { cameraFramePadding } from "../../src/camera-frame";
 import { Icon } from "../../src/components/icons/Icon";
 import { BackLink, Notice, PrimaryButton, ReportProgress, Screen } from "../../src/components/ui";
@@ -66,12 +67,20 @@ export default function ReportIdentityScreen() {
     setPhase("running");
     const result = await runLiveness({
       takeFrame,
-      onStep: (gesture, index, total) => setStep({ gesture, index, total }),
+      onStep: (gesture, index, total) => {
+        setStep({ gesture, index, total });
+        // The prompts are the whole instruction; a VoiceOver user cannot see them change.
+        void announce(gesturePrompt(index, total, GESTURE_COPY[gesture].label));
+      },
     });
     setPhase("checking");
+    void announce(note("Checking."));
     const verdict = await submitLiveness(API_URL, result);
     setLiveness(true, verdict.verifiedPerson, verdict.degraded, verdict.ticket);
     if (!verdict.verifiedPerson) void warn();
+    void announce(
+      note(verdict.verifiedPerson ? "You're verified." : "Could not confirm a live person. You can continue anyway."),
+    );
     setPhase(verdict.verifiedPerson ? "verified" : "degraded");
   }
 
@@ -89,7 +98,7 @@ export default function ReportIdentityScreen() {
       <Screen footer={<PrimaryButton label="Allow camera" onPress={requestPermission} />}>
         <BackLink label="Back" onPress={() => router.back()} />
         <ReportProgress step={1} label="Identity" />
-        <Text style={styles.title}>A quick selfie check</Text>
+        <Text style={styles.title} accessibilityRole="header">A quick selfie check</Text>
         <Text style={styles.muted}>
           The camera is needed for a short liveness check. Your face is not stored and nothing about
           you is signed or put on-chain.
@@ -106,7 +115,7 @@ export default function ReportIdentityScreen() {
           <Animated.View style={[styles.badge, { transform: [{ scale: badge }] }]}>
             <Icon name="check" size={44} color={color.success} />
           </Animated.View>
-          <Text style={styles.title}>You're verified</Text>
+          <Text style={styles.title} accessibilityRole="header">You're verified</Text>
           <Text style={styles.muted}>A live person was confirmed for this report.</Text>
         </View>
       </Screen>
@@ -117,7 +126,7 @@ export default function ReportIdentityScreen() {
     return (
       <Screen footer={<PrimaryButton label="Continue anyway" onPress={advance} />}>
         <ReportProgress step={1} label="Identity" />
-        <Text style={styles.title}>Could not confirm a live person</Text>
+        <Text style={styles.title} accessibilityRole="header">Could not confirm a live person</Text>
         <Notice tone="warning" icon="warning">
           We could not confirm a live person right now. You can still submit; the report will be
           marked unverified.
@@ -149,7 +158,9 @@ export default function ReportIdentityScreen() {
         {phase === "intro" ? (
           <>
             <Text style={styles.stepLabelLight}>Step 1 of 4 · Identity</Text>
-            <Text style={styles.instructionLight}>Hold the phone at eye level</Text>
+            <Text style={styles.instructionLight} accessibilityRole="header">
+              Hold the phone at eye level
+            </Text>
             <Text style={styles.hintLight}>
               Three quick head movements. One small frame per movement is sent once for a live-person
               check, then discarded. Your face is never stored.
@@ -161,7 +172,9 @@ export default function ReportIdentityScreen() {
             <Text style={styles.stepLabelLight}>
               Movement {step.index + 1} of {step.total}
             </Text>
-            <Text style={styles.instructionLight}>{GESTURE_COPY[step.gesture].label}</Text>
+            <Text style={styles.instructionLight} accessibilityRole="header">
+              {GESTURE_COPY[step.gesture].label}
+            </Text>
             <View style={styles.progressRow}>
               {Array.from({ length: step.total }, (_, i) => (
                 <View

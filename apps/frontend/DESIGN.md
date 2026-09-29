@@ -172,6 +172,28 @@ Reporters capture outdoors in daylight; the app commits to a single high-contras
 `app.json` sets `userInterfaceStyle: "light"`, `_layout.tsx` sets `<StatusBar style="dark" />`,
 and `src/theme.ts` carries one light-only token set. Dark mode is a post-hackathon item.
 
+## VoiceOver
+
+Every screen works with VoiceOver, and `test/a11y-audit.test.ts` enforces it by parsing each screen
+and shared component with the TypeScript compiler:
+
+- Every `Pressable` has a role; one without visible text has a label. Every `TextInput` has a label.
+  Every `Image` has a label or is explicitly decorative. Every route screen has a heading, so the
+  rotor's Headings list works (the camera's instruction is the heading on the camera screens).
+- Compound items read as one element (`accessible` + one label): photo slots, the contribution
+  card, and each status timeline stage. A stage says in words what its dot shows in colour
+  ("Done", "Current step", "Not yet", `stageSpoken` in `src/announce.ts`).
+- Photos set `accessibilityIgnoresInvertColors`, so iOS Smart Invert never shows them as negatives.
+
+iOS ignores `accessibilityLiveRegion` (Android only), so changes that do not change the screen are
+spoken through `src/announce.ts` (`announceForAccessibilityWithOptions`): photo taken, each selfie
+movement prompt and the result, save and camera failures, going offline / back online, and sync
+results. Failures interrupt (high priority); progress queues behind current speech; background
+news (a report sent or confirmed by the auto-sync) is low priority and never interrupts. A
+background sync never speaks an error; a check the reporter asked for (pull to refresh, "Check for
+updates") always gets an answer. Sends are never counted aloud, because the queue counts photos,
+not reports. Nothing is spoken when no screen reader is running.
+
 ## Keyboard
 
 `Screen` (`src/components/ui.tsx`) is keyboard aware through `src/keyboard.ts`. On iOS the keyboard
