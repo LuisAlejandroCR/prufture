@@ -36,6 +36,9 @@ same one warm palette used by `apps/backend/app/globals.css`.
   a fixed-size shape is capped through `maxTextScale` in `src/theme.ts`: tab bar labels 1.2x (iOS
   barely grows its own tab labels) and the photo-slot step number 1.3x inside its 26px circle. The
   Report "+" is a glyph, not copy, so it does not scale. Never set `allowFontScaling={false}` on copy.
+  Because tab labels are capped, each tab item (and Report) sets `accessibilityShowsLargeContentViewer`
+  with its label as `accessibilityLargeContentTitle`: at accessibility text sizes a long press shows
+  the iOS Large Content Viewer, as the system tab bar does.
 - Targets: 44px minimum, 56px for the primary and capture buttons.
 
 ## Product language

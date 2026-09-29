@@ -34,3 +34,11 @@ test("no Text anywhere turns scaling off except the decorative plus glyph", () =
   const hits = files.flatMap((f) => read(f).match(/allowFontScaling=\{false\}/g) ?? []);
   assert.equal(hits.length, 1);
 });
+
+test("capped tab items offer the iOS Large Content Viewer with their label", () => {
+  const src = read("../app/(tabs)/_layout.tsx");
+  const shows = src.match(/accessibilityShowsLargeContentViewer\b/g) ?? [];
+  assert.equal(shows.length, 2, "one on renderItem (3 tabs) and one on the Report action");
+  assert.match(src, /accessibilityLargeContentTitle=\{item\.label\}/);
+  assert.match(src, /accessibilityLargeContentTitle="Report"/);
+});
