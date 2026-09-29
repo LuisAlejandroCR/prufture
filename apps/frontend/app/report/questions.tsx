@@ -7,6 +7,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { answerTone } from "../../src/answer-tone";
 import { Icon } from "../../src/components/icons/Icon";
 import { BackLink, CategoryBadge, PrimaryButton, ReportProgress, Screen } from "../../src/components/ui";
+import { select } from "../../src/feedback";
 import { identityStepEnabled } from "../../src/flags";
 import { ensureDraft, getDraft, setAnswer } from "../../src/report-draft";
 import { getTask } from "../../src/tasks";
@@ -30,6 +31,7 @@ export default function ReportQuestionsScreen() {
   }
 
   const choose = (value: string) => {
+    if (value !== current) void select();
     setAnswer(q.id, value);
     force((n) => n + 1);
   };

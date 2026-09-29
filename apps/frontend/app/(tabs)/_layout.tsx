@@ -7,6 +7,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Icon, type IconName } from "../../src/components/icons/Icon";
 import { color, navSelectedTint, radius, space, target, type } from "../../src/theme";
+import { select } from "../../src/feedback";
 
 const ITEMS: { name: string; label: string; icon: IconName }[] = [
   { name: "index", label: "Missions", icon: "home" },
@@ -29,7 +30,10 @@ function TabBar({ state, navigation }: TabBarShape) {
     return (
       <Pressable
         key={item.name}
-        onPress={() => navigation.navigate(item.name)}
+        onPress={() => {
+          if (!focused) void select();
+          navigation.navigate(item.name);
+        }}
         accessibilityRole="tab"
         accessibilityState={{ selected: focused }}
         accessibilityLabel={item.label}
