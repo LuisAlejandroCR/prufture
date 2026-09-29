@@ -3,12 +3,14 @@ import "react-native-get-random-values";
 // The crypto shim above MUST stay the first statement: it binds crypto.getRandomValues before
 // @proof/core's ed25519 is first touched by the keystore on launch.
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Platform } from "react-native";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { announce, connectivityChange, syncResult } from "../src/announce";
 import { color } from "../src/theme";
+import { useOnline } from "../src/useOnline";
 import { API_URL, useAutoSync } from "../src/useAutoSync";
 import { notifyReportConfirmed, registerForPush } from "../src/notifications";
 import { configurePurchasesForPlatform } from "../src/purchases";
@@ -31,7 +33,16 @@ export default function RootLayout() {
   // fallback for when no server push is delivered.
   useAutoSync((summary) => {
     if (summary.attested > 0) void notifyReportConfirmed(summary.attested);
+    void announce(syncResult(summary, false));
   });
+
+  // Tell a VoiceOver user when signal drops or returns; the Offline pill alone is visual.
+  const online = useOnline();
+  const lastOnline = useRef<boolean | null>(null);
+  useEffect(() => {
+    void announce(connectivityChange(lastOnline.current, online));
+    lastOnline.current = online;
+  }, [online]);
 
   return (
     <SafeAreaProvider>

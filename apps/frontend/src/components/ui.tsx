@@ -396,7 +396,12 @@ export function EvidenceSteps({
           <>
             <View>
               {uri ? (
-                <Image source={{ uri }} style={[s.slot, { width: size, height: size }]} />
+                <Image
+                  source={{ uri }}
+                  style={[s.slot, { width: size, height: size }]}
+                  accessible={false}
+                  accessibilityIgnoresInvertColors
+                />
               ) : (
                 <View
                   style={[
@@ -430,7 +435,7 @@ export function EvidenceSteps({
             {slot}
           </Pressable>
         ) : (
-          <View key={i} style={s.step} accessibilityLabel={label}>
+          <View key={i} style={s.step} accessible accessibilityLabel={label}>
             {slot}
           </View>
         );
