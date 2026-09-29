@@ -23,6 +23,7 @@ import { answerTone } from "../answer-tone";
 import { keyboardFrame } from "../keyboard";
 import { categoryAccent, categoryIcon, type Category } from "../tasks";
 import {
+  cameraColor,
   categorySoft,
   color,
   maxTextScale,
@@ -293,7 +294,17 @@ export function Row({
   );
 }
 
-export function BackLink({ label, onPress }: { label: string; onPress: () => void }) {
+export function BackLink({
+  label,
+  onPress,
+  tone = "default",
+}: {
+  label: string;
+  onPress: () => void;
+  /** `onDark` for the live camera, where `muted` would fall below AA contrast. */
+  tone?: "default" | "onDark";
+}) {
+  const ink = tone === "onDark" ? cameraColor.control : color.muted;
   return (
     <Pressable
       onPress={onPress}
@@ -301,8 +312,8 @@ export function BackLink({ label, onPress }: { label: string; onPress: () => voi
       accessibilityLabel={label}
       style={({ pressed }) => [s.back, pressed && s.pressed]}
     >
-      <Icon name="back" size={20} color={color.muted} />
-      <Text style={s.backText}>{label}</Text>
+      <Icon name="back" size={20} color={ink} />
+      <Text style={[s.backText, { color: ink }]}>{label}</Text>
     </Pressable>
   );
 }
