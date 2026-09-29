@@ -8,14 +8,14 @@ import { useCallback, useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { CellMap } from "../../src/components/CellMap";
 import { Icon } from "../../src/components/icons/Icon";
-import { BackLink, Notice, PrimaryButton, ReportProgress, Screen, SecondaryButton } from "../../src/components/ui";
+import { BackLink, InfoCard, Notice, PrimaryButton, ReportProgress, Screen, SecondaryButton } from "../../src/components/ui";
 import { identityStepEnabled } from "../../src/flags";
 import { encodeGeohash } from "../../src/geohash";
 import { sealPrecise } from "../../src/location-seal";
 import { ensureDraft, setArea, setPreciseLocation } from "../../src/report-draft";
 import { getTask } from "../../src/tasks";
-import { color, radius, space, type } from "../../src/theme";
-import { areaNameForCell } from "../../src/useApproxArea";
+import { color, space, type } from "../../src/theme";
+import { areaNameForCell, cityCentreForCell } from "../../src/useApproxArea";
 
 type State = "checking" | "ready" | "denied" | "error";
 
@@ -44,6 +44,7 @@ export default function ReportLocationScreen() {
   const [state, setState] = useState<State>("checking");
   const [cell, setCell] = useState("");
   const [areaName, setAreaName] = useState<string | null>(null);
+  const [cityCentre, setCityCentre] = useState<{ latitude: number; longitude: number } | null>(null);
 
   const detect = useCallback(async () => {
     setState("checking");
@@ -70,6 +71,7 @@ export default function ReportLocationScreen() {
       setArea(coarse, name ?? task.area);
       setPreciseLocation(sealPrecisePoint(latitude, longitude, Math.floor(pos.timestamp ?? Date.now())));
       setState("ready");
+      cityCentreForCell(coarse).then(setCityCentre).catch(() => undefined);
     } catch {
       setState("error");
     }
@@ -111,24 +113,35 @@ export default function ReportLocationScreen() {
       ) : null}
 
       {state === "ready" ? (
-        <View style={styles.card}>
+        <>
+          <Text style={styles.heading} accessibilityRole="header">
+            Where was this?
+          </Text>
           <CellMap
             cells={[{ key: "me", cell, tone: "self" }]}
-            height={200}
+            height={240}
+            focusCell={cell}
+            cityCentre={cityCentre}
+            caption="Showing an approximate area (not exact location)"
             offlineLabel="Map unavailable without signal. Your area is still saved with the report."
           />
-          <Text style={styles.title}>Approximate area</Text>
-          <Text style={styles.area}>{areaName ?? task.area}</Text>
-          <Text style={styles.fine}>
-            The shaded square is about 5 km across. This rough area is what the public record shows. Your precise location is encrypted on
-            this phone for the programme team and is never published.
-          </Text>
-        </View>
+          <View style={styles.area}>
+            <Icon name="location" size={18} color={color.success} />
+            <Text style={styles.areaText}>{areaName ?? task.area}</Text>
+          </View>
+          <InfoCard
+            icon="privacy"
+            tint={color.success}
+            soft={color.successSoft}
+            title="Only the approximate area is public"
+            body="The shaded square is about 5 km across. Your precise location is encrypted on this phone for the programme team and never published."
+          />
+        </>
       ) : null}
 
       {state === "denied" ? (
         <Notice tone="warning" icon="location">
-          This report needs your location. Allow location access to continue — the public record
+          This report needs your location. Allow location access to continue. The public record
           only ever shows an approximate area.
         </Notice>
       ) : null}
@@ -145,15 +158,7 @@ export default function ReportLocationScreen() {
 const styles = StyleSheet.create({
   center: { alignItems: "center", gap: space.md, paddingVertical: space.xxl },
   body: { ...type.body, color: color.muted },
-  card: {
-    alignSelf: "stretch",
-    alignItems: "center",
-    gap: space.sm,
-    padding: space.xl,
-    borderRadius: radius.lg,
-    backgroundColor: color.successSoft,
-  },
-  title: { ...type.title, color: color.text },
-  area: { ...type.display, color: color.text },
-  fine: { ...type.meta, color: color.muted, textAlign: "center" },
+  heading: { ...type.display, color: color.text },
+  area: { flexDirection: "row", alignItems: "center", gap: space.sm },
+  areaText: { ...type.title, color: color.text, flex: 1 },
 });

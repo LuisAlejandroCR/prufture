@@ -10,10 +10,18 @@ import { useRef, useState } from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { base64ToBytes } from "../../src/capture";
 import { Icon } from "../../src/components/icons/Icon";
-import { BackLink, Notice, PrimaryButton, ReportProgress, Screen, SecondaryButton } from "../../src/components/ui";
+import {
+  BackLink,
+  EvidenceSteps,
+  Notice,
+  PrimaryButton,
+  ReportProgress,
+  Screen,
+  SecondaryButton,
+} from "../../src/components/ui";
 import { tap } from "../../src/feedback";
 import { identityStepEnabled } from "../../src/flags";
-import { addPhoto, ensureDraft } from "../../src/report-draft";
+import { addPhoto, ensureDraft, getDraft } from "../../src/report-draft";
 import { getTask } from "../../src/tasks";
 import { color, radius, space, target, type } from "../../src/theme";
 
@@ -113,10 +121,19 @@ export default function ReportCaptureScreen() {
         }
       >
         <ReportProgress step={progressStep} total={totalSteps} label="Capture" />
+        <EvidenceSteps
+          prompts={task.photos.map((p) => p.prompt)}
+          photos={task.photos.map((_, i) =>
+            i === stepIndex ? shot.uri : getDraft()?.photos.find((p) => p.stepIndex === i)?.uri,
+          )}
+          current={stepIndex}
+          size={56}
+        />
         <Text style={styles.stepLabel}>
           Photo {stepIndex + 1} of {total}
         </Text>
         <Text style={styles.instruction}>{spec?.prompt}</Text>
+        {spec?.hint ? <Text style={styles.hint}>{spec.hint}</Text> : null}
         <Image source={{ uri: shot.uri }} style={styles.previewImage} accessibilityLabel="Photo you just took" />
       </Screen>
     );
@@ -173,6 +190,7 @@ const styles = StyleSheet.create({
   gateBody: { ...type.body, color: color.muted, textAlign: "center" },
   stepLabel: { ...type.meta, color: color.primary, fontWeight: "700" },
   instruction: { ...type.title, color: color.text },
+  hint: { ...type.meta, color: color.muted },
   previewImage: {
     width: "100%",
     aspectRatio: 3 / 4,

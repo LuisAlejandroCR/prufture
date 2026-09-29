@@ -134,7 +134,9 @@ export default function ReportStatusScreen() {
       >
         <Icon name="more" size={16} color={color.muted} />
         <Text style={styles.techToggleText}>Technical details</Text>
-        <Icon name={showTech ? "back" : "chevron"} size={14} color={color.faint} />
+        <View style={showTech ? styles.chevronOpen : undefined}>
+          <Icon name="chevron" size={14} color={color.faint} />
+        </View>
       </Pressable>
 
       {showTech ? (
@@ -207,6 +209,7 @@ const styles = StyleSheet.create({
   noteLabel: { ...type.meta, color: color.muted, fontWeight: "700" },
   noteText: { ...type.body, color: color.text },
   noteHint: { ...type.meta, color: color.muted },
+  chevronOpen: { transform: [{ rotate: "90deg" }] },
   techToggle: { flexDirection: "row", alignItems: "center", gap: space.sm, minHeight: 44 },
   techToggleText: { ...type.subtitle, color: color.muted, flex: 1 },
   tech: { gap: space.sm, padding: space.md, borderRadius: radius.md, backgroundColor: color.surfaceSoft },
