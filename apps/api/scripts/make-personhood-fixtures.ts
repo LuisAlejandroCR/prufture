@@ -26,6 +26,7 @@ const sA = expectedScope(scopeA);
 const sB = expectedScope(scopeB);
 const fixtures = {
   root: group.root.toString(),
+  commitments: members.map((m) => m.commitment.toString()),
   scopes: {
     A: { ...scopeA, epoch: "1", policyVersion: "1" },
     B: { ...scopeB, epoch: "1", policyVersion: "1" },
