@@ -99,6 +99,12 @@ The flow is presented as four steps via `ReportProgress` ("Step X of 4 · label"
 (`report/location` area confirm, then `report/review`). Questions are large Yes / No / "I could
 not confirm" controls, one at a time, no free text, no PII.
 
+Each question is its own stack screen (`report/questions?q=N`, `src/question-flow.ts`), so the iOS
+edge swipe, Android back and the in-screen Back all return to the previous question instead of
+leaving the step. Resuming a draft opens the first unanswered required question. Edits from Review
+never stack a second Review: "Change" opens that exact question with `from=review` and its Next
+pops back, a retaken photo pops back too, and Review re-reads the draft when it regains focus.
+
 Review is the evidence sheet (Alternative C, screen 2): `CategoryBadge` + task title, the
 approximate area on a `CellMap` with the chip "Showing an approximate area (not exact location)",
 numbered round photo slots (tap one to retake just that photo: `capture?retake=1` returns to

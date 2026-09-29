@@ -1,5 +1,7 @@
 // report/questions.tsx: only the answers needed to understand the activity — one question per view,
 // large choices toned by meaning (works / problem / unsure, src/answer-tone.ts), no free text, no PII. Answers live in the in-memory draft and survive going offline.
+// Each question is its own stack screen (`q` param, src/question-flow.ts), so the iOS swipe back and
+// the Back control both return to the previous question; `from=review` edits one answer and pops back.
 
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
@@ -9,18 +11,20 @@ import { Icon } from "../../src/components/icons/Icon";
 import { BackLink, CategoryBadge, PrimaryButton, ReportProgress, Screen } from "../../src/components/ui";
 import { select } from "../../src/feedback";
 import { identityStepEnabled } from "../../src/flags";
+import { afterQuestion, questionIndex } from "../../src/question-flow";
 import { ensureDraft, getDraft, setAnswer } from "../../src/report-draft";
 import { getTask } from "../../src/tasks";
 import { color, radius, space, target, type } from "../../src/theme";
 
 export default function ReportQuestionsScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, q: qParam, from } = useLocalSearchParams<{ id: string; q?: string; from?: string }>();
   const router = useRouter();
   const task = getTask(id ?? "");
   ensureDraft(task.id);
 
   const questions = task.questions;
-  const [index, setIndex] = useState(0);
+  const index = questionIndex(qParam, questions.length);
+  const fromReview = from === "review";
   const q = questions[index];
   const [, force] = useState(0);
   const current = getDraft()?.answers[q?.id ?? ""] ?? null;
@@ -37,17 +41,14 @@ export default function ReportQuestionsScreen() {
   };
 
   const advance = () => {
-    if (index + 1 < questions.length) {
-      setIndex(index + 1);
-    } else {
-      router.replace({ pathname: "/report/location", params: { id: task.id } });
-    }
+    const next = afterQuestion({ index, total: questions.length, fromReview });
+    if (next.kind === "review") router.back();
+    else if (next.kind === "question") {
+      router.push({ pathname: "/report/questions", params: { id: task.id, q: String(next.index) } });
+    } else router.push({ pathname: "/report/location", params: { id: task.id } });
   };
 
-  const back = () => {
-    if (index === 0) router.back();
-    else setIndex(index - 1);
-  };
+  const back = () => router.back();
 
   return (
     <Screen

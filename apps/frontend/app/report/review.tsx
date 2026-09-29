@@ -2,8 +2,8 @@
 // on a map, numbered evidence photos (tap one to retake it), the answers, an optional private note and
 // one "Save report" action. Saving turns the draft into signed queued proofs via report-draft.saveDraft.
 
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { useState } from "react";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import { useCallback, useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { CellMap } from "../../src/components/CellMap";
 import { Icon } from "../../src/components/icons/Icon";
@@ -38,6 +38,9 @@ export default function ReportReviewScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [note, setNoteText] = useState(draft?.note ?? "");
+  // Questions and Capture pop back to this same Review after an edit; re-read the draft then.
+  const [, refresh] = useState(0);
+  useFocusEffect(useCallback(() => refresh((n) => n + 1), []));
 
   const photos = draft?.photos ?? [];
   const answers = draft?.answers ?? {};
@@ -109,7 +112,12 @@ export default function ReportReviewScreen() {
           {answered.map((q) => (
             <Pressable
               key={q.id}
-              onPress={() => router.push({ pathname: "/report/questions", params: { id: task.id } })}
+              onPress={() =>
+                router.push({
+                  pathname: "/report/questions",
+                  params: { id: task.id, q: String(task.questions.indexOf(q)), from: "review" },
+                })
+              }
               accessibilityRole="button"
               accessibilityLabel={`${q.text} ${answers[q.id]}. Tap to change.`}
               style={({ pressed }) => [styles.answer, pressed && styles.pressed]}
