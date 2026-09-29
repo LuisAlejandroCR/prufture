@@ -39,3 +39,4 @@ Thumbs.db
 demo-captures/
 *.mp4
 !docs/**/*.mp4
+!apps/backend/public/media/app-journey.mp4

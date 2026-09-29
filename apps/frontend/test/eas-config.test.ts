@@ -206,6 +206,20 @@ test("store assets exist on disk", () => {
   }
 });
 
+// The App Store rejects an icon with an alpha channel; both stores expect 1024x1024. Read the PNG
+// IHDR directly (bytes 16-25) so no image dependency is needed.
+test("icon.png is a 1024x1024 PNG without an alpha channel", () => {
+  const buf = readFileSync(fileURLToPath(new URL("../assets/icon.png", import.meta.url)));
+  assert.deepEqual([...buf.subarray(0, 8)], [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a], "not a PNG");
+  assert.equal(buf.toString("ascii", 12, 16), "IHDR");
+  assert.equal(buf.readUInt32BE(16), 1024, "width");
+  assert.equal(buf.readUInt32BE(20), 1024, "height");
+  const colorType = buf[25];
+  // 4 = grayscale+alpha, 6 = RGBA; 3 = palette, which can carry alpha via a tRNS chunk
+  assert.ok(colorType === 0 || colorType === 2 || colorType === 3, `alpha color type ${colorType}`);
+  assert.equal(buf.includes(Buffer.from("tRNS")), false, "tRNS transparency chunk present");
+});
+
 test("eas.json: production profile targets the store on its own channel", () => {
   const p = resolved("production");
   assert.equal(p.distribution, "store");

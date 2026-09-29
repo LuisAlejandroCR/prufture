@@ -11,9 +11,16 @@
 
 Prover: `circom-prover` 0.1.4 (zkmopro/mopro, MIT OR Apache-2.0).
 
-Build (Windows Smart App Control blocks cargo build scripts; use Docker):
+Build natively on Linux (Debian/Ubuntu; the binary lands in `target/release/prove-cli`):
+
+    apt-get install protobuf-compiler clang && cargo build --release
+
+Build in Docker (Windows Smart App Control blocks cargo build scripts):
 
     docker run --rm -v "<crate>:/src" -v prufture-zk-target:/target -e CARGO_TARGET_DIR=/target -w /src rust:1 \
       bash -c 'apt-get update -qq && apt-get install -y -qq protobuf-compiler clang && cargo build --release'
 
-Gate: `cd apps/api && npx tsx scripts/zk-prover-gate.ts` -> `GATE PASS`.
+Gate, from `apps/api` -> `GATE PASS`:
+
+- native binary: `PROVE_CLI=<crate>/target/release/prove-cli npx tsx scripts/zk-prover-gate.ts`
+- Docker build: `npx tsx scripts/zk-prover-gate.ts` (runs `/target/release/prove-cli` in `rust:1`)

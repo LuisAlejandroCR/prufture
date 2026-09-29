@@ -7,6 +7,8 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync, statSync } from "node:fs";
 
 const COMPONENT = readFileSync(new URL("../app/ScrollFilms.tsx", import.meta.url), "utf8");
+const PAGE = readFileSync(new URL("../app/page.tsx", import.meta.url), "utf8");
+const HERO = readFileSync(new URL("../app/HeroPhone.tsx", import.meta.url), "utf8");
 const MEDIA = new URL("../public/media/", import.meta.url);
 const SLUGS = [
   "offline-capture",
@@ -35,4 +37,24 @@ test("scroll films preserve mobile, loading, and motion safeguards", () => {
   assert.match(COMPONENT, /preload="metadata"/);
   assert.match(COMPONENT, /prefers-reduced-motion: reduce/);
   assert.match(COMPONENT, /poster=\{`\/media\/\$\{film\.slug\}\.webp`\}/);
+});
+
+test("the hero phone uses the optimized real app journey and approved store icon", () => {
+  for (const name of ["app-journey.mp4", "app-journey.webp", "prufture-icon.png"]) {
+    const asset = new URL(name, MEDIA);
+    assert.ok(existsSync(asset), `missing ${name}`);
+  }
+
+  assert.ok(statSync(new URL("app-journey.mp4", MEDIA)).size < 2_500_000, "hero journey exceeds 2.5 MB");
+  assert.match(PAGE, /<HeroPhone \/>/);
+  assert.match(HERO, /className="phone-journey"/);
+  assert.doesNotMatch(HERO, /autoPlay/, "autoPlay would bypass the reduced-motion check");
+  assert.match(HERO, /loop/);
+  assert.match(HERO, /muted/);
+  assert.match(HERO, /playsInline/);
+  assert.match(HERO, /poster="\/media\/app-journey\.webp"/);
+  assert.match(HERO, /prefers-reduced-motion: reduce/);
+  assert.match(HERO, /video\.play\(\)/);
+  assert.match(PAGE, /src="\/media\/prufture-icon\.png"/);
+  assert.doesNotMatch(PAGE, /journey-0[1-6]/, "App Store screenshots must not be used as loose landing images");
 });

@@ -1,8 +1,10 @@
 // status/[id].tsx: the lifecycle of one report in plain language — a four-stage timeline with short
 // descriptions over all its per-photo proofs (src/progress.ts; id may be a reportId, row id or
-// proofHash), marking a stage done only when every proof reached it. The reporter's private note (local only) shows under the timeline. Proof references sit under
-// Technical details. A coordinator's request for the photos shows as a yes/no prompt; nothing is sent
-// without a yes, and a yes sends sealed photos only (src/evidence-share.ts). No PII, exact location or secrets.
+// proofHash), marking a stage done only when every proof reached it. For an assignment it shows live
+// community confirmations from independent nearby reports (src/confirmations.ts). The reporter's
+// private note (local only) shows under the timeline. Proof references sit under Technical details.
+// A coordinator's request for the photos shows as a yes/no prompt; nothing is sent without a yes, and
+// a yes sends sealed photos only (src/evidence-share.ts). No PII, exact location or secrets.
 
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
@@ -25,6 +27,14 @@ import {
   readLocalPhoto,
   shareCopy,
 } from "../../src/evidence-share";
+import {
+  confirmationsLabel,
+  confirmationsNote,
+  fetchConfirmations,
+  liveConfirmations,
+  type ConfirmationReport,
+} from "../../src/confirmations";
+import { identityStepEnabled } from "../../src/flags";
 import { listProofs } from "../../src/queue";
 import type { LocalProof } from "../../src/queue-row";
 import { findReport, reportStages } from "../../src/progress";
@@ -48,6 +58,8 @@ export default function ReportStatusScreen() {
   const [answering, setAnswering] = useState(false);
   const [shareNotice, setShareNotice] = useState<string | null>(null);
   const copy = shareCopy();
+  // null = not checked (offline, unsent or api unreachable): no count is shown rather than a guess.
+  const [reports, setReports] = useState<ConfirmationReport[] | null>(null);
 
   const load = useCallback(() => {
     listProofs()
@@ -60,6 +72,12 @@ export default function ReportStatusScreen() {
         pendingEvidenceRequests()
           .then((all) => setRequested(all.filter((h) => mine.has(h))))
           .catch(() => setRequested([]));
+        const sent = report.find((r) => r.status !== "pending_sync");
+        if (sent && getTask(sent.taskId).confirmations) {
+          fetchConfirmations(API_URL, sent.proofHash).then(setReports).catch(() => setReports(null));
+        } else {
+          setReports(null);
+        }
       })
       .catch(() => setGroup([]));
   }, [id]);
@@ -130,6 +148,8 @@ export default function ReportStatusScreen() {
       );
   const stages = reportStages(group);
   const photos = group.length;
+  const live = reports ? liveConfirmations(task, reports, identityStepEnabled()) : null;
+  const liveNote = live ? confirmationsNote(live) : null;
 
   return (
     <Screen>
@@ -189,6 +209,38 @@ export default function ReportStatusScreen() {
         </View>
       </View>
 
+      {task.confirmations ? (
+        <View
+          style={styles.community}
+          accessible
+          accessibilityLabel={
+            live
+              ? `Community confirmations. ${confirmationsLabel(live)}.${liveNote ? ` ${liveNote}` : ""}`
+              : "Community confirmations not checked yet."
+          }
+        >
+          <View style={styles.communityHead}>
+            <Icon name="community" size={22} color={color.success} />
+            <Text style={styles.sectionTitle}>
+              {live ? confirmationsLabel(live) : "Community confirmations"}
+            </Text>
+          </View>
+          {live ? (
+            <View style={styles.segments}>
+              {Array.from({ length: live.need }, (_, i) => (
+                <View key={i} style={[styles.segment, i < live.have && styles.segmentOn]} />
+              ))}
+            </View>
+          ) : null}
+          <Text style={styles.stageDetail}>
+            {live
+              ? "Independent reports from people near this activity. Each one adds a confirmation."
+              : "Not checked yet. The count appears once your report is sent and the phone is online."}
+          </Text>
+          {liveNote ? <Text style={styles.stageDetail}>{liveNote}</Text> : null}
+        </View>
+      ) : null}
+
       {note ? (
         <View style={styles.note}>
           <Text style={styles.noteLabel}>Your private note</Text>
@@ -227,7 +279,7 @@ export default function ReportStatusScreen() {
             value={newest.geohash ? newest.geohash.slice(0, 5) : "not added"}
             mono
           />
-          <TechRow label="Confirmations" value={String(minCount)} />
+          <TechRow label="On-chain attestations" value={String(minCount)} />
 
           <Text style={styles.refLabel}>References</Text>
           {group.map((r) => (
@@ -299,6 +351,11 @@ const styles = StyleSheet.create({
   stageLabel: { ...type.subtitle, color: color.text },
   stageDetail: { ...type.meta, color: color.muted },
   stageUpcoming: { color: color.faint },
+  community: { gap: space.sm, padding: space.md, borderRadius: radius.md, backgroundColor: color.surface, borderWidth: 1, borderColor: color.border },
+  communityHead: { flexDirection: "row", alignItems: "center", gap: space.sm },
+  segments: { flexDirection: "row", gap: space.xs },
+  segment: { flex: 1, height: 8, borderRadius: radius.pill, backgroundColor: color.border },
+  segmentOn: { backgroundColor: color.success },
   note: { gap: space.xs, padding: space.md, borderRadius: radius.md, backgroundColor: color.surfaceSoft },
   noteLabel: { ...type.meta, color: color.muted, fontWeight: "700" },
   noteText: { ...type.body, color: color.text },
