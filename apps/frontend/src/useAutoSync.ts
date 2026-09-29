@@ -1,12 +1,13 @@
 // useAutoSync.ts: binds the pure syncPending() to real deps and drains the queue on reconnect and
-// app-foreground. runPendingSync() shares one in-flight promise, so runs never overlap; src/sync.ts
-// stays pure and native-free for unit tests.
+// app-foreground, then runs the sealed-evidence pass (src/evidence-share.ts). runPendingSync() shares
+// one in-flight promise, so runs never overlap; src/sync.ts stays pure and native-free for unit tests.
 
 import { useEffect, useRef } from "react";
 import { AppState, type AppStateStatus } from "react-native";
 import NetInfo from "@react-native-community/netinfo";
 import { listProofs, markAttested, markSynced } from "./queue";
-import { syncPending, type SyncSummary } from "./sync";
+import { syncEvidence } from "./evidence-share";
+import { PENDING_STATUS, syncPending, type SyncSummary } from "./sync";
 
 // Expo inlines EXPO_PUBLIC_* at build time. Local-dev fallback only.
 export const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8787";
@@ -28,13 +29,23 @@ let inFlight: Promise<SyncSummary> | null = null;
 /** Bound, de-duplicated sync. Concurrent callers share the one in-flight run. */
 export function runPendingSync(): Promise<SyncSummary> {
   if (inFlight) return inFlight;
+  const fetchImpl = (input: RequestInfo | URL, init?: RequestInit) => fetch(input, init);
   inFlight = syncPending({
-    fetchImpl: (input: RequestInfo | URL, init?: RequestInit) => fetch(input, init),
+    fetchImpl,
     apiUrl: API_URL,
     listProofs,
     markSynced,
     markAttested,
-  }).finally(() => {
+  })
+    .then(async (summary) => {
+      // After the proofs: post any sealed photos the reporter agreed to share, and look for
+      // coordinator requests on proofs the api has. Best-effort; never changes the summary.
+      const rows = await listProofs().catch(() => []);
+      const onApi = rows.filter((r) => r.status !== PENDING_STATUS).map((r) => r.proofHash);
+      await syncEvidence(API_URL, fetchImpl, onApi);
+      return summary;
+    })
+    .finally(() => {
     inFlight = null;
   });
   return inFlight;

@@ -82,6 +82,39 @@ export const env = {
   get revenuecatProjectId(): string {
     return process.env.REVENUECAT_PROJECT_ID ?? "";
   },
+
+  // Sealed evidence photos (opt-in or coordinator-requested, reporter-approved). The api only ever
+  // holds opaque ciphertext. "none" (default) keeps every evidence route typed-unavailable.
+  get evidenceStorage(): "none" | "s3" {
+    return process.env.EVIDENCE_STORAGE === "s3" ? "s3" : "none";
+  },
+  /** S3-compatible endpoint, e.g. https://<account>.r2.cloudflarestorage.com. Path-style requests. */
+  get evidenceS3Endpoint(): string {
+    return process.env.EVIDENCE_S3_ENDPOINT ?? "";
+  },
+  get evidenceS3Bucket(): string {
+    return process.env.EVIDENCE_S3_BUCKET ?? "";
+  },
+  /** R2 expects "auto"; AWS expects the bucket's region. */
+  get evidenceS3Region(): string {
+    return process.env.EVIDENCE_S3_REGION || "auto";
+  },
+  get evidenceS3AccessKeyId(): string {
+    return process.env.EVIDENCE_S3_ACCESS_KEY_ID ?? "";
+  },
+  get evidenceS3SecretAccessKey(): string {
+    return process.env.EVIDENCE_S3_SECRET_ACCESS_KEY ?? "";
+  },
+  /** Days a sealed blob is kept before the purge job deletes it. Invalid or unset -> 90. */
+  get evidenceRetentionDays(): number {
+    const n = Number(process.env.EVIDENCE_RETENTION_DAYS);
+    return Number.isFinite(n) && n > 0 ? n : 90;
+  },
+  /** Max SEALED bytes per photo (after decoding). Invalid or unset -> 5 MiB. */
+  get evidenceMaxBytes(): number {
+    const n = Number(process.env.EVIDENCE_MAX_BYTES);
+    return Number.isSafeInteger(n) && n > 0 ? n : 5 * 1024 * 1024;
+  },
 };
 
 export function relayerConfigured(): boolean {
