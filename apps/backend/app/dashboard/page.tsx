@@ -4,7 +4,7 @@
 
 import Link from "next/link";
 import { fetchProofs } from "../../lib/api";
-import { alerts, dailyCounts, metrics, reportsHref, statusBreakdown } from "../../lib/dashboard";
+import { alerts, dailyCounts, metrics, reportsHref, statusBreakdown, weekTrend } from "../../lib/dashboard";
 import { Icon } from "../_components/brand";
 import { ActivityChart, StatusBar } from "./Charts";
 import { DashboardTable } from "./DashboardTable";
@@ -42,6 +42,7 @@ export default async function DashboardOverview() {
           value={m.thisWeek}
           label="Reports this week"
           hint={`${proofs.length} received in total`}
+          trend={weekTrend(m.thisWeek, m.lastWeek)}
           href={reportsHref({ from: weekStart })}
         />
         <Metric

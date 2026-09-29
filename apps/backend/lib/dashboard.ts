@@ -61,6 +61,8 @@ export function reviewStatus(p: ProofSummary): ReviewStatus {
 
 export interface Metrics {
   thisWeek: number;
+  /** Reports captured in the seven days before this week, for a week-over-week comparison. */
+  lastWeek: number;
   readyToReview: number;
   needAnother: number;
   confirmed: number;
@@ -68,12 +70,19 @@ export interface Metrics {
   areas: number;
 }
 
-export function metrics(proofs: ProofSummary[]): Metrics {
-  const now = Date.now();
+export function metrics(proofs: ProofSummary[], now: number = Date.now()): Metrics {
+  const age = (p: ProofSummary) => {
+    const t = new Date(p.capturedAt).getTime();
+    return Number.isNaN(t) ? null : now - t;
+  };
   return {
     thisWeek: proofs.filter((p) => {
-      const t = new Date(p.capturedAt).getTime();
-      return !Number.isNaN(t) && now - t <= WEEK_MS;
+      const a = age(p);
+      return a !== null && a <= WEEK_MS;
+    }).length,
+    lastWeek: proofs.filter((p) => {
+      const a = age(p);
+      return a !== null && a > WEEK_MS && a <= 2 * WEEK_MS;
     }).length,
     readyToReview: proofs.filter((p) => reviewStatus(p) === "ready").length,
     needAnother: proofs.filter((p) => reviewStatus(p) === "needs-another").length,
@@ -81,6 +90,16 @@ export function metrics(proofs: ProofSummary[]): Metrics {
     programmes: new Set(proofs.map((p) => p.taskId)).size,
     areas: new Set(proofs.map((p) => p.geohashRegion).filter(Boolean)).size,
   };
+}
+
+/** Plain-language week-over-week line: "4 more than last week", "Same as last week", ... */
+export function weekTrend(thisWeek: number, lastWeek: number): { text: string; direction: "up" | "down" | "flat" } {
+  const d = thisWeek - lastWeek;
+  if (d === 0) return { text: "Same as last week", direction: "flat" };
+  if (lastWeek === 0) return { text: `Up from none last week`, direction: "up" };
+  return d > 0
+    ? { text: `${d} more than last week`, direction: "up" }
+    : { text: `${-d} fewer than last week`, direction: "down" };
 }
 
 export interface ProgrammeRow {

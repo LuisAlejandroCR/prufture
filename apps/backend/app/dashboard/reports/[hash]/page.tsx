@@ -183,6 +183,10 @@ export default async function ReportReviewPage({
             </ul>
           </div>
 
+          <p className="print-only faint">
+            Public reference <code>{proof.proofHash}</code>. Anyone can check this report, without an
+            account, on its public /verify page.
+          </p>
           <details className="tech">
             <summary>Technical details</summary>
             <div>
@@ -239,7 +243,7 @@ export default async function ReportReviewPage({
             </ol>
           </div>
 
-          <div className="box">
+          <div className="box report-actions">
             <div className="box-head">
               <h2>Actions</h2>
             </div>

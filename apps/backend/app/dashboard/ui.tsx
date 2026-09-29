@@ -47,6 +47,7 @@ export function Metric({
   hint,
   tone = "neutral",
   href,
+  trend,
 }: {
   icon: IconName;
   value: number | string;
@@ -55,6 +56,8 @@ export function Metric({
   tone?: "neutral" | "ok" | "wait" | "info" | "attn";
   /** When set, the whole tile opens this (usually pre-filtered) view. */
   href?: string;
+  /** Week-over-week line. Neutral colour: more reports is not "good" or "bad" by itself. */
+  trend?: { text: string; direction: "up" | "down" | "flat" };
 }) {
   const body = (
     <>
@@ -64,6 +67,11 @@ export function Metric({
       <span className="n">{value}</span>
       <span className="k">{label}</span>
       {hint ? <span className="metric-hint">{hint}</span> : null}
+      {trend ? (
+        <span className={`metric-trend is-${trend.direction}`}>
+          <span aria-hidden>{trend.direction === "up" ? "↑" : trend.direction === "down" ? "↓" : "→"}</span> {trend.text}
+        </span>
+      ) : null}
       {href ? (
         <span className="metric-go" aria-hidden>
           <Icon name="arrow" size={16} />

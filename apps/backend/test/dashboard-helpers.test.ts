@@ -7,7 +7,9 @@ import assert from "node:assert/strict";
 import {
   alerts,
   applyReportFilters,
+  metrics,
   neighbours,
+  weekTrend,
   byNewest,
   dailyCounts,
   parseReportFilters,
@@ -113,6 +115,22 @@ test("neighbours: position and prev/next inside a view; null when not in it", ()
   assert.equal(neighbours(list, list[0].proofHash)?.prev, null);
   assert.equal(neighbours(list, list[2].proofHash)?.next, null);
   assert.equal(neighbours(list, "missing"), null);
+});
+
+test("metrics: this week vs the seven days before, bad dates in neither", () => {
+  const m = metrics(
+    [p("2026-09-28T12:00:00Z"), p("2026-09-25T12:00:00Z"), p("2026-09-20T12:00:00Z"), p("2026-09-01T12:00:00Z"), p("nope")],
+    NOW,
+  );
+  assert.equal(m.thisWeek, 2);
+  assert.equal(m.lastWeek, 1);
+});
+
+test("weekTrend: plain words for more, fewer, same and up-from-none", () => {
+  assert.deepEqual(weekTrend(9, 5), { text: "4 more than last week", direction: "up" });
+  assert.deepEqual(weekTrend(2, 5), { text: "3 fewer than last week", direction: "down" });
+  assert.deepEqual(weekTrend(3, 3), { text: "Same as last week", direction: "flat" });
+  assert.equal(weekTrend(4, 0).text, "Up from none last week");
 });
 
 test("alerts: stale-report alert links to the pre-filtered, oldest-first workspace", () => {

@@ -905,6 +905,35 @@ a.pager-btn:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px
 .share-qr figcaption { font-size: .76rem; color: var(--text-muted); font-weight: 600; }
 @media (max-width: 640px) { .share-grid { grid-template-columns: 1fr; } .share-qr { justify-self: start; } }
 
+/* Week-over-week line on a metric tile: neutral ink, the arrow carries direction. */
+.metric-trend { margin-top: 6px; font-size: .76rem; font-weight: 650; color: var(--text); display: inline-flex; gap: 4px; align-items: center; }
+.metric-trend span { color: var(--text-muted); }
+
+.print-only { display: none; }
+
+/* Print: programme officers print a report review or a filtered list for a field meeting.
+   Drop navigation, banners and controls; keep content, status labels and the public reference. */
+@media print {
+  :root { color-scheme: light; }
+  /* Keep status pills and timeline dots: status must survive on paper. */
+  body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body, .dash, .site { background: #fff !important; }
+  /* A grid track can't split across pages, so a tall grid jumps whole to page 2; flow it instead. */
+  .report-grid, .report-main, .report-side, .dash-grid { display: block !important; }
+  .report-main > *, .report-side > *, .dash-grid > * { margin-bottom: 12px; }
+  .dash { display: block; }
+  .dash-side, .dash-auth-banner, .dash-narrow-note, .skip-link, .pager, .tabs, .filters, .result-bar button,
+  .table-more, .table-more-btn, .dash-head-actions, .report-hero .btn, .site-head, .site-foot, .share-row,
+  .share-qr + *, .option-card .btn, .btn:disabled, .kbd-hint, .metric-go { display: none !important; }
+  .dash-main { padding: 0; max-width: none; }
+  .box, .metric, .fact, .table-scroll, .verify-hero, .share-card, .prog-card { box-shadow: none !important; break-inside: avoid; }
+  .back-link, .report-actions, details.tech { display: none !important; }
+  .print-only { display: block !important; }
+  .fade-in { animation: none !important; }
+  a { color: inherit; text-decoration: none; }
+  .verify-hero::after { display: none; }
+}
+
 @media (max-width: 1180px) {
   .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .dash-grid, .report-grid { grid-template-columns: 1fr; }
