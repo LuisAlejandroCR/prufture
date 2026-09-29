@@ -8,6 +8,7 @@ import { DashboardTable } from "../DashboardTable";
 import { DegradedNotice, PageHeader } from "../ui";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "Reports" };
 
 type Search = Record<string, string | string[] | undefined>;
 

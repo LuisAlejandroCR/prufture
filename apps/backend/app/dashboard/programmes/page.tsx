@@ -9,6 +9,7 @@ import { Icon } from "../../_components/brand";
 import { DegradedNotice, EmptyState, PageHeader } from "../ui";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "Programmes" };
 
 export default async function ProgrammesPage() {
   const { proofs, degraded } = await fetchProofs();

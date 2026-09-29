@@ -7,6 +7,7 @@ import { assuranceFromProof, assuranceLabel, isNeutralAssurance } from "../../..
 import { fetchProof } from "../../../lib/api";
 import { activityLabel, programmeName } from "../../../lib/dashboard";
 import { Icon, SiteFooter, SiteHeader, type IconName } from "../../_components/brand";
+import { qrPath } from "../../pitch/qr";
 import { ShareLink } from "./ShareLink";
 
 const VERIFY_BASE = process.env.NEXT_PUBLIC_VERIFY_BASE_URL ?? "http://localhost:3000";
@@ -42,6 +43,17 @@ const STAGES: { key: Stage; label: string }[] = [
   { key: "waiting", label: "Waiting for confirmation" },
   { key: "confirmed", label: "Confirmed" },
 ];
+
+/** Tab and link-preview title (chat apps show it when the link is shared). Same fields as the page:
+ *  activity and plain status only, never a region, reporter or reference. */
+export async function generateMetadata({ params }: { params: Promise<{ hash: string }> }) {
+  const { hash } = await params;
+  const r = await fetchProof(hash);
+  if (r.state !== "ok") return { title: "Field report · Prufture" };
+  const title = `${activityLabel(r.proof.taskId)} · ${STAGE_COPY[stageFor(r.proof.attestationCount)].pill}`;
+  const description = "A community field report on Prufture. Checkable by anyone, with no personal data.";
+  return { title: `${title} · Prufture`, description, openGraph: { title, description, siteName: "Prufture" } };
+}
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
@@ -99,6 +111,8 @@ export default async function VerifyPage({ params }: { params: Promise<{ hash: s
   const stage = stageFor(proof.attestationCount);
   const copy = STAGE_COPY[stage];
   const stageIndex = STAGES.findIndex((s) => s.key === stage);
+  // Encodes only the public link (proofHash), the same thing the share field shows.
+  const qr = qrPath(shareUrl);
   const assurance = assuranceFromProof(proof);
   const captured = new Date(proof.capturedAt);
   const capturedText = Number.isNaN(captured.getTime())
@@ -163,18 +177,27 @@ export default async function VerifyPage({ params }: { params: Promise<{ hash: s
         </div>
       </div>
 
-      <section className="share-card">
-        <h2>Share this report</h2>
-        <p className="muted" style={{ margin: 0 }}>
-          This link carries only the public reference. No reporter identity, photo, or exact location
-          is stored or shown, so it is safe to send over a chat or email.
-        </p>
-        <ShareLink url={shareUrl} />
-        <ul className="privacy-list">
-          <li><Icon name="eyeOff" size={16} /> No name or face</li>
-          <li><Icon name="pin" size={16} /> No exact location</li>
-          <li><Icon name="lock" size={16} /> No account needed</li>
-        </ul>
+      <section className="share-card share-grid">
+        <div>
+          <h2>Share this report</h2>
+          <p className="muted" style={{ margin: 0 }}>
+            This link carries only the public reference. No reporter identity, photo, or exact
+            location is stored or shown, so it is safe to send over a chat or email.
+          </p>
+          <ShareLink url={shareUrl} />
+          <ul className="privacy-list">
+            <li><Icon name="eyeOff" size={16} /> No name or face</li>
+            <li><Icon name="pin" size={16} /> No exact location</li>
+            <li><Icon name="lock" size={16} /> No account needed</li>
+          </ul>
+        </div>
+        <figure className="share-qr">
+          <svg viewBox={`0 0 ${qr.size} ${qr.size}`} role="img" aria-label="QR code of this report's public link">
+            <rect width={qr.size} height={qr.size} fill="#fbf6ef" />
+            <path d={qr.path} fill="#1c1208" />
+          </svg>
+          <figcaption>Scan to open on a phone</figcaption>
+        </figure>
       </section>
 
       <details className="tech">

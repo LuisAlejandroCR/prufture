@@ -7,6 +7,7 @@ import { alerts } from "../../../lib/dashboard";
 import { AlertCard, EmptyState, PageHeader } from "../ui";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "Alerts" };
 
 export default async function AlertsPage() {
   const { proofs, degraded } = await fetchProofs();

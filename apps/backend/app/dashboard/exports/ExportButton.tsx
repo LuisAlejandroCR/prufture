@@ -27,19 +27,20 @@ export function csv(proofs: ProofSummary[]): string {
   return [head.join(","), ...lines].join("\n");
 }
 
-export function ExportButton({ proofs }: { proofs: ProofSummary[] }) {
-  const download = () => {
-    const blob = new Blob([csv(proofs)], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `prufture-reports-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
+/** Trigger a browser download of the coarse CSV for exactly these rows. */
+export function downloadCsv(proofs: ProofSummary[], suffix = ""): void {
+  const blob = new Blob([csv(proofs)], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `prufture-reports-${new Date().toISOString().slice(0, 10)}${suffix}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
+export function ExportButton({ proofs }: { proofs: ProofSummary[] }) {
   return (
-    <button type="button" className="btn" onClick={download} disabled={proofs.length === 0}>
+    <button type="button" className="btn" onClick={() => downloadCsv(proofs)} disabled={proofs.length === 0}>
       {proofs.length === 0 ? "No reports to export" : `Download ${proofs.length} rows`}
     </button>
   );
