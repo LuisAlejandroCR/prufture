@@ -30,7 +30,8 @@ import {
 } from "./store.js";
 import { pushRegistrationCount, registerPushToken } from "./push-store.js";
 import { attestOnce } from "./relayer.js";
-import { checkLivenessVerdict } from "./assurance.js";
+import { checkLivenessVerdict, createLivenessSession, livenessSessionVerdict } from "./assurance.js";
+import { isSessionId } from "./liveness-aws.js";
 import {
   POLICY_VERSION,
   enrolCommitment,
@@ -259,6 +260,31 @@ app.post("/liveness-result", async (c) => {
     setVerifiedPerson(proofHash, verdict.verifiedPerson, verdict.degraded);
   }
   return c.json({ status: "recorded", verifiedPerson: verdict.verifiedPerson }, 200);
+});
+
+// Session-flow liveness (LIVENESS_PROVIDER=aws). The device captures against the provider
+// directly; the api only opens the session and asks for the verdict. Neither route returns or
+// logs the provider's error text, confidence, images or raw response — result.error stays here.
+app.post("/liveness/session", async (c) => {
+  const r = await createLivenessSession();
+  if (!r.available) return c.json({ error: "liveness unavailable", degraded: true }, 503);
+  return c.json({ sessionId: r.data.sessionId }, 200);
+});
+
+app.post("/liveness/result", async (c) => {
+  const raw = await readJsonObject(c);
+  if (!raw) return c.json({ error: "invalid json" }, 400);
+  const sessionId = (raw as { sessionId?: unknown }).sessionId;
+  if (!isSessionId(sessionId)) return c.json({ error: "invalid sessionId" }, 400);
+
+  const r = await livenessSessionVerdict(sessionId);
+  // Same degrade as /verify-identity: a typed unavailable becomes a degraded ticket, never a 5xx.
+  if (!r.available) {
+    const verdict = { verifiedPerson: false, degraded: true };
+    return c.json({ ...verdict, ticket: issueTicket(verdict) }, 200);
+  }
+  const verifiedPerson = r.data.verifiedPerson === true;
+  return c.json({ verifiedPerson, ticket: issueTicket({ verifiedPerson, degraded: false }) }, 200);
 });
 
 // MAX_CIPHER_LEN: hex cap for the opaque precise-location blob. ephPub(32) + nonce(24) +
