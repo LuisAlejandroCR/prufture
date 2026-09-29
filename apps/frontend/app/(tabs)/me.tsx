@@ -75,7 +75,7 @@ export default function MeScreen() {
 
       <View style={{ gap: space.sm }}>
         <SectionLabel>Settings</SectionLabel>
-        <View style={styles.valueRow} accessibilityLabel="Language. English">
+        <View style={styles.valueRow} accessible accessibilityLabel="Language. English">
           <View style={styles.toggleIcon}><Icon name="language" size={20} color={color.text} /></View>
           <View style={{ flex: 1 }}>
             <Text style={styles.toggleTitle}>Language</Text>
