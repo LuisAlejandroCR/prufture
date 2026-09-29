@@ -11,6 +11,7 @@ import { Icon } from "../../src/components/icons/Icon";
 import {
   AnswerChip,
   BackLink,
+  DraftLoading,
   EvidenceSteps,
   Notice,
   PrimaryButton,
@@ -25,6 +26,7 @@ import { getDraft, saveDraft, setCaptureProof, setNote } from "../../src/report-
 import { missingItems, type Missing } from "../../src/report-check";
 import { NOTE_MAX, noteCounter } from "../../src/report-note";
 import { getTask } from "../../src/tasks";
+import { useDraftReady } from "../../src/useDraftReady";
 import { color, radius, space, target, type } from "../../src/theme";
 
 // Wire the real (native keystore + sqlite) capture path into the draft module here,
@@ -32,7 +34,7 @@ import { color, radius, space, target, type } from "../../src/theme";
 // off-device unit tests can import it. Static import -> bundled, no offline chunk fetch.
 setCaptureProof(captureProof);
 
-export default function ReportReviewScreen() {
+function ReportReviewBody() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const task = getTask(id ?? "");
@@ -57,7 +59,14 @@ export default function ReportReviewScreen() {
     const result = await saveDraft();
     setBusy(false);
     if (result.saved === 0) {
-      setError("The report could not be saved on this phone. Please try again.");
+      // Visible in the Metro log during testing; reasons carry no photo, key or location data.
+      console.warn("[prufture] report not saved:", result.reasons.join(", "));
+      const unreadable = result.reasons.some((r) => r.endsWith("-unreadable"));
+      setError(
+        unreadable
+          ? "A photo could not be read from this phone. Tap it above to take it again, then save."
+          : "The report could not be saved on this phone. Please try again.",
+      );
       return;
     }
     router.replace({
@@ -261,3 +270,10 @@ const styles = StyleSheet.create({
   privacy: { flexDirection: "row", alignItems: "center", gap: space.sm },
   privacyText: { ...type.meta, color: color.text, fontWeight: "600", flex: 1 },
 });
+
+/** Restore this task's saved draft before rendering, so a JS reload never starts an empty one over it. */
+export default function ReportReviewScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const ready = useDraftReady(getTask(id ?? "").id);
+  return ready ? <ReportReviewBody /> : <DraftLoading />;
+}

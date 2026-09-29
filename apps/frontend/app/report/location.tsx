@@ -8,12 +8,22 @@ import { useCallback, useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { CellMap } from "../../src/components/CellMap";
 import { Icon } from "../../src/components/icons/Icon";
-import { BackLink, InfoCard, Notice, PrimaryButton, ReportProgress, Screen, SecondaryButton } from "../../src/components/ui";
+import {
+  BackLink,
+  DraftLoading,
+  InfoCard,
+  Notice,
+  PrimaryButton,
+  ReportProgress,
+  Screen,
+  SecondaryButton,
+} from "../../src/components/ui";
 import { identityStepEnabled } from "../../src/flags";
 import { encodeGeohash } from "../../src/geohash";
 import { sealPrecise } from "../../src/location-seal";
 import { ensureDraft, setArea, setPreciseLocation } from "../../src/report-draft";
 import { getTask } from "../../src/tasks";
+import { useDraftReady } from "../../src/useDraftReady";
 import { color, space, type } from "../../src/theme";
 import { areaNameForCell, cityCentreForCell } from "../../src/useApproxArea";
 
@@ -35,7 +45,7 @@ function sealPrecisePoint(lat: number, lng: number, capturedAt: number): string 
   }
 }
 
-export default function ReportLocationScreen() {
+function ReportLocationBody() {
   const { id, from } = useLocalSearchParams<{ id: string; from?: string }>();
   const router = useRouter();
   const task = getTask(id ?? "");
@@ -164,3 +174,10 @@ const styles = StyleSheet.create({
   area: { flexDirection: "row", alignItems: "center", gap: space.sm },
   areaText: { ...type.title, color: color.text, flex: 1 },
 });
+
+/** Restore this task's saved draft before rendering, so a JS reload never starts an empty one over it. */
+export default function ReportLocationScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const ready = useDraftReady(getTask(id ?? "").id);
+  return ready ? <ReportLocationBody /> : <DraftLoading />;
+}

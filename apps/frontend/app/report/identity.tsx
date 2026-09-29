@@ -7,10 +7,18 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Animated, StyleSheet, Text, View } from "react-native";
 import { Icon } from "../../src/components/icons/Icon";
-import { BackLink, Notice, PrimaryButton, ReportProgress, Screen } from "../../src/components/ui";
+import {
+  BackLink,
+  DraftLoading,
+  Notice,
+  PrimaryButton,
+  ReportProgress,
+  Screen,
+} from "../../src/components/ui";
 import { runLiveness, submitLiveness, type Gesture } from "../../src/liveness";
 import { ensureDraft, setLiveness } from "../../src/report-draft";
 import { getTask } from "../../src/tasks";
+import { useDraftReady } from "../../src/useDraftReady";
 import { color, radius, space, type } from "../../src/theme";
 
 // Duplicates src/feedback MOMENT_IDENTITY_MS, inlined before that constant existed; switch to the
@@ -28,7 +36,7 @@ const GESTURE_COPY: Record<Gesture, { label: string; glyph: string }> = {
 
 type Phase = "intro" | "running" | "checking" | "verified" | "degraded";
 
-export default function ReportIdentityScreen() {
+function ReportIdentityBody() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const task = getTask(id ?? "");
@@ -204,3 +212,10 @@ const styles = StyleSheet.create({
   title: { ...type.display, color: color.text },
   muted: { ...type.body, color: color.muted },
 });
+
+/** Restore this task's saved draft before rendering, so a JS reload never starts an empty one over it. */
+export default function ReportIdentityScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const ready = useDraftReady(getTask(id ?? "").id);
+  return ready ? <ReportIdentityBody /> : <DraftLoading />;
+}

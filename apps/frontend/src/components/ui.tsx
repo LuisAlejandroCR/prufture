@@ -341,6 +341,17 @@ export function Appear({ index = 0, children }: { index?: number; children: Reac
   );
 }
 
+/** Shown for a moment while a report screen restores the draft saved on this phone. */
+export function DraftLoading() {
+  return (
+    <Screen>
+      <Text style={s.hint} accessibilityRole="progressbar">
+        Getting your report ready...
+      </Text>
+    </Screen>
+  );
+}
+
 /** Soft tinted circle with the programme category icon (mission rows, catalog, report header). */
 export function CategoryBadge({ category, size = 48 }: { category: Category; size?: number }) {
   const accent = categoryAccent[category];

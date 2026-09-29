@@ -80,6 +80,13 @@ opens the full catalog.
 
 ## Flow integrity
 
+- A saved draft is never lost to a reload. `draft-store.persistDraft` keeps a photo whose URI is
+  already its stored copy (copying it onto itself used to delete it, so Save found no bytes), and
+  the report screens (permissions, identity, capture, questions, location, review) render through
+  `useDraftReady`, which restores this task's persisted draft (`prepareDraft`) instead of starting an
+  empty one over it. `saveDraft` returns content-free `reasons`; Review logs them to Metro and, for
+  an unreadable photo, tells the reporter to retake it.
+
 - Review enables "Save report" only when nothing is missing (`src/report-check.ts`): every photo
   step, every required answer, the approximate area. Otherwise an amber "N things left before
   saving" card lists each gap, and each row opens its fix.

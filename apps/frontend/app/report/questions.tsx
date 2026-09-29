@@ -8,15 +8,23 @@ import { useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { answerTone } from "../../src/answer-tone";
 import { Icon } from "../../src/components/icons/Icon";
-import { BackLink, CategoryBadge, PrimaryButton, ReportProgress, Screen } from "../../src/components/ui";
+import {
+  BackLink,
+  CategoryBadge,
+  DraftLoading,
+  PrimaryButton,
+  ReportProgress,
+  Screen,
+} from "../../src/components/ui";
 import { tap } from "../../src/feedback";
 import { identityStepEnabled } from "../../src/flags";
 import { questionIndex } from "../../src/report-check";
 import { ensureDraft, getDraft, setAnswer } from "../../src/report-draft";
 import { getTask } from "../../src/tasks";
+import { useDraftReady } from "../../src/useDraftReady";
 import { color, radius, space, target, type } from "../../src/theme";
 
-export default function ReportQuestionsScreen() {
+function ReportQuestionsBody() {
   const { id, q: qParam, from } = useLocalSearchParams<{ id: string; q?: string; from?: string }>();
   const router = useRouter();
   const task = getTask(id ?? "");
@@ -150,3 +158,10 @@ const styles = StyleSheet.create({
   optionText: { ...type.subtitle, color: color.text, flex: 1 },
   optionTextSelected: { fontWeight: "700" },
 });
+
+/** Restore this task's saved draft before rendering, so a JS reload never starts an empty one over it. */
+export default function ReportQuestionsScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const ready = useDraftReady(getTask(id ?? "").id);
+  return ready ? <ReportQuestionsBody /> : <DraftLoading />;
+}

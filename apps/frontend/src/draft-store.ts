@@ -136,6 +136,13 @@ export async function persistDraft(d: ReportDraft): Promise<void> {
       const key = `${d.reportId}:${p.stepIndex}`;
       const prev = copied.get(key);
       let dest = prev?.dest;
+      // After a resume the URI already IS the stored copy. Copying it onto itself would delete it
+      // first (copyIn replaces the destination), losing the photo, so keep it as-is.
+      if (p.uri.endsWith(`/${photoName(d.reportId, p.stepIndex)}`)) {
+        copied.set(key, { src: p.uri, dest: p.uri });
+        photos.push({ uri: p.uri, stepIndex: p.stepIndex });
+        continue;
+      }
       if (!prev || prev.src !== p.uri) {
         try {
           dest = await store.copyIn(p.uri, photoName(d.reportId, p.stepIndex));

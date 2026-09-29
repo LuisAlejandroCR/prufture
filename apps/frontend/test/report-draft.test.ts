@@ -10,6 +10,7 @@ import {
   clearDraft,
   getDraft,
   newReportId,
+  prepareDraft,
   restoreDraft,
   resumeTarget,
   saveDraft,
@@ -190,4 +191,54 @@ test("resumeTarget: routes to the first incomplete step, review when complete", 
 
   const located = { ...answered, geohash: "abcde" };
   assert.equal(resumeTarget(located, task).pathname, "/report/review");
+});
+
+test("prepareDraft after a reload restores the saved draft for the same task, never an empty one", async () => {
+  await new Promise((r) => setTimeout(r, 0)); // let beforeEach's async clear settle
+  const saved = {
+    taskId: "solar-panel-install",
+    reportId: "saved-report",
+    photos: [{ uri: "mem://draft/photo-saved-report-0.jpg", stepIndex: 0 }],
+    answers: { "all-panels": "Yes" },
+    note: "",
+    geohash: "kzdwb",
+    areaLabel: "Kalama",
+    preciseLocationCipher: "",
+    livenessChecked: false,
+    livenessVerified: false,
+    livenessDegraded: false,
+    livenessTicket: "",
+    startedAt: Date.now(),
+  };
+  await persistDraft(saved);
+
+  const d = await prepareDraft("solar-panel-install");
+  assert.equal(d.reportId, "saved-report");
+  assert.equal(d.photos.length, 1);
+  assert.equal(getDraft()?.reportId, "saved-report");
+});
+
+test("prepareDraft for a different task starts fresh", async () => {
+  await new Promise((r) => setTimeout(r, 0));
+  const d = await prepareDraft("water-pump-repair");
+  assert.equal(d.taskId, "water-pump-repair");
+  assert.equal(d.photos.length, 0);
+});
+
+test("saveDraft reports why a photo failed, without any content", async () => {
+  __setCaptureProofForTest((async () => {
+    throw new Error("sqlite busy");
+  }) as never);
+  startDraft("solar-panel-install");
+  addPhoto({ uri: "file:///a.jpg", bytes: new Uint8Array([1]), stepIndex: 0 });
+  const r = await saveDraft();
+  assert.equal(r.saved, 0);
+  assert.deepEqual(r.reasons, ["photo-1-not-saved"]);
+});
+
+test("saveDraft without the capture path wired says not-ready", async () => {
+  startDraft("solar-panel-install");
+  addPhoto({ uri: "file:///a.jpg", bytes: new Uint8Array([1]), stepIndex: 0 });
+  const r = await saveDraft();
+  assert.deepEqual(r.reasons, ["not-ready"]);
 });

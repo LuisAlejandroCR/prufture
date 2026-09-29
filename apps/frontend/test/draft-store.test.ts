@@ -158,3 +158,47 @@ test("a missing native module (backend() returns null) makes every call a safe n
   assert.equal(await hasPersistedDraft(), null);
   assert.equal(await readPersistedPhotoBytes("x"), null);
 });
+
+test("re-persisting a resumed draft never deletes its own photos (copy onto itself)", async () => {
+  // A backend that behaves like expo-file-system: copyIn deletes an existing destination first.
+  const files = new Map<string, Uint8Array>();
+  let text: string | null = null;
+  const fsLike: DraftStoreBackend = {
+    async ensureDir() {},
+    async readDraft() {
+      return text;
+    },
+    async writeDraft(t) {
+      text = t;
+    },
+    async removeDir() {
+      files.clear();
+      text = null;
+    },
+    async copyIn(src, name) {
+      const dest = `mem://draft/${name}`;
+      if (files.has(dest)) files.delete(dest);
+      const b = files.get(src);
+      if (!b) throw new Error(`no such file ${src}`);
+      files.set(dest, b);
+      return dest;
+    },
+    async readBytes(uri) {
+      const b = files.get(uri);
+      if (!b) throw new Error("no such file");
+      return b;
+    },
+  };
+  files.set("file:///cam0.jpg", new Uint8Array([7, 7]));
+  __setDraftStoreBackend(fsLike);
+  await persistDraft(draft());
+
+  // App restart: the copy cache is empty and the loaded photo URI is already the stored copy.
+  __setDraftStoreBackend(fsLike);
+  const resumed = await loadPersistedDraft();
+  assert.ok(resumed);
+  await persistDraft({ ...resumed, answers: { "all-panels": "No" } });
+
+  const uri = (await loadPersistedDraft())!.photos[0]!.uri;
+  assert.deepEqual(await readPersistedPhotoBytes(uri), new Uint8Array([7, 7]));
+});

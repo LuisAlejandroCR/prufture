@@ -118,6 +118,25 @@ export function ensureDraft(taskId: string): ReportDraft {
   return current;
 }
 
+/**
+ * Make sure a draft for `taskId` is open WITHOUT clobbering the one saved on this phone: keep the
+ * in-memory draft if it matches, else restore the persisted one if it is for the same task, else
+ * start fresh. Used by report screens after a JS reload. Never rejects.
+ */
+export async function prepareDraft(taskId: string): Promise<ReportDraft> {
+  if (current?.taskId === taskId) return current;
+  try {
+    const saved = await loadPersistedDraft();
+    if (saved && saved.taskId === taskId) {
+      current = saved;
+      return saved;
+    }
+  } catch {
+    // Fall through to a fresh draft.
+  }
+  return startDraft(taskId);
+}
+
 /** Load the persisted draft (if any) into memory as the open draft. */
 export async function restoreDraft(): Promise<ReportDraft | null> {
   current = await loadPersistedDraft();
@@ -205,6 +224,9 @@ export interface SaveResult {
   saved: number;
   failed: number;
   firstProofHash: string | null;
+  /** Why photos failed, for logs and the error line: "no-draft", "not-ready", "photo-N-unreadable",
+   *  "photo-N-not-saved". Never contains photo bytes, keys or locations. */
+  reasons: string[];
 }
 
 /**
@@ -215,20 +237,22 @@ export interface SaveResult {
  */
 export async function saveDraft(): Promise<SaveResult> {
   const draft = current;
-  if (!draft) return { saved: 0, failed: 0, firstProofHash: null };
+  if (!draft) return { saved: 0, failed: 0, firstProofHash: null, reasons: ["no-draft"] };
 
   let saved = 0;
   let failed = 0;
   let firstProofHash: string | null = null;
+  const reasons: string[] = [];
 
   const captureProof = captureProofImpl;
-  if (!captureProof) return { saved: 0, failed: draft.photos.length, firstProofHash: null };
+  if (!captureProof) return { saved: 0, failed: draft.photos.length, firstProofHash: null, reasons: ["not-ready"] };
 
   for (const photo of draft.photos) {
     try {
       const bytes = photo.bytes ?? (await readPersistedPhotoBytes(photo.uri)) ?? undefined;
       if (!bytes) {
         failed += 1;
+        reasons.push(`photo-${photo.stepIndex + 1}-unreadable`);
         continue;
       }
       const proof = await captureProof({
@@ -242,6 +266,7 @@ export async function saveDraft(): Promise<SaveResult> {
       saved += 1;
     } catch {
       failed += 1;
+      reasons.push(`photo-${photo.stepIndex + 1}-not-saved`);
     }
   }
 
@@ -266,5 +291,5 @@ export async function saveDraft(): Promise<SaveResult> {
   }
 
   if (failed === 0) clearDraft();
-  return { saved, failed, firstProofHash };
+  return { saved, failed, firstProofHash, reasons };
 }

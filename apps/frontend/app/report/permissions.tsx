@@ -6,7 +6,15 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
-import { AnswerChip, BackLink, InfoCard, PrimaryButton, Screen, SectionLabel } from "../../src/components/ui";
+import {
+  AnswerChip,
+  BackLink,
+  DraftLoading,
+  InfoCard,
+  PrimaryButton,
+  Screen,
+  SectionLabel,
+} from "../../src/components/ui";
 import {
   getPermissionState,
   RATIONALE,
@@ -18,9 +26,10 @@ import {
 import { nextAfterPermissions } from "../../src/flags";
 import { ensureDraft } from "../../src/report-draft";
 import { getTask } from "../../src/tasks";
+import { useDraftReady } from "../../src/useDraftReady";
 import { color, radius, space, target, type } from "../../src/theme";
 
-export default function ReportPermissionsScreen() {
+function ReportPermissionsBody() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const task = getTask(id ?? "");
@@ -155,3 +164,10 @@ const styles = StyleSheet.create({
   blocked: { ...type.meta, color: color.text, fontWeight: "600" },
   pressed: { opacity: 0.7 },
 });
+
+/** Restore this task's saved draft before rendering, so a JS reload never starts an empty one over it. */
+export default function ReportPermissionsScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const ready = useDraftReady(getTask(id ?? "").id);
+  return ready ? <ReportPermissionsBody /> : <DraftLoading />;
+}

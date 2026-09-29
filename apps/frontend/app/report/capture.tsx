@@ -12,6 +12,7 @@ import { base64ToBytes } from "../../src/capture";
 import { Icon } from "../../src/components/icons/Icon";
 import {
   BackLink,
+  DraftLoading,
   EvidenceSteps,
   Notice,
   PrimaryButton,
@@ -23,11 +24,12 @@ import { celebrationsAllowed, tap } from "../../src/feedback";
 import { identityStepEnabled } from "../../src/flags";
 import { addPhoto, ensureDraft, getDraft } from "../../src/report-draft";
 import { getTask } from "../../src/tasks";
+import { useDraftReady } from "../../src/useDraftReady";
 import { color, radius, space, target, type } from "../../src/theme";
 
 type Shot = { uri: string; bytes: Uint8Array };
 
-export default function ReportCaptureScreen() {
+function ReportCaptureBody() {
   const { id, step, retake } = useLocalSearchParams<{ id: string; step: string; retake?: string }>();
   const router = useRouter();
   const task = getTask(id ?? "");
@@ -289,3 +291,10 @@ const styles = StyleSheet.create({
   shutterBusy: { opacity: 0.5 },
   shutterInner: { width: 54, height: 54, borderRadius: radius.pill, backgroundColor: color.primary },
 });
+
+/** Restore this task's saved draft before rendering, so a JS reload never starts an empty one over it. */
+export default function ReportCaptureScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const ready = useDraftReady(getTask(id ?? "").id);
+  return ready ? <ReportCaptureBody /> : <DraftLoading />;
+}
