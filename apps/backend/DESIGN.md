@@ -78,7 +78,22 @@ Row links carry the view's query, so the review page's Back returns to it and Pr
 the j / k keys) step through it with an "n of N" position. Coverage-map zones open a popup linking
 to that area's reports. Every dashboard page sets its own tab title; the dashboard has a "Skip to
 content" link. `/verify` shows a QR of its own public link and sets a link-preview title from the
-activity and plain status only. Every dashboard route has a `loading.tsx` skeleton and
+activity and plain status only.
+
+The coverage map drives Leaflet from one effect (create on mount, `map.remove()` on cleanup), not
+react-leaflet: the App Router runs React 19, whose dev StrictMode re-runs ref callbacks and made
+MapContainer initialise twice. Popup bodies are built with `textContent`, never HTML strings. The
+"Reports this week" tile adds a plain week-over-week line in neutral ink (more reports is neither
+good nor bad by itself). A print stylesheet drops navigation, banners and controls, keeps status
+colours, flows grids so they split across pages, and prints the full public reference on a report.
+
+"Programmes" means the programme groups from `programmeName` (Education, Water and sanitation,
+Health, ...); activity types (`taskId`) sit inside them. The Overview tile counts programmes and
+names the activity types and areas in its hint; the Programmes page has one section per programme
+(totals, confirmed share, "All <programme> reports") with activity cards inside
+(`programmeGroups`). With a healthy index and no reports, the Overview shows a three-step
+"how the first report gets here" panel and the metric tiles only, never empty charts or an empty
+table; a degraded index still shows the alert. Every dashboard route has a `loading.tsx` skeleton and
 an `error.tsx` boundary that never prints raw error text; the site has a branded `not-found.tsx`.
 
 ## Rules

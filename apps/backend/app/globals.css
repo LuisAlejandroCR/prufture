@@ -905,6 +905,61 @@ a.pager-btn:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px
 .share-qr figcaption { font-size: .76rem; color: var(--text-muted); font-weight: 600; }
 @media (max-width: 640px) { .share-grid { grid-template-columns: 1fr; } .share-qr { justify-self: start; } }
 
+/* Week-over-week line on a metric tile: neutral ink, the arrow carries direction. */
+.metric-trend { margin-top: 6px; font-size: .76rem; font-weight: 650; color: var(--text); display: inline-flex; gap: 4px; align-items: center; }
+.metric-trend span { color: var(--text-muted); }
+
+/* Programmes grouped: one section per programme, activity cards inside. */
+.prog-groups { display: grid; gap: 28px; }
+.prog-group { display: grid; gap: 14px; }
+.prog-group-head {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(180px, 260px) auto; gap: 8px 24px; align-items: center;
+  padding-bottom: 12px; border-bottom: 1px solid var(--border);
+}
+.prog-group-head h2 { font-size: 1.25rem; letter-spacing: -.02em; }
+.prog-group-head p { margin: 4px 0 0; font-size: .86rem; }
+.prog-group-meter { display: grid; gap: 6px; font-size: .8rem; color: var(--text-muted); }
+.prog-group-meter strong { color: var(--text); }
+.prog-group-head .card-link { margin: 0; white-space: nowrap; }
+@media (max-width: 860px) { .prog-group-head { grid-template-columns: 1fr; } }
+
+/* First-run overview: explains how reports arrive instead of showing only zeros. */
+.first-run { display: grid; grid-template-columns: minmax(220px, .8fr) minmax(0, 2fr); gap: 16px 32px; align-items: start; margin-bottom: 20px; }
+.first-run h2 { font-size: 1.3rem; margin: 0 0 6px; }
+.first-run p { margin: 0; }
+.first-run-steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.first-run-steps li { display: grid; gap: 10px; align-content: start; }
+.first-run-steps strong { font-size: .92rem; }
+.first-run-steps p { font-size: .85rem; color: var(--text-muted); margin-top: 4px; }
+.first-run-icon { width: 36px; height: 36px; border-radius: 11px; display: grid; place-items: center; background: var(--brand-soft); color: var(--brand); }
+.first-run .card-link { grid-column: 1 / -1; }
+@media (max-width: 960px) { .first-run, .first-run-steps { grid-template-columns: 1fr; } }
+
+.print-only { display: none; }
+
+/* Print: programme officers print a report review or a filtered list for a field meeting.
+   Drop navigation, banners and controls; keep content, status labels and the public reference. */
+@media print {
+  :root { color-scheme: light; }
+  /* Keep status pills and timeline dots: status must survive on paper. */
+  body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body, .dash, .site { background: #fff !important; }
+  /* A grid track can't split across pages, so a tall grid jumps whole to page 2; flow it instead. */
+  .report-grid, .report-main, .report-side, .dash-grid { display: block !important; }
+  .report-main > *, .report-side > *, .dash-grid > * { margin-bottom: 12px; }
+  .dash { display: block; }
+  .dash-side, .dash-auth-banner, .dash-narrow-note, .skip-link, .pager, .tabs, .filters, .result-bar button,
+  .table-more, .table-more-btn, .dash-head-actions, .report-hero .btn, .site-head, .site-foot, .share-row,
+  .share-qr + *, .option-card .btn, .btn:disabled, .kbd-hint, .metric-go { display: none !important; }
+  .dash-main { padding: 0; max-width: none; }
+  .box, .metric, .fact, .table-scroll, .verify-hero, .share-card, .prog-card { box-shadow: none !important; break-inside: avoid; }
+  .back-link, .report-actions, details.tech { display: none !important; }
+  .print-only { display: block !important; }
+  .fade-in { animation: none !important; }
+  a { color: inherit; text-decoration: none; }
+  .verify-hero::after { display: none; }
+}
+
 @media (max-width: 1180px) {
   .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .dash-grid, .report-grid { grid-template-columns: 1fr; }
