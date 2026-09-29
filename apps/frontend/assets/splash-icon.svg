@@ -1,4 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
-    <path d="M256 44 L432 108 C432 296 350 420 256 468 C162 420 80 296 80 108 Z" fill="none" stroke="#C8533A" stroke-width="30" stroke-linejoin="round"/>
-    <polygon points="256.0 166.0 339.1 214.0 339.1 310.0 256.0 358.0 172.9 310.0 172.9 214.0" fill="none" stroke="#C8533A" stroke-width="22" stroke-linejoin="round"/>
-    <line x1="256.0" y1="166.0" x2="325.1" y2="195.3" stroke="#C8533A" stroke-width="20" stroke-linecap="round"/><line x1="339.1" y1="214.0" x2="348.3" y2="288.5" stroke="#C8533A" stroke-width="20" stroke-linecap="round"/><line x1="339.1" y1="310.0" x2="279.2" y2="355.1" stroke="#C8533A" stroke-width="20" stroke-linecap="round"/><line x1="256.0" y1="358.0" x2="186.9" y2="328.7" stroke="#C8533A" stroke-width="20" stroke-linecap="round"/><line x1="172.9" y1="310.0" x2="163.7" y2="235.5" stroke="#C8533A" stroke-width="20" stroke-linecap="round"/><line x1="172.9" y1="214.0" x2="232.8" y2="168.9" stroke="#C8533A" stroke-width="20" stroke-linecap="round"/></svg>
+  <circle cx="256" cy="214" r="150" fill="#FBE7C6"/>
+  <g transform="translate(112 58) scale(12)">
+    <path d="M12 21V12.3" stroke="#C8533A" stroke-width="2.2" stroke-linecap="round" fill="none"/>
+    <path d="M12 12.3c0-4 2.6-6.8 7.5-7-0.2 4.7-3 7.3-7.5 7.3Z" fill="#C8533A"/>
+    <path d="M12 14.5c0-3.3-2.2-5.6-6.5-5.8.2 3.9 2.6 6 6.5 6Z" fill="#C8533A"/>
+  </g>
+  <text x="256" y="446" text-anchor="middle" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="64" font-weight="700" fill="#1C1208">Prufture</text>
+</svg>

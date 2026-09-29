@@ -68,6 +68,15 @@ rectangles with no centre pin (`CellMap`). Mission rows use `CategoryBadge` (sof
 category icon), the first closed question, and "Nearby area" or a rounded distance. A final row
 opens the full catalog.
 
+## Launch
+
+The native splash (`assets/splash-icon.svg` rendered to `splash-icon.png`) shows the home
+`BrandMark` sprout on a warm sun disc with "Prufture" below. `app/_layout.tsx` holds it
+(`preventAutoHideAsync`) until the root view lays out, then hands off to `LaunchSplash`, which
+starts from the same mark: sun disc swells, stem grows, right then left leaf unfold (back-eased),
+wordmark and tagline rise in, short hold, then the overlay fades into Missions (about 1.9 s).
+With reduce motion or celebrations off it shows the finished mark for 0.7 s and fades.
+
 ## Shared report pieces (Alternative C)
 
 Every task and report screen is built from the same `src/components/ui.tsx` pieces, so the flow
