@@ -38,3 +38,10 @@ test("new screens keep DESIGN.md copy rules: no em-dash in UI strings", () => {
 test("the Language value row is one VoiceOver element", () => {
   assert.match(me, /<View style=\{styles\.valueRow\} accessible accessibilityLabel="Language\. English">/);
 });
+
+test("About shows the app version only", () => {
+  assert.match(about, /Constants\.expoConfig\?\.version/);
+  assert.doesNotMatch(about, /Illustration|Project|open-source|Community evidence/);
+  assert.match(about, /accessible accessibilityLabel=\{`Version \$\{version\}`\}/);
+  assert.match(me, /title="About Prufture" subtitle="Version"/);
+});
