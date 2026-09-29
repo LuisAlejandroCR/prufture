@@ -184,6 +184,10 @@ test("resumeTarget: routes to the first incomplete step, review when complete", 
     photos: [0, 1, 2].map((i) => ({ uri: `f${i}`, stepIndex: i })),
   };
   assert.equal(resumeTarget(withPhotos, task).pathname, "/report/questions");
+  assert.equal(resumeTarget(withPhotos, task).params.q, "0");
+
+  const firstAnswered = { ...withPhotos, answers: { "all-panels": "Yes" } };
+  assert.equal(resumeTarget(firstAnswered, task).params.q, "1");
 
   const answered = { ...withPhotos, answers: { "all-panels": "Yes", "lights-work": "Yes" } };
   assert.equal(resumeTarget(answered, task).pathname, "/report/location");
