@@ -1,9 +1,10 @@
 // communities/page.tsx: geographic coverage by coarse region, with aggregate counts and the regions
-// that still need a second community report. Never a household, school or beneficiary coordinate.
+// that still need a second community report; each region links to its reports. Never a household,
+// school or beneficiary coordinate.
 
 import Link from "next/link";
 import { fetchProofs } from "../../../lib/api";
-import { areas } from "../../../lib/dashboard";
+import { areas, reportsHref } from "../../../lib/dashboard";
 import { Icon } from "../../_components/brand";
 import { DegradedNotice, EmptyState, Metric, Notice, PageHeader } from "../ui";
 
@@ -60,10 +61,17 @@ export default async function CommunitiesPage() {
                 {rows.map((r) => (
                   <tr key={r.region}>
                     <td>
-                      <span className="area-chip">
-                        <Icon name="pin" size={14} />
-                        <code>{r.region}</code>
-                      </span>
+                      {r.region === "(none)" ? (
+                        <span className="area-chip">
+                          <Icon name="pin" size={14} />
+                          <code>not recorded</code>
+                        </span>
+                      ) : (
+                        <Link className="area-chip is-link" href={reportsHref({ q: r.region })} aria-label={`Reports in area ${r.region}`}>
+                          <Icon name="pin" size={14} />
+                          <code>{r.region}</code>
+                        </Link>
+                      )}
                     </td>
                     <td>
                       <span className="inline-bar">
@@ -74,7 +82,20 @@ export default async function CommunitiesPage() {
                       </span>
                     </td>
                     <td>{r.confirmed}</td>
-                    <td>{r.needsAnother > 0 ? <span className="pill wait"><span className="dot" aria-hidden />{r.needsAnother}</span> : <span className="faint">0</span>}</td>
+                    <td>
+                      {r.needsAnother > 0 && r.region !== "(none)" ? (
+                        <Link
+                          className="pill wait is-link"
+                          href={reportsHref({ q: r.region, status: "needs-another" })}
+                          aria-label={`${r.needsAnother} in ${r.region} need another report`}
+                        >
+                          <span className="dot" aria-hidden />
+                          {r.needsAnother}
+                        </Link>
+                      ) : (
+                        <span className="faint">{r.needsAnother}</span>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>

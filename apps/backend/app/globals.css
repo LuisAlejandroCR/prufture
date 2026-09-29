@@ -822,6 +822,53 @@ table.data td:has(> .rowlink) { text-align: right; }
 .check-list li::before { content: "\2713"; position: absolute; left: 0; top: 0; width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; font-size: .7rem; font-weight: 800; background: var(--ok-bg); color: var(--ok-text); }
 .check-list.is-never li::before { content: "\00d7"; font-size: .9rem; background: var(--attn-bg); color: var(--attn-text); }
 
+/* Deep links: tiles, legend rows, chips and cards that open a pre-filtered workspace view. */
+a.metric { color: inherit; text-decoration: none; transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease; }
+a.metric:hover { border-color: var(--brand-line); box-shadow: var(--shadow-md); transform: translateY(-1px); }
+a.metric:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.metric-go { position: absolute; top: 18px; right: 18px; color: var(--text-muted); opacity: 0; transition: opacity .15s ease, transform .15s ease; }
+a.metric:hover .metric-go, a.metric:focus-visible .metric-go { opacity: 1; transform: translateX(2px); color: var(--brand); }
+.statusbar-legend a { display: flex; align-items: center; gap: 8px; width: 100%; margin: -4px -6px; padding: 4px 6px; border-radius: 8px; color: inherit; text-decoration: none; }
+.statusbar-legend a:hover { background: var(--surface-2); }
+.statusbar-legend a:focus-visible, .card-link:focus-visible, .attn-link:focus-visible, .is-link:focus-visible, .th-sort:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.attn-link, .card-link { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; font-size: .86rem; font-weight: 650; color: var(--link); text-decoration: none; }
+.attn-link:hover, .card-link:hover { text-decoration: underline; }
+.card-link { margin-top: 2px; }
+a.area-chip, a.pill { color: var(--text); text-decoration: none; }
+a.area-chip:hover { border-color: var(--brand-line); background: var(--brand-soft); }
+a.pill:hover { box-shadow: inset 0 0 0 1px var(--wait-text); }
+
+/* Sortable table headers. */
+table.data th[aria-sort] { padding: 0; }
+.th-sort {
+  width: 100%; display: inline-flex; align-items: center; gap: 6px; padding: 10px 14px; border: 0; background: none; cursor: pointer;
+  font: inherit; font-weight: 600; letter-spacing: inherit; text-transform: inherit; color: var(--text-faint); text-align: left;
+}
+.th-sort:hover, .th-sort.is-active { color: var(--text); }
+.th-sort-icon { font-size: .8rem; opacity: .55; }
+.th-sort.is-active .th-sort-icon { opacity: 1; color: var(--brand); }
+.kbd-hint {
+  position: absolute; right: 10px; bottom: 11px; min-width: 22px; height: 20px; display: grid; place-items: center;
+  border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 5px; background: var(--surface-2);
+  font-family: var(--mono); font-size: .72rem; color: var(--text-muted); pointer-events: none;
+}
+.filter-search input:focus + .kbd-hint, .filter-search input:not(:placeholder-shown) + .kbd-hint { display: none; }
+
+/* Loading skeleton and error/empty actions. */
+.sk { border-radius: 8px; background: linear-gradient(90deg, var(--surface-2) 0%, var(--border) 50%, var(--surface-2) 100%); background-size: 200% 100%; }
+@media (prefers-reduced-motion: no-preference) { .sk { animation: sk-shimmer 1.4s ease-in-out infinite; } }
+@keyframes sk-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+.sk-eyebrow { width: 160px; height: 10px; margin: 8px 0 18px; }
+.sk-title { width: min(420px, 70%); height: 38px; margin-bottom: 14px; }
+.sk-line { width: min(520px, 80%); height: 12px; margin-bottom: 28px; }
+.sk-line.short { width: 45%; margin-bottom: 12px; }
+.sk-icon { width: 34px; height: 34px; border-radius: 11px; margin-bottom: 12px; }
+.sk-number { width: 56px; height: 28px; margin-bottom: 10px; }
+.sk-block { height: 180px; border-radius: 12px; }
+.state-card .eyebrow-label { text-align: center; }
+.empty-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 14px; }
+.empty-ref { font-family: var(--mono); font-size: .75rem; margin-top: 10px !important; }
+
 @media (max-width: 1180px) {
   .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .dash-grid, .report-grid { grid-template-columns: 1fr; }
