@@ -1,6 +1,6 @@
 // zk-prover-gate.ts: host gate for the Rust prover. Builds circuit inputs in JS exactly as
-// @semaphore-protocol/proof does, proves with packages/zk-prover (Docker, Linux build), and checks
-// the result with the api's own verifier. Test keys only; run: npx tsx scripts/zk-prover-gate.ts
+// @semaphore-protocol/proof does, proves with packages/zk-prover (PROVE_CLI binary, else Docker), and
+// checks the result with the api's own verifier. Test keys only; run: [PROVE_CLI=<path>] npx tsx scripts/zk-prover-gate.ts
 
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
@@ -44,17 +44,27 @@ const { inputs, root } = buildCircuitInputs({
   scope,
 });
 
+const zkeyRel = "artifacts/semaphore-10.zkey";
+// PROVE_CLI runs a natively built prove-cli directly; without it the Linux build runs in Docker.
+const proveCli = process.env.PROVE_CLI;
+const [cmd, args] = proveCli
+  ? [proveCli, [resolve(crateDir, zkeyRel)]]
+  : [
+      "docker",
+      [
+        "run", "--rm", "-i",
+        "-v", `${crateDir}:/src`,
+        "-v", "prufture-zk-target:/target",
+        "rust:1", "/target/release/prove-cli", `/src/${zkeyRel}`,
+      ],
+    ];
+
 const t0 = Date.now();
-const out = execFileSync(
-  "docker",
-  [
-    "run", "--rm", "-i",
-    "-v", `${crateDir}:/src`,
-    "-v", "prufture-zk-target:/target",
-    "rust:1", "/target/release/prove-cli", "/src/artifacts/semaphore-10.zkey",
-  ],
-  { input: JSON.stringify(inputs), env: { ...process.env, MSYS_NO_PATHCONV: "1" }, stdio: ["pipe", "pipe", "inherit"] },
-).toString();
+const out = execFileSync(cmd, args, {
+  input: JSON.stringify(inputs),
+  env: { ...process.env, MSYS_NO_PATHCONV: "1" },
+  stdio: ["pipe", "pipe", "inherit"],
+}).toString();
 const wallMs = Date.now() - t0;
 // circom-witnesscalc prints timing lines on stdout; the proof is the last line.
 const { points, publicSignals } = JSON.parse(out.trim().split(/\r?\n/).at(-1)!) as { points: string[]; publicSignals: string[] };
@@ -83,7 +93,7 @@ const checks = {
   ).state,
 };
 await closePersonhoodVerifier();
-console.log(JSON.stringify({ depth: DEPTH, dockerWallMs: wallMs, checks }, null, 2));
+console.log(JSON.stringify({ depth: DEPTH, prover: proveCli ? "native" : "docker", proveWallMs: wallMs, checks }, null, 2));
 const pass =
   checks.rootMatchesPublicSignal && checks.nullifierMatchesJsFixture && checks.jsVerifyProof && checks.apiVerifyMembership === "verified";
 console.log(pass ? "GATE PASS" : "GATE FAIL");
