@@ -1,13 +1,11 @@
 // HeroPhone.tsx: the real reporter journey playing inside the landing's device frame.
-// Playback starts from the effect only (never the autoplay attribute), slowed to a readable pace;
+// Playback starts from the effect only (never the autoplay attribute); the file itself is encoded at
+// half speed so every browser plays it at a readable pace;
 // reduced-motion visitors receive the poster only.
 
 "use client";
 
 import { useEffect, useRef } from "react";
-
-// The capture runs faster than a visitor can read the screens; 0.6 keeps each step legible.
-const PLAYBACK_RATE = 0.6;
 
 export function HeroPhone() {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -16,8 +14,6 @@ export function HeroPhone() {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const video = videoRef.current;
     if (!video) return;
-    video.defaultPlaybackRate = PLAYBACK_RATE;
-    video.playbackRate = PLAYBACK_RATE;
     void video.play().catch(() => undefined);
   }, []);
 

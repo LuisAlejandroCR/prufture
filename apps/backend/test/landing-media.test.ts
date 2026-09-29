@@ -49,8 +49,6 @@ test("the hero phone uses the optimized real app journey and approved store icon
   assert.match(PAGE, /<HeroPhone \/>/);
   assert.match(HERO, /className="phone-journey"/);
   assert.doesNotMatch(HERO, /autoPlay/, "autoPlay would bypass the reduced-motion check");
-  assert.match(HERO, /PLAYBACK_RATE = 0.6/);
-  assert.match(HERO, /video.playbackRate = PLAYBACK_RATE/);
   assert.match(HERO, /loop/);
   assert.match(HERO, /muted/);
   assert.match(HERO, /playsInline/);
