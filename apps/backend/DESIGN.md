@@ -85,7 +85,15 @@ react-leaflet: the App Router runs React 19, whose dev StrictMode re-runs ref ca
 MapContainer initialise twice. Popup bodies are built with `textContent`, never HTML strings. The
 "Reports this week" tile adds a plain week-over-week line in neutral ink (more reports is neither
 good nor bad by itself). A print stylesheet drops navigation, banners and controls, keeps status
-colours, flows grids so they split across pages, and prints the full public reference on a report. Every dashboard route has a `loading.tsx` skeleton and
+colours, flows grids so they split across pages, and prints the full public reference on a report.
+
+"Programmes" means the programme groups from `programmeName` (Education, Water and sanitation,
+Health, ...); activity types (`taskId`) sit inside them. The Overview tile counts programmes and
+names the activity types and areas in its hint; the Programmes page has one section per programme
+(totals, confirmed share, "All <programme> reports") with activity cards inside
+(`programmeGroups`). With a healthy index and no reports, the Overview shows a three-step
+"how the first report gets here" panel and the metric tiles only, never empty charts or an empty
+table; a degraded index still shows the alert. Every dashboard route has a `loading.tsx` skeleton and
 an `error.tsx` boundary that never prints raw error text; the site has a branded `not-found.tsx`.
 
 ## Rules

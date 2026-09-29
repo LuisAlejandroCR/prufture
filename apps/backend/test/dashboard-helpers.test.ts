@@ -9,6 +9,7 @@ import {
   applyReportFilters,
   metrics,
   neighbours,
+  programmeGroups,
   weekTrend,
   byNewest,
   dailyCounts,
@@ -124,6 +125,35 @@ test("metrics: this week vs the seven days before, bad dates in neither", () => 
   );
   assert.equal(m.thisWeek, 2);
   assert.equal(m.lastWeek, 1);
+});
+
+test("metrics: programmes counts programme groups, activities counts task types", () => {
+  const mk = (taskId: string, region: string): ProofSummary => ({ ...p("2026-09-28T12:00:00Z"), proofHash: taskId + region, taskId, geohashRegion: region });
+  const m = metrics([mk("water-pump-repair", "aaaaa"), mk("latrine-construction", "aaaaa"), mk("vaccination-drive", "bbbbb")], NOW);
+  assert.equal(m.programmes, 2); // Water and sanitation, Health
+  assert.equal(m.activities, 3);
+  assert.equal(m.areas, 2);
+});
+
+test("programmeGroups: activities nested under their programme with group totals", () => {
+  const mk = (taskId: string, region: string, count = 0): ProofSummary => ({
+    ...p("2026-09-28T12:00:00Z", count),
+    proofHash: `${taskId}-${region}-${count}`,
+    taskId,
+    geohashRegion: region,
+  });
+  const groups = programmeGroups([
+    mk("water-pump-repair", "aaaaa", 2),
+    mk("water-pump-repair", "bbbbb"),
+    mk("latrine-construction", "aaaaa", 2),
+    mk("vaccination-drive", "ccccc"),
+  ]);
+  assert.deepEqual(groups.map((g) => g.name), ["Water and sanitation", "Health"]);
+  const water = groups[0];
+  assert.equal(water.received, 3);
+  assert.equal(water.confirmed, 2);
+  assert.equal(water.areas, 2); // aaaaa counted once across both activities
+  assert.deepEqual(water.activities.map((a) => a.taskId), ["water-pump-repair", "latrine-construction"]);
 });
 
 test("weekTrend: plain words for more, fewer, same and up-from-none", () => {

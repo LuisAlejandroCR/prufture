@@ -66,7 +66,10 @@ export interface Metrics {
   readyToReview: number;
   needAnother: number;
   confirmed: number;
+  /** Distinct programme groups (programmeName), e.g. Education, Health. */
   programmes: number;
+  /** Distinct activity types (taskId) inside those programmes. */
+  activities: number;
   areas: number;
 }
 
@@ -87,7 +90,8 @@ export function metrics(proofs: ProofSummary[], now: number = Date.now()): Metri
     readyToReview: proofs.filter((p) => reviewStatus(p) === "ready").length,
     needAnother: proofs.filter((p) => reviewStatus(p) === "needs-another").length,
     confirmed: proofs.filter((p) => reviewStatus(p) === "confirmed").length,
-    programmes: new Set(proofs.map((p) => p.taskId)).size,
+    programmes: new Set(proofs.map((p) => programmeName(p.taskId))).size,
+    activities: new Set(proofs.map((p) => p.taskId)).size,
     areas: new Set(proofs.map((p) => p.geohashRegion).filter(Boolean)).size,
   };
 }
@@ -128,6 +132,39 @@ export function programmes(proofs: ProofSummary[]): ProgrammeRow[] {
       lastActivity: [...list.map((p) => p.capturedAt)].sort().slice(-1)[0] ?? "",
     }))
     .sort((a, b) => b.received - a.received);
+}
+
+export interface ProgrammeGroup {
+  name: string;
+  received: number;
+  confirmed: number;
+  attention: number;
+  areas: number;
+  activities: ProgrammeRow[];
+}
+
+/**
+ * Activity rows grouped under their programme (programmeName), each group with its own totals.
+ * Groups sort by reports received, then name; activities keep programmes()' order.
+ */
+export function programmeGroups(proofs: ProofSummary[]): ProgrammeGroup[] {
+  const groups = new Map<string, ProgrammeGroup>();
+  for (const row of programmes(proofs)) {
+    const name = programmeName(row.taskId);
+    const g = groups.get(name) ?? { name, received: 0, confirmed: 0, attention: 0, areas: 0, activities: [] };
+    g.received += row.received;
+    g.confirmed += row.confirmed;
+    g.attention += row.attention;
+    g.activities.push(row);
+    groups.set(name, g);
+  }
+  for (const g of groups.values()) {
+    // Areas are counted per group, not summed: one area can host several activities.
+    g.areas = new Set(
+      proofs.filter((p) => programmeName(p.taskId) === g.name).map((p) => p.geohashRegion).filter(Boolean),
+    ).size;
+  }
+  return [...groups.values()].sort((a, b) => b.received - a.received || a.name.localeCompare(b.name));
 }
 
 export interface AreaRow {
