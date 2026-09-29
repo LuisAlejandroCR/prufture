@@ -3,6 +3,7 @@
 // reporter identity and cannot add one.
 
 import type { ProofSummary } from "./api";
+import { foldText, placeLabel } from "./places";
 
 /** Friendly review status shown to programme staff. */
 export type ReviewStatus = "ready" | "needs-another" | "confirmed" | "attention";
@@ -21,8 +22,14 @@ export const REVIEW_CLASS: Record<ReviewStatus, string> = {
   attention: "attn",
 };
 
+/** Task ids picked from the reporter app's catalogue arrive as `item:<id>`; the prefix is not a word. */
+function baseTaskId(taskId: string): string {
+  return taskId.replace(/^item:/, "");
+}
+
 /** Humanized activity label. Falls back to the raw task id for anything unknown. */
-export function activityLabel(taskId: string): string {
+export function activityLabel(rawTaskId: string): string {
+  const taskId = baseTaskId(rawTaskId);
   const known: Record<string, string> = {
     "solar-panel-install": "Solar panels installed",
     "water-pump-repair": "Hand pump repaired",
@@ -30,6 +37,8 @@ export function activityLabel(taskId: string): string {
     "teacher-training": "Teacher training delivered",
     "vaccination-drive": "Vaccination drive",
     "nutrition-screening": "Nutrition screening",
+    "tree-planting": "Trees planted",
+    "child-friendly-space": "Child-friendly space set up",
   };
   if (known[taskId]) return known[taskId];
   return taskId
@@ -39,11 +48,14 @@ export function activityLabel(taskId: string): string {
 }
 
 /** Broad programme grouping for the Programme column and page. */
-export function programmeName(taskId: string): string {
+export function programmeName(rawTaskId: string): string {
+  const taskId = baseTaskId(rawTaskId);
   if (/(solar|teacher|school|classroom)/.test(taskId)) return "Education";
-  if (/(water|pump|latrine|sanitation|toilet)/.test(taskId)) return "Water and sanitation";
-  if (/(vaccin|health|clinic)/.test(taskId)) return "Health";
+  if (/(water|pump|latrine|sanitation|toilet|handwash|hygiene)/.test(taskId)) return "Water and sanitation";
+  if (/(vaccin|immuni|cold-chain|health|clinic)/.test(taskId)) return "Health";
   if (/(nutri|feeding)/.test(taskId)) return "Nutrition";
+  if (/(child-friendly|protection|safe-space)/.test(taskId)) return "Child protection";
+  if (/(tree|climate|environment)/.test(taskId)) return "Climate and environment";
   if (/(train)/.test(taskId)) return "Training";
   return "Other";
 }
@@ -423,19 +435,21 @@ function utcDay(iso: string): string {
 }
 
 /**
- * Apply workspace filters (status, programme, text search over activity / task / region, and an
+ * Apply workspace filters (status, programme, text search over activity / task / region / place, and an
  * inclusive UTC date range) and then the chosen sort. The single source of truth for "which
  * reports are in this view", shared by the table, the CSV of the view and report prev/next.
  */
 export function applyReportFilters(proofs: ProofSummary[], f: ReportFilters): ProofSummary[] {
-  const q = (f.q ?? "").toLowerCase();
+  const q = foldText(f.q ?? "");
   const filtered = proofs.filter((p) => {
     if (f.programme && programmeName(p.taskId) !== f.programme) return false;
     if (f.status && reviewStatus(p) !== f.status) return false;
     const d = utcDay(p.capturedAt);
     if (f.from && d < f.from) return false;
     if (f.to && d > f.to) return false;
-    if (q && !`${activityLabel(p.taskId)} ${p.taskId} ${p.geohashRegion}`.toLowerCase().includes(q)) return false;
+    if (q && !foldText(`${activityLabel(p.taskId)} ${p.taskId} ${p.geohashRegion} ${placeLabel(p.geohashRegion)}`).includes(q)) {
+      return false;
+    }
     return true;
   });
   return sortReports(filtered, f.sort ?? "newest");

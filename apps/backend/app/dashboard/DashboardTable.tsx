@@ -25,7 +25,7 @@ import {
 } from "../../lib/dashboard";
 import { Icon } from "../_components/brand";
 import { downloadCsv } from "./exports/ExportButton";
-import { StatusPill } from "./ui";
+import { AreaChip, StatusPill } from "./ui";
 
 function day(iso: string): string {
   const d = new Date(iso);
@@ -255,10 +255,7 @@ export function DashboardTable({
                     </div>
                   </td>
                   <td>
-                    <span className="area-chip">
-                      <Icon name="pin" size={14} />
-                      <code>{p.geohashRegion || "not recorded"}</code>
-                    </span>
+                    <AreaChip region={p.geohashRegion} />
                   </td>
                   <td>
                     <span className="cell-date">

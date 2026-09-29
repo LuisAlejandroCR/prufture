@@ -1,11 +1,12 @@
 // ui.tsx: small presentational pieces shared by every dashboard page: the page header (eyebrow,
 // title with an optional serif accent, actions), metric tiles, the degraded-service notice and
-// the status pill. Pure markup over already-coarse values; no data access here.
+// the status pill, and the area chip ("Near Bogotá" + region code). Pure markup over already-coarse values; no data access here.
 
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Icon, type IconName } from "../_components/brand";
 import { REVIEW_CLASS, REVIEW_LABEL, type Alert, type ReviewStatus } from "../../lib/dashboard";
+import { placeLabel } from "../../lib/places";
 
 export function PageHeader({
   eyebrow,
@@ -156,6 +157,29 @@ export function StatusPill({ status }: { status: ReviewStatus }) {
       {REVIEW_LABEL[status]}
     </span>
   );
+}
+
+/**
+ * An approximate area: the nearest listed city when there is one ("Near Bogotá") with the coarse
+ * region code beside it, else the code alone. Links to `href` when given and the region is known.
+ */
+export function AreaChip({ region, href }: { region: string; href?: string }) {
+  const place = region ? placeLabel(region) : "";
+  const body = (
+    <>
+      <Icon name="pin" size={14} />
+      {place ? <span>{place}</span> : null}
+      <code className={place ? "area-code" : undefined}>{region || "not recorded"}</code>
+    </>
+  );
+  if (href && region) {
+    return (
+      <Link className="area-chip is-link" href={href} aria-label={`Reports in ${place ? `${place}, ` : ""}area ${region}`}>
+        {body}
+      </Link>
+    );
+  }
+  return <span className="area-chip">{body}</span>;
 }
 
 export function EmptyState({ icon, title, children }: { icon: IconName; title: string; children?: ReactNode }) {

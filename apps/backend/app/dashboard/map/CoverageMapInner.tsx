@@ -11,6 +11,7 @@
 import "leaflet/dist/leaflet.css";
 import { useEffect, useRef } from "react";
 import { reportsHref, type CoverageCell } from "../../../lib/dashboard";
+import { placeLabel } from "../../../lib/places";
 
 const FILL = "#C8533A";
 const MIN_OPACITY = 0.15;
@@ -19,12 +20,18 @@ function countLabel(n: number): string {
   return `${n} ${n === 1 ? "report" : "reports"}`;
 }
 
+/** "Near Bogotá (d2g62)" when the cell is near a listed city, else "Area d2g62". */
+function areaName(region: string): string {
+  const place = placeLabel(region);
+  return place ? `${place} (${region})` : `Area ${region}`;
+}
+
 /** Popup body built from DOM nodes with textContent, so no cell value is ever parsed as HTML. */
 function popupNode(c: CoverageCell): HTMLElement {
   const root = document.createElement("div");
   root.className = "cov-pop";
   const title = document.createElement("strong");
-  title.textContent = `Area ${c.region}`;
+  title.textContent = areaName(c.region);
   const meta = document.createElement("span");
   meta.textContent = `${countLabel(c.count)} · ${c.confirmed} confirmed`;
   const link = document.createElement("a");
@@ -63,7 +70,7 @@ export default function CoverageMapInner({ cells }: { cells: CoverageCell[] }) {
           ],
           { color: FILL, weight: 1, fillColor: FILL, fillOpacity: opacity },
         )
-          .bindTooltip(`Approximate area ${c.region} · ${countLabel(c.count)} · ${c.confirmed} confirmed`)
+          .bindTooltip(`${areaName(c.region)} · ${countLabel(c.count)} · ${c.confirmed} confirmed`)
           .bindPopup(popupNode(c))
           .addTo(map);
       }

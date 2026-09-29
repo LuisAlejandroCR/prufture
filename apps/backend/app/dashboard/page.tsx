@@ -69,7 +69,7 @@ export default async function DashboardOverview() {
   // A healthy index with nothing in it yet. A degraded index is never "empty": it gets the alert.
   const empty = !degraded && proofs.length === 0;
   const attention = alerts(proofs, degraded);
-  const today = new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
+  const today = new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
   // Matches metrics().thisWeek closely enough for a link: the last seven UTC days, today included.
   const weekStart = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 

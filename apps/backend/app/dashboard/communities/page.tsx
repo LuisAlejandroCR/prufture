@@ -6,7 +6,7 @@ import Link from "next/link";
 import { fetchProofs } from "../../../lib/api";
 import { areas, reportsHref } from "../../../lib/dashboard";
 import { Icon } from "../../_components/brand";
-import { DegradedNotice, EmptyState, Metric, Notice, PageHeader } from "../ui";
+import { AreaChip, DegradedNotice, EmptyState, Metric, Notice, PageHeader } from "../ui";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Communities" };
@@ -63,15 +63,9 @@ export default async function CommunitiesPage() {
                   <tr key={r.region}>
                     <td>
                       {r.region === "(none)" ? (
-                        <span className="area-chip">
-                          <Icon name="pin" size={14} />
-                          <code>not recorded</code>
-                        </span>
+                        <AreaChip region="" />
                       ) : (
-                        <Link className="area-chip is-link" href={reportsHref({ q: r.region })} aria-label={`Reports in area ${r.region}`}>
-                          <Icon name="pin" size={14} />
-                          <code>{r.region}</code>
-                        </Link>
+                        <AreaChip region={r.region} href={reportsHref({ q: r.region })} />
                       )}
                     </td>
                     <td>
