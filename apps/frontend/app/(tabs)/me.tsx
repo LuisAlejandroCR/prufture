@@ -3,7 +3,7 @@
 
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
-import { StyleSheet, Switch, Text, View } from "react-native";
+import { Alert, StyleSheet, Switch, Text, View } from "react-native";
 import { Icon, type IconName } from "../../src/components/icons/Icon";
 import { Illustration } from "../../src/components/Illustration";
 import { BrandMark, Row, Screen, ScreenTitle, SectionLabel } from "../../src/components/ui";
@@ -15,6 +15,7 @@ import {
   setHapticsEnabled,
 } from "../../src/feedback";
 import { confirmedReportCount } from "../../src/home";
+import { openInApp, siteUrl } from "../../src/links";
 import { listProofs } from "../../src/queue";
 import { color, radius, space, target, type } from "../../src/theme";
 
@@ -75,7 +76,12 @@ export default function MeScreen() {
 
       <View style={{ gap: space.sm }}>
         <SectionLabel>Settings</SectionLabel>
-        <Row icon="language" title="Language" subtitle="English" onPress={() => undefined} />
+        <Row
+          icon="language"
+          title="Language"
+          subtitle="English"
+          onPress={() => Alert.alert("Language", "Prufture is available in English for this pilot. More languages are planned.")}
+        />
         <Row
           icon="privacy"
           title="Data and privacy"
@@ -118,7 +124,9 @@ export default function MeScreen() {
       <View style={{ gap: space.sm }}>
         <SectionLabel>Support</SectionLabel>
         <Row icon="help" title="Help" subtitle="How the app works" onPress={() => router.push("/help")} />
-        <Row icon="info" title="About Prufture" subtitle="Version and open-source notes" onPress={() => undefined} />
+        <Row icon="info" title="About Prufture" subtitle="What Prufture is and who runs it" onPress={() => void openInApp(siteUrl(""))} />
+        <Row icon="privacy" title="Privacy policy" subtitle="Opens inside the app" onPress={() => void openInApp(siteUrl("privacy"))} />
+        <Row icon="community" title="Contact support" subtitle="Opens inside the app" onPress={() => void openInApp(siteUrl("support"))} />
       </View>
 
       <Text style={styles.about}>

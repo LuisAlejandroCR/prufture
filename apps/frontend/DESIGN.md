@@ -78,6 +78,16 @@ opens the full catalog.
 - `Appear` fades list rows up with a 40 ms stagger (audit motion table), capped at 8 steps, and
   renders in place under reduce motion or with celebrations off.
 
+## Links open in-app
+
+Public pages never send the reporter out of Prufture. `src/links.ts` builds every URL from the one
+`EXPO_PUBLIC_VERIFY_URL` base (a report's public record, and the site's about / privacy / support
+pages), allows only https (or http on a local dev host), and opens them with `expo-web-browser` as
+an in-app sheet (Safari View Controller / Custom Tabs) tinted ivory and terracotta; the system
+browser is only a fallback. Status shows "See public record" once a report is sent; Me links About,
+Privacy policy and Contact support. Links inside those pages (e.g. the external record) stay in the
+same sheet.
+
 ## Keyboard and connection notices
 
 Scrolling screens set `automaticallyAdjustKeyboardInsets`, so a focused field (the Review note)
