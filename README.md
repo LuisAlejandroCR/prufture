@@ -30,7 +30,8 @@ Prufture removes that trade-off:
 - reporting works offline and needs no wallet;
 - the phone signs the evidence before it enters a queue;
 - the public record contains only `proofHash`, `taskId`, coarse `geohash`, and `capturedAt`;
-- nearby independent reports can become community confirmations;
+- nearby reports from enrolled members, each with a verified programme pass, become community
+  confirmations;
 - programme staff can review activity without making the reporter public.
 
 The first use case is community reporting inspired by UNICEF U-Report. The same workflow can support
@@ -45,8 +46,10 @@ Prufture is an independent project and does not claim deployment by or endorseme
    the OS secure store, and saves it to SQLite as pending sync.
 4. **Sync automatically.** When a connection returns, the API verifies the signature and sends an
    attest-only transaction to EAS on Base Sepolia. The relayer cannot move user funds.
-5. **Verify together.** Anyone can open a public record without an account. A second nearby report
-   can add an independent community confirmation.
+5. **Verify together.** Anyone can open a public record without an account. Another report of the
+   same task within 5 km counts as a community confirmation only when it carries a verified
+   programme pass, so within a programme epoch each confirmation comes from a different enrolled
+   member.
 
 External services degrade without breaking capture or the local queue. Calls use explicit timeouts,
 typed results, retries with backoff, and idempotency by `proofHash`.
@@ -75,7 +78,8 @@ Prufture is designed for the conditions in which field evidence is hardest to co
 
 - airplane-mode capture and a visible pending queue;
 - large touch targets, VoiceOver labels, Larger Text support, and calm haptics;
-- plain-language states such as *Ready to send*, *Sent*, and *Confirmed*;
+- plain-language states such as *Ready to send*, *Sent*, *Recorded publicly*, and *Confirmed*
+  (only once the community count is met);
 - no crypto vocabulary in the reporter journey;
 - approximate-area maps without exact-looking centre pins;
 - native support and privacy explanations inside the app.
@@ -147,6 +151,7 @@ cd prufture
 npm install
 cp apps/api/.env.example apps/api/.env.local
 cp apps/frontend/.env.example apps/frontend/.env.local
+cp apps/backend/.env.example apps/backend/.env.local
 npm run typecheck
 npm test
 ```
