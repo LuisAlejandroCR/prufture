@@ -8,11 +8,7 @@ import type { ReactNode } from "react";
 export function Mark({ label = true }: { label?: boolean }) {
   return (
     <span className="landing-mark brand-mark" aria-label="Prufture">
-      <span className="mark-orbit" aria-hidden="true">
-        <span />
-        <span />
-        <span />
-      </span>
+      <img className="brand-app-icon" src="/media/prufture-icon.png" alt="" aria-hidden="true" />
       {label ? <span>Prufture</span> : null}
     </span>
   );

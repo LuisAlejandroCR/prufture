@@ -41,6 +41,8 @@ import {
 } from "../theme";
 import { Icon, type IconName } from "./icons/Icon";
 
+const APP_ICON = require("../../assets/icon.png");
+
 /**
  * Top padding for the screen frame: the real safe-area inset when there is one (notch / status bar),
  * else a small floor. An inverted ternary once dropped the pad on inset devices, hiding every header
@@ -382,7 +384,7 @@ export function CategoryBadge({ category, size = 48 }: { category: Category; siz
 export function BrandMark() {
   return (
     <View style={s.brand} accessibilityRole="header" accessibilityLabel="Prufture">
-      <Icon name="sprout" size={24} filled color={color.primary} />
+      <Image source={APP_ICON} style={s.brandIcon} accessible={false} accessibilityIgnoresInvertColors />
       <Text style={s.brandText}>Prufture</Text>
     </View>
   );
@@ -586,6 +588,7 @@ const s = StyleSheet.create({
   infoBody: { ...type.meta, color: color.muted },
   badge: { borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
   brand: { flexDirection: "row", alignItems: "center", gap: space.xs },
+  brandIcon: { width: 28, height: 28, borderRadius: 8 },
   brandText: { ...type.title, color: color.text },
   offlineWrap: { alignItems: "flex-end", gap: 2 },
   offlinePill: {

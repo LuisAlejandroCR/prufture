@@ -197,7 +197,7 @@ export default function MeScreen() {
         <Row icon="help" title="Help" subtitle="How the app works" onPress={() => router.push("/help")} />
         <Row icon="info" title="About Prufture" subtitle="Version" onPress={() => router.push("/about")} />
         <Row icon="privacy" title="Privacy policy" subtitle="Opens inside the app" onPress={() => void openInApp(siteUrl("privacy"))} />
-        <Row icon="community" title="Contact support" subtitle="Opens inside the app" onPress={() => void openInApp(siteUrl("support"))} />
+        <Row icon="community" title="Contact support" subtitle="Get the right next step" onPress={() => router.push("/support")} />
       </View>
 
       <Text style={styles.about}>
