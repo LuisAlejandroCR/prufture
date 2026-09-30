@@ -27,7 +27,7 @@ export interface PersonhoodDeps {
 }
 
 export interface PersonhoodRequest {
-  /** 0x-prefixed 32-byte report hash, already accepted by /sync. */
+  /** 32-byte report hash as /sync accepted it (bare hex from hashBytes; 0x also tolerated). */
   proofHash: string;
   /** The signed payload's taskId; the api derives the scope from its own stored copy. */
   taskId: string;
@@ -57,13 +57,15 @@ export function parseScope(body: unknown): { scope: bigint; epoch: number } | nu
   return scope < SNARK_FIELD ? { scope, epoch: b.epoch } : null;
 }
 
-const HASH = /^0x[0-9a-fA-F]{64}$/;
+// Real proof hashes are bare hex (hashBytes), which is also how /sync stores them; 0x is tolerated.
+const HASH = /^(?:0x)?([0-9a-fA-F]{64})$/;
 
 /** Never throws. Nothing is fetched, proved or read from storage unless the gate is open. */
 export async function attachPersonhoodProof(req: PersonhoodRequest, deps: PersonhoodDeps): Promise<PersonhoodOutcome> {
   try {
     if (!personhoodActive(deps.provider(), deps.proverAvailable())) return "unavailable";
-    if (!req.programmeId || !HASH.test(req.proofHash) || !req.taskId) return "unavailable";
+    const hex = HASH.exec(req.proofHash)?.[1];
+    if (!req.programmeId || !hex || !req.taskId) return "unavailable";
     const base = deps.apiUrl.replace(/\/+$/, "");
     const programmeId = req.programmeId;
 
@@ -88,7 +90,7 @@ export async function attachPersonhoodProof(req: PersonhoodRequest, deps: Person
     }
 
     const identity = await deps.getIdentity();
-    const message = BigInt(req.proofHash);
+    const message = BigInt(`0x${hex}`);
     // Throws when this device is not enrolled or the group outgrew the circuit: both "unavailable".
     const { inputs } = buildCircuitInputs({
       secretScalar: identity.secretScalar,

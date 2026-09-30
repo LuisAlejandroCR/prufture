@@ -63,7 +63,7 @@ export function memoryNullifierStore(): NullifierStore {
 export interface MembershipInput {
   /** Untrusted JSON from the app. */
   proof: unknown;
-  /** The report's 0x-prefixed 32-byte hash the proof must be bound to. */
+  /** The report's 32-byte hash the proof must be bound to: bare hex as stored, or 0x-prefixed. */
   proofHash: string;
   scope: bigint;
   /** Group roots the programme currently accepts (decimal strings). */
@@ -103,8 +103,10 @@ function parseProof(raw: unknown): SemaphoreProof | null {
   };
 }
 
+// /sync stores proof hashes as bare hex (packages/core hashBytes); 0x is accepted for the same value.
 function parseHash(h: string): bigint | null {
-  return /^0x[0-9a-fA-F]{64}$/.test(h) ? BigInt(h) : null;
+  const m = /^(?:0x)?([0-9a-fA-F]{64})$/.exec(h);
+  return m ? BigInt(`0x${m[1]}`) : null;
 }
 
 const result = (state: MembershipState, reason: MembershipReason): MembershipResult => ({ state, reason });

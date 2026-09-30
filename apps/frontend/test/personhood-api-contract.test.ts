@@ -14,6 +14,7 @@ import * as store from "../../api/src/store";
 import { closePersonhoodVerifier, enrolCommitment, expectedScope, POLICY_VERSION } from "../../api/src/personhood";
 import { attachPersonhoodProof, checkEnrolment, type PersonhoodDeps } from "../src/personhood-proof";
 import { BENCH_COMMITMENTS, BENCH_PRIVATE_KEY } from "../src/zk-bench-fixture";
+import { hashBytes } from "@proof/core";
 
 const fx = JSON.parse(readFileSync(new URL("../../api/test/fixtures/semaphore-proofs.json", import.meta.url), "utf8"));
 const BASE = "http://api.test";
@@ -74,6 +75,32 @@ test("every request the phone makes hits a real route; the posted scope is the a
   const apiScope = expectedScope({ programmeId: PROGRAMME, taskId: TASK, epoch: 1n, policyVersion: POLICY_VERSION });
   assert.equal(posted.proof.scope, apiScope.toString());
   assert.equal(posted.proof.message, BigInt(HASH).toString());
+});
+
+test("regression: a real report hash (bare hex from hashBytes, as /sync stores it) goes all the way", async () => {
+  // Every fixture used 0x hashes, but the phone's proofs are bare hex. The phone refused them
+  // before any request, so every real report ended "unavailable" after five silent tries.
+  const bare = hashBytes(new TextEncoder().encode("a real photo"));
+  assert.match(bare, /^[0-9a-f]{64}$/);
+  store.__setStorePathForTests(join(tmpdir(), `prufture-pass-contract-${randomUUID()}.json`));
+  let g;
+  for (const c of BENCH_COMMITMENTS) g = enrolCommitment(g, c).group;
+  store.putPersonhoodGroup(PROGRAMME, g!);
+  store.upsertProof({ proofHash: bare, taskId: TASK, geohash: "9q8yy", capturedAt: "2026-09-06T14:32:00.000Z" });
+  process.env.PERSONHOOD_PROVIDER = "semaphore";
+  const urls: string[] = [];
+  const bodies: unknown[] = [];
+  const outcome = await attachPersonhoodProof({ proofHash: bare, taskId: TASK, programmeId: PROGRAMME }, deps(urls, bodies));
+  assert.equal(outcome, "invalid", "the fake prover's points reach the api's real Groth16 check");
+  assert.deepEqual(urls, [
+    `${BASE}/proof/${bare}`,
+    `${BASE}/personhood/scope?programmeId=${PROGRAMME}&proofHash=${bare}`,
+    `${BASE}/personhood/group/${PROGRAMME}`,
+    `${BASE}/personhood/proof`,
+  ]);
+  const posted = bodies[0] as { proofHash: string; proof: { message: string } };
+  assert.equal(posted.proofHash, bare);
+  assert.equal(posted.proof.message, BigInt(`0x${bare}`).toString());
 });
 
 test("a report the api already accepted is verified with no new proof", async () => {
