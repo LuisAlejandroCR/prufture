@@ -1,6 +1,7 @@
 // LaunchSplash.tsx: the opening moment — the Prufture sprout (same mark as the home BrandMark) grows
 // from its stem, the two leaves unfold, the wordmark rises in below, then the overlay fades into the
-// app. About 1.9 s; with reduce motion or celebrations off it shows the finished mark and fades out.
+// app. About 4.6 s so the mark and the wordmark can be read; with reduce motion or celebrations off it
+// shows the finished mark for 1.4 s and fades out. The native splash is blank, so this is the only mark.
 
 import { useEffect, useRef } from "react";
 import { Animated, Easing, StyleSheet, Text, View } from "react-native";
@@ -38,7 +39,7 @@ export function LaunchSplash({ onDone }: { onDone: () => void }) {
   useEffect(() => {
     let cancelled = false;
     const finish = () =>
-      Animated.timing(out, { toValue: 0, duration: 320, easing: Easing.in(Easing.quad), useNativeDriver: true }).start(
+      Animated.timing(out, { toValue: 0, duration: 520, easing: Easing.in(Easing.quad), useNativeDriver: true }).start(
         () => !cancelled && onDone(),
       );
 
@@ -48,20 +49,20 @@ export function LaunchSplash({ onDone }: { onDone: () => void }) {
         if (cancelled) return;
         if (!allowed) {
           [glow, stem, right, left, word].forEach((v) => v.setValue(1));
-          setTimeout(finish, 700);
+          setTimeout(finish, 1400);
           return;
         }
         const grow = (v: Animated.Value, duration: number) =>
           Animated.timing(v, { toValue: 1, duration, easing: Easing.out(Easing.back(1.6)), useNativeDriver: true });
         Animated.sequence([
           Animated.parallel([
-            Animated.timing(glow, { toValue: 1, duration: 520, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-            Animated.timing(stem, { toValue: 1, duration: 420, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+            Animated.timing(glow, { toValue: 1, duration: 900, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+            Animated.timing(stem, { toValue: 1, duration: 800, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
           ]),
-          grow(right, 340),
-          grow(left, 320),
-          Animated.timing(word, { toValue: 1, duration: 320, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-          Animated.delay(380),
+          grow(right, 620),
+          grow(left, 580),
+          Animated.timing(word, { toValue: 1, duration: 700, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+          Animated.delay(1300),
         ]).start(() => !cancelled && finish());
       });
     return () => {
