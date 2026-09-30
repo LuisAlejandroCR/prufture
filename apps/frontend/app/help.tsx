@@ -5,7 +5,7 @@ import { useRouter } from "expo-router";
 import { useState } from "react";
 import { LayoutAnimation, Pressable, StyleSheet, Text, View } from "react-native";
 import { Icon, type IconName } from "../src/components/icons/Icon";
-import { BackLink, Screen, ScreenTitle } from "../src/components/ui";
+import { BackLink, Screen, ScreenTitle, SecondaryButton } from "../src/components/ui";
 import { color, radius, space, target, type } from "../src/theme";
 
 interface Topic {
@@ -96,6 +96,7 @@ export default function HelpScreen() {
           );
         })}
       </View>
+      <SecondaryButton label="Contact support" icon="community" onPress={() => router.push("/support")} />
     </Screen>
   );
 }

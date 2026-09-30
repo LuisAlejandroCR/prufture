@@ -1,9 +1,11 @@
-// support.tsx: a native, first-party support destination for reporter next steps. It does not
-// collect a message, identity or report detail; contact remains through the inviting programme team.
+// support.tsx: a native, first-party support destination for reporter next steps. It collects
+// nothing itself: it points to Help, the inviting programme team, and the Prufture team's WhatsApp
+// and email (opened in their own apps) plus the public support page (opened in-app).
 
 import { useRouter } from "expo-router";
-import { StyleSheet, Text, View } from "react-native";
+import { Linking, StyleSheet, Text, View } from "react-native";
 import { openInApp, siteUrl } from "../src/links";
+import { SUPPORT_EMAIL, SUPPORT_WHATSAPP, mailtoUrl, whatsappUrl } from "../src/support-contact";
 import { BackLink, Card, Notice, Screen, ScreenTitle, SecondaryButton } from "../src/components/ui";
 import { color, space, type } from "../src/theme";
 
@@ -31,8 +33,16 @@ export default function SupportScreen() {
 
       <Card>
         <Text style={styles.title}>Contact the Prufture team</Text>
-        <Text style={styles.body}>For a problem with the app itself, our support page lists how to reach us.</Text>
-        <SecondaryButton label="Open support page" icon="community" onPress={() => void openInApp(siteUrl("support"))} />
+        <Text style={styles.body}>
+          For a problem with the app itself, message us on WhatsApp or send an email. Say which screen you were on and
+          what you expected to happen.
+        </Text>
+        <SecondaryButton label="WhatsApp" icon="community" onPress={() => void openExternal(whatsappUrl())} />
+        <SecondaryButton label="Email" icon="info" onPress={() => void openExternal(mailtoUrl())} />
+        <Text style={styles.contact} selectable>
+          {SUPPORT_WHATSAPP} · {SUPPORT_EMAIL}
+        </Text>
+        <SecondaryButton label="Support page" icon="help" onPress={() => void openInApp(siteUrl("support"))} />
       </Card>
 
       <Notice tone="info" icon="privacy">
@@ -47,8 +57,19 @@ export default function SupportScreen() {
   );
 }
 
+// WhatsApp and mail compose belong to their own apps; the address stays visible (and selectable) if
+// neither app is installed.
+async function openExternal(url: string): Promise<void> {
+  try {
+    await Linking.openURL(url);
+  } catch {
+    // No handler for this link on this phone; the contact is shown as text below.
+  }
+}
+
 const styles = StyleSheet.create({
   title: { ...type.subtitle, color: color.text },
   body: { ...type.body, color: color.muted },
+  contact: { ...type.meta, color: color.text },
   privacyLink: { gap: space.sm },
 });

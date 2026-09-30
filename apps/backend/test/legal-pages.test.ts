@@ -138,11 +138,13 @@ test("support page covers the topics app review looks for", () => {
 });
 
 test("support page never prints a fabricated contact address", () => {
-  // The address comes from NEXT_PUBLIC_SUPPORT_EMAIL; a literal one hard-coded here would ship
-  // as a dead link and fail review.
+  // The address and number come from NEXT_PUBLIC_SUPPORT_EMAIL and NEXT_PUBLIC_SUPPORT_WHATSAPP; a
+  // literal one hard-coded here would ship as a dead link and fail review.
   const literalEmails = SUPPORT.match(/[\w.+-]+@[\w-]+\.[\w.]+/g) ?? [];
   assert.deepEqual(literalEmails, [], `hard-coded address: ${literalEmails.join(", ")}`);
   assert.ok(SUPPORT.includes("NEXT_PUBLIC_SUPPORT_EMAIL"));
+  assert.ok(SUPPORT.includes("NEXT_PUBLIC_SUPPORT_WHATSAPP"));
+  assert.doesNotMatch(SUPPORT, /\+?\d[\d ]{8,}\d/, "hard-coded phone number");
 });
 
 test("neither page leaks an internal field name, key or endpoint", () => {
