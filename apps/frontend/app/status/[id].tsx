@@ -1,9 +1,10 @@
-// status/[id].tsx: the lifecycle of one report in plain language — a four-stage timeline with short
-// descriptions over all its per-photo proofs (src/progress.ts; id may be a reportId, row id or
-// proofHash), marking a stage done only when every proof reached it. For an assignment it shows live
-// community confirmations from independent nearby reports (src/confirmations.ts). The reporter's
-// private note (local only) shows under the timeline. When the programme pass is on, one line says
-// whether its check was accepted (src/personhood-outcome.ts). Proof references sit under Technical details.
+// status/[id].tsx: the lifecycle of one report, kept short: a compact stepper over all its per-photo
+// proofs (src/progress.ts; id may be a reportId, row id or proofHash) with one line for the current
+// step. For an assignment the last step is live community confirmations from independent nearby
+// reports (src/confirmations.ts); the public record alone never reads as "confirmed". The reporter's
+// private note (local only) shows under it. When the programme pass is on, one line says whether its
+// check was accepted (src/personhood-outcome.ts); its explanation and the proof references sit under
+// Technical details. One action (See public record); pull down to check for updates.
 // A coordinator's request for the photos shows as a yes/no prompt; nothing is sent without a yes, and
 // a yes sends sealed photos only (src/evidence-share.ts). No PII, exact location or secrets.
 
@@ -29,7 +30,6 @@ import {
   shareCopy,
 } from "../../src/evidence-share";
 import {
-  confirmationsLabel,
   confirmationsNote,
   fetchConfirmations,
   liveConfirmations,
@@ -151,27 +151,29 @@ export default function ReportStatusScreen() {
   const task = getTask(newest.taskId);
   const anyPending = group.some((r) => r.status === "pending_sync");
   const minCount = Math.min(...group.map((r) => r.attestationCount));
-  const status = anyPending
-    ? friendlyStatus("pending_sync")
-    : friendlyStatus(
-        group.every((r) => r.status === "attested") ? "attested" : "synced",
-        minCount,
-      );
-  const stages = reportStages(group);
   const photos = group.length;
   const live = reports ? liveConfirmations(task, reports, identityStepEnabled()) : null;
   const liveNote = live ? confirmationsNote(live) : null;
   const passCopy = pass ? reportPassCopy(pass) : null;
+  const community = task.confirmations ? { have: live ? live.have : null, need: live?.need ?? task.confirmations.need } : null;
+  const communityDone = !!live && live.have >= live.need;
+  const status = anyPending
+    ? friendlyStatus("pending_sync")
+    : task.confirmations
+      ? (communityDone ? "confirmed" : "waiting")
+      : friendlyStatus(group.every((r) => r.status === "attested") ? "attested" : "synced", minCount);
+  const stages = reportStages(group, community);
+  const current = stages.find((s) => s.current) ?? stages[stages.length - 1]!;
 
   return (
-    <Screen>
+    <Screen onRefresh={checkNow} refreshing={checking}>
       <BackLink label="My reports" onPress={() => router.back()} />
       <TaskHeader category={task.category} title={task.title} subtitle={task.purpose} />
 
       <View style={styles.summary}>
         <View style={styles.summaryTop}>
           <Text style={styles.sectionLabel}>Report summary</Text>
-          <StatusPill status={status} count={minCount} />
+          <StatusPill status={status} count={task.confirmations ? live?.have : minCount} />
         </View>
         <View style={styles.facts}>
           <Fact icon="photo" label={photos === 1 ? "1 photo" : `${photos} photos`} />
@@ -198,72 +200,43 @@ export default function ReportStatusScreen() {
       {shareNotice ? <Notice tone="info" icon="privacy">{shareNotice}</Notice> : null}
 
       <View style={styles.progressCard}>
-        <Text style={styles.sectionTitle} accessibilityRole="header">Report progress</Text>
-        <View style={styles.timeline}>
+        <View style={styles.stepper}>
           {stages.map((s, i, arr) => (
-            <View key={s.label} style={styles.stageRow} accessible accessibilityLabel={stageSpoken(s)}>
-              <View style={styles.stageMarker}>
+            <View key={s.label} style={styles.step} accessible accessibilityLabel={stageSpoken(s)}>
+              <View style={styles.stepTrack}>
+                <View style={[styles.connector, i === 0 && styles.connectorHidden, s.done && styles.connectorDone]} />
                 <View style={[styles.node, s.done && styles.nodeDone, s.current && styles.nodeCurrent]}>
                   {s.done ? <Icon name="check" size={12} color={color.onPrimary} /> : null}
                 </View>
-                {i < arr.length - 1 ? (
-                  <View style={[styles.connector, s.done && styles.connectorDone]} />
-                ) : null}
+                <View
+                  style={[
+                    styles.connector,
+                    i === arr.length - 1 && styles.connectorHidden,
+                    arr[i + 1]?.done && styles.connectorDone,
+                  ]}
+                />
               </View>
-              <View style={styles.stageText}>
-                <Text style={[styles.stageLabel, !s.done && !s.current && styles.stageUpcoming]}>
-                  {s.label}
-                </Text>
-                <Text style={styles.stageDetail}>{s.detail}</Text>
-              </View>
+              <Text style={[styles.stepLabel, !s.done && !s.current && styles.stageUpcoming]} numberOfLines={1}>
+                {s.short}
+              </Text>
             </View>
           ))}
         </View>
-      </View>
-
-      {task.confirmations ? (
-        <View
-          style={styles.community}
-          accessible
-          accessibilityLabel={
-            live
-              ? `Community confirmations. ${confirmationsLabel(live)}.${liveNote ? ` ${liveNote}` : ""}`
-              : "Community confirmations not checked yet."
-          }
-        >
-          <View style={styles.communityHead}>
-            <Icon name="community" size={22} color={color.success} />
-            <Text style={styles.sectionTitle}>
-              {live ? confirmationsLabel(live) : "Community confirmations"}
-            </Text>
-          </View>
-          {live ? (
-            <View style={styles.segments}>
-              {Array.from({ length: live.need }, (_, i) => (
-                <View key={i} style={[styles.segment, i < live.have && styles.segmentOn]} />
-              ))}
-            </View>
-          ) : null}
-          <Text style={styles.stageDetail}>
-            {live
-              ? "Independent reports from people near this activity. Each one adds a confirmation."
-              : "Not checked yet. The count appears once your report is sent and the phone is online."}
-          </Text>
+        <View style={{ gap: 2 }}>
+          <Text style={styles.stageLabel}>{current.label}</Text>
+          <Text style={styles.stageDetail}>{current.detail}</Text>
           {liveNote ? <Text style={styles.stageDetail}>{liveNote}</Text> : null}
         </View>
-      ) : null}
+      </View>
 
       {pass && passCopy ? (
-        <View style={styles.community} accessible accessibilityLabel={`${passCopy.title}. ${passCopy.body}`}>
-          <View style={styles.communityHead}>
-            <Icon
-              name={pass.outcome === "verified" ? "check" : "programme"}
-              size={22}
-              color={pass.outcome === "verified" ? color.success : color.muted}
-            />
-            <Text style={styles.sectionTitle}>{passCopy.title}</Text>
-          </View>
-          <Text style={styles.stageDetail}>{passCopy.body}</Text>
+        <View style={styles.passLine} accessible accessibilityLabel={passCopy.title}>
+          <Icon
+            name={pass.outcome === "verified" ? "check" : "programme"}
+            size={18}
+            color={pass.outcome === "verified" ? color.success : color.muted}
+          />
+          <Text style={styles.passText}>{passCopy.title}</Text>
         </View>
       ) : null}
 
@@ -276,14 +249,11 @@ export default function ReportStatusScreen() {
       ) : null}
 
       {!anyPending ? (
-        <>
-          <SecondaryButton
-            label="See public record"
-            icon="review"
-            onPress={() => void openInApp(publicRecordUrl(newest.proofHash))}
-          />
-          <SecondaryButton label="Check for updates" icon="retry" onPress={checkNow} disabled={checking} />
-        </>
+        <SecondaryButton
+          label="See public record"
+          icon="review"
+          onPress={() => void openInApp(publicRecordUrl(newest.proofHash))}
+        />
       ) : null}
 
       <Pressable
@@ -302,6 +272,8 @@ export default function ReportStatusScreen() {
           <Icon name="chevron" size={14} color={color.faint} />
         </View>
       </Pressable>
+
+      {showTech && passCopy ? <Text style={styles.stageDetail}>{passCopy.body}</Text> : null}
 
       {showTech ? (
         <View style={styles.tech}>
@@ -363,9 +335,13 @@ const styles = StyleSheet.create({
   requestCard: { gap: space.md, padding: space.md, borderRadius: radius.md, backgroundColor: color.surface, borderWidth: 1, borderColor: color.primary },
   progressCard: { gap: space.md, padding: space.md, borderRadius: radius.md, backgroundColor: color.surface, borderWidth: 1, borderColor: color.border },
   sectionTitle: { ...type.subtitle, color: color.text },
-  timeline: { gap: 0, paddingVertical: space.sm },
-  stageRow: { flexDirection: "row", gap: space.md, alignItems: "flex-start" },
-  stageMarker: { alignItems: "center", width: 22, alignSelf: "stretch" },
+  stepper: { flexDirection: "row" },
+  step: { flex: 1, alignItems: "center", gap: space.xs },
+  stepTrack: { flexDirection: "row", alignItems: "center", alignSelf: "stretch" },
+  stepLabel: { ...type.meta, color: color.text, fontWeight: "600" },
+  connectorHidden: { opacity: 0 },
+  passLine: { flexDirection: "row", alignItems: "center", gap: space.sm, paddingHorizontal: space.xs },
+  passText: { ...type.body, color: color.text, flex: 1 },
   node: {
     width: 22,
     height: 22,
@@ -378,17 +354,11 @@ const styles = StyleSheet.create({
   },
   nodeDone: { backgroundColor: color.success, borderColor: color.success },
   nodeCurrent: { borderColor: color.primary },
-  connector: { width: 2, flex: 1, minHeight: 26, backgroundColor: color.border },
+  connector: { height: 2, flex: 1, backgroundColor: color.border },
   connectorDone: { backgroundColor: color.success },
-  stageText: { flex: 1, gap: 2, paddingBottom: space.lg },
   stageLabel: { ...type.subtitle, color: color.text },
   stageDetail: { ...type.meta, color: color.muted },
   stageUpcoming: { color: color.faint },
-  community: { gap: space.sm, padding: space.md, borderRadius: radius.md, backgroundColor: color.surface, borderWidth: 1, borderColor: color.border },
-  communityHead: { flexDirection: "row", alignItems: "center", gap: space.sm },
-  segments: { flexDirection: "row", gap: space.xs },
-  segment: { flex: 1, height: 8, borderRadius: radius.pill, backgroundColor: color.border },
-  segmentOn: { backgroundColor: color.success },
   note: { gap: space.xs, padding: space.md, borderRadius: radius.md, backgroundColor: color.surfaceSoft },
   noteLabel: { ...type.meta, color: color.muted, fontWeight: "700" },
   noteText: { ...type.body, color: color.text },
