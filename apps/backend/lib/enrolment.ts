@@ -100,6 +100,7 @@ export type ActionState =
   | "not_configured"
   | "not_staff"
   | "not_entitled"
+  | "not_admin"
   | "entitlement_down"
   | "unreachable";
 
@@ -112,6 +113,7 @@ export const ACTION_STATES: readonly ActionState[] = [
   "not_configured",
   "not_staff",
   "not_entitled",
+  "not_admin",
   "entitlement_down",
   "unreachable",
 ];
@@ -137,6 +139,8 @@ export function toActionState(kind: "enrol" | "epoch", status: number, body: unk
       return "not_configured";
     case 402:
       return "not_entitled";
+    case 403:
+      return "not_admin";
     case 404:
       return "unknown_programme";
     case 503:
@@ -232,6 +236,12 @@ export function actionNotice(state: ActionState): ActionNotice {
         tone: "attn",
         title: "Coordinator plan required",
         text: "Enrolment needs an active coordinator_pro plan on the coordinator account. Nothing was saved.",
+      };
+    case "not_admin":
+      return {
+        tone: "attn",
+        title: "This account cannot change groups",
+        text: "The coordinator account has the plan but is not a programme admin. Add its app user id (COORDINATOR_APP_USER_ID) to PERSONHOOD_ADMIN_APP_USER_IDS on the api. Nothing was saved.",
       };
     case "entitlement_down":
       return {

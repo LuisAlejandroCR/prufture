@@ -77,6 +77,16 @@ export const env = {
     return process.env.REQUIRE_EVIDENCE_TOKEN === "true";
   },
 
+  // App user ids allowed to enrol members and start rounds (/coordinator/personhood/*), comma
+  // separated: the dashboard's COORDINATOR_APP_USER_ID. Empty closes enrolment; coordinator_pro alone
+  // is not enough, since any subscriber holds it.
+  get personhoodAdminAppUserIds(): string[] {
+    return (process.env.PERSONHOOD_ADMIN_APP_USER_IDS ?? "")
+      .split(",")
+      .map((s: string) => s.trim())
+      .filter(Boolean);
+  },
+
   // RevenueCat entitlement check: the secret key never reaches the client.
   get revenuecatSecretKey(): string {
     return process.env.REVENUECAT_SECRET_KEY ?? "";

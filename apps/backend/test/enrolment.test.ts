@@ -103,6 +103,13 @@ test("toActionState keeps not entitled (402) and entitlement check down (503) di
   assert.equal(toActionState("epoch", 503, {}), "entitlement_down");
 });
 
+test("toActionState: 403 means the account is not a programme admin, not an outage", () => {
+  assert.equal(toActionState("enrol", 403, { error: "programme admin required" }), "not_admin");
+  assert.equal(toActionState("epoch", 403, {}), "not_admin");
+  assert.match(actionNotice("not_admin").text, /PERSONHOOD_ADMIN_APP_USER_IDS/);
+  assert.match(actionNotice("not_admin").text, /Nothing was saved/);
+});
+
 test("toActionState maps success, duplicates and the remaining statuses", () => {
   assert.equal(toActionState("enrol", 200, { added: true, size: 1, epoch: 1 }), "enrolled");
   assert.equal(toActionState("enrol", 200, { added: false, size: 1, epoch: 1 }), "already_enrolled");

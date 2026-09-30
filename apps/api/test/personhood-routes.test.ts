@@ -24,6 +24,7 @@ afterEach(() => {
   delete process.env.REVENUECAT_SECRET_KEY;
   delete process.env.REVENUECAT_PROJECT_ID;
   delete process.env.REVENUECAT_COORDINATOR_ENTITLEMENT_ID;
+  delete process.env.PERSONHOOD_ADMIN_APP_USER_IDS;
 });
 
 function freshStore(): string {
@@ -42,13 +43,15 @@ function seedGroup(): void {
   store.putPersonhoodGroup(PROGRAMME, g!);
 }
 
-function coordinator(): Record<string, string> {
+/** An entitled coordinator. `admin`: also on PERSONHOOD_ADMIN_APP_USER_IDS (the dashboard's account). */
+function coordinator(admin = true, id = "anon-coordinator-1"): Record<string, string> {
+  process.env.PERSONHOOD_ADMIN_APP_USER_IDS = admin ? `other-admin, ${id}` : "other-admin";
   process.env.REVENUECAT_SECRET_KEY = "sk_test_personhood";
   process.env.REVENUECAT_PROJECT_ID = "proj1ab2c3d4";
   process.env.REVENUECAT_COORDINATOR_ENTITLEMENT_ID = "entl0c00rd1n4";
   globalThis.fetch = (async () =>
     new Response(JSON.stringify({ items: [{ entitlement_id: "entl0c00rd1n4" }] }), { status: 200 })) as typeof fetch;
-  return { [APP_USER_HEADER]: "anon-coordinator-1" };
+  return { [APP_USER_HEADER]: id };
 }
 
 const post = (path: string, body: unknown, headers: Record<string, string> = {}) =>
@@ -66,6 +69,29 @@ test("enrol is coordinator-only", async () => {
   freshStore();
   const res = await post("/coordinator/personhood/enrol", { programmeId: PROGRAMME, commitment: fx.commitments[0] });
   assert.equal(res.status, 401);
+  assert.equal(store.getPersonhoodGroup(PROGRAMME), undefined);
+});
+
+test("a paying coordinator who is not a programme admin cannot enrol or start a round", async () => {
+  // Any subscriber holds coordinator_pro. Enrolling their own commitments would mint "members" that
+  // confirm their own reports; a new round lets the same member confirm again.
+  freshStore();
+  seedGroup();
+  const before = store.getPersonhoodGroup(PROGRAMME);
+  const h = coordinator(false);
+  const enrol = await post("/coordinator/personhood/enrol", { programmeId: PROGRAMME, commitment: "12345" }, h);
+  assert.equal(enrol.status, 403);
+  const epoch = await post("/coordinator/personhood/epoch", { programmeId: PROGRAMME }, h);
+  assert.equal(epoch.status, 403);
+  assert.deepEqual(store.getPersonhoodGroup(PROGRAMME), before);
+});
+
+test("with no admin configured, enrolment is closed rather than open to every subscriber", async () => {
+  freshStore();
+  const h = coordinator();
+  delete process.env.PERSONHOOD_ADMIN_APP_USER_IDS;
+  const res = await post("/coordinator/personhood/enrol", { programmeId: PROGRAMME, commitment: fx.commitments[0] }, h);
+  assert.equal(res.status, 403);
   assert.equal(store.getPersonhoodGroup(PROGRAMME), undefined);
 });
 
@@ -260,4 +286,14 @@ test("groups, nullifiers and membership survive a restart; junk is dropped", asy
   store.__setStorePathForTests(p);
   assert.equal(store.getProof(fx.hashes.two)?.membership, undefined);
   assert.equal(store.getPersonhoodGroup(PROGRAMME)?.commitments.length, 5);
+});
+
+test("/health says whether a programme admin is configured, never who", async () => {
+  process.env.PERSONHOOD_ADMIN_APP_USER_IDS = "admin-app-user-9";
+  const on = await (await app.request("/health")).text();
+  assert.equal((JSON.parse(on) as { personhoodEnrolment: boolean }).personhoodEnrolment, true);
+  assert.ok(!on.includes("admin-app-user-9"));
+  delete process.env.PERSONHOOD_ADMIN_APP_USER_IDS;
+  const off = (await (await app.request("/health")).json()) as { personhoodEnrolment: boolean };
+  assert.equal(off.personhoodEnrolment, false);
 });
