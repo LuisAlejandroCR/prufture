@@ -3,6 +3,7 @@
 // so mediaUri and other local columns can never leak.
 
 import type { QueuedProof, SignedProof } from "@proof/core";
+import { evidenceTokenFor } from "./evidence-token";
 import { flushPendingLiveness } from "./liveness";
 
 /** New captures wait in this state until a sync succeeds. */
@@ -191,13 +192,16 @@ async function tryPostPrecise(
   fetchImpl: typeof fetch,
 ): Promise<boolean> {
   try {
+    // The evidence token proves this device synced the proof, so no one else can plant a point.
+    const evidenceToken = await evidenceTokenFor(item.proofHash);
     const res = await fetchImpl(`${apiUrl.replace(/\/+$/, "")}/precise-location`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify(item),
+      body: JSON.stringify(evidenceToken ? { ...item, evidenceToken } : item),
     });
-    // 404 = proof not on the api yet; keep it buffered for the next pass.
-    return res.ok;
+    // 404 = proof not on the api yet; keep it buffered for the next pass. A 403 (not this device's
+    // proof) or 409 (a different point is already stored) will never succeed on retry.
+    return res.ok || res.status === 403 || res.status === 409;
   } catch {
     return false;
   }

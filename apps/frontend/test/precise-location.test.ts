@@ -9,6 +9,7 @@ import {
   __pendingPreciseLocation,
   __resetPendingPreciseLocation,
 } from "../src/sync.js";
+import { __setEvidenceSecretSource, deriveEvidenceToken } from "../src/evidence-token.js";
 
 const API = "http://api.test";
 const CIPHER = "de".repeat(80);
@@ -67,4 +68,29 @@ test("flush clears items once the api accepts them", async () => {
   ok = true;
   await flushPendingPreciseLocation(API, fetchImpl);
   assert.equal(__pendingPreciseLocation().length, 0);
+});
+
+test("carries this device's evidence token, so a stranger cannot plant a point for the proof", async () => {
+  const secret = "9".repeat(64);
+  const hash = "b".repeat(64);
+  __setEvidenceSecretSource(async () => secret);
+  try {
+    let body: unknown;
+    const fetchImpl = (async (_u: string, init?: RequestInit) => {
+      body = JSON.parse(String(init?.body));
+      return res(200);
+    }) as unknown as typeof fetch;
+    await attachPreciseLocation(API, hash, CIPHER, fetchImpl);
+    assert.deepEqual(body, { proofHash: hash, cipher: CIPHER, evidenceToken: deriveEvidenceToken(secret, hash) });
+  } finally {
+    __setEvidenceSecretSource(null);
+  }
+});
+
+test("a refused owner (403) or a different stored point (409) is not retried forever", async () => {
+  for (const status of [403, 409]) {
+    __resetPendingPreciseLocation();
+    await attachPreciseLocation(API, "hash-9", CIPHER, (async () => res(status)) as unknown as typeof fetch);
+    assert.deepEqual(__pendingPreciseLocation(), [], `status ${status} left the item pending`);
+  }
 });

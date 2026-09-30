@@ -284,6 +284,19 @@ app.post("/verify-identity", async (c) => {
   return c.json({ ...verdict, ticket: issueTicket(verdict) }, 200);
 });
 
+/**
+ * True when a write keyed by a public proofHash must be refused because the caller is not the device
+ * that first synced the proof. Without it anyone could stamp data on someone else's report, or lock
+ * out the real data (these writes are write-once). That device holds the proof's evidence token. A
+ * wrong token is always refused; a missing one only with REQUIRE_EVIDENCE_TOKEN, since older builds
+ * do not send it. A proof synced without a token hash has nothing to prove against.
+ */
+function ownerRefused(proofHash: string, token: unknown): boolean {
+  const rec = getEvidenceRecord(proofHash);
+  if (!rec?.tokenHash) return false;
+  return token !== undefined ? !tokenMatches(rec, token) : env.requireEvidenceToken;
+}
+
 app.post("/liveness-result", async (c) => {
   const raw = await readJsonObject(c);
   if (!raw) return c.json({ error: "invalid json" }, 400);
@@ -297,18 +310,8 @@ app.post("/liveness-result", async (c) => {
 
   const entry = getProof(proofHash);
   if (!entry) return c.json({ error: "unknown proofHash" }, 404);
-  // Proof hashes are public and a ticket is not bound to a proof, so without this anyone holding a
-  // ticket could stamp a verdict on someone else's report, or lock out the real one (write-once).
-  // The device that first synced the proof holds its evidence token. A wrong token is always
-  // refused; a missing one only once LIVENESS_REQUIRE_TOKEN is on, since older builds do not send
-  // it. A proof synced without a token hash has nothing to prove against and is accepted.
-  const rec = getEvidenceRecord(proofHash);
-  if (rec?.tokenHash) {
-    const given = body.evidenceToken !== undefined;
-    if (given ? !tokenMatches(rec, body.evidenceToken) : env.livenessRequireToken) {
-      return c.json({ error: "evidence token required" }, 403);
-    }
-  }
+  // A ticket is not bound to a proof: see ownerRefused.
+  if (ownerRefused(proofHash, body.evidenceToken)) return c.json({ error: "evidence token required" }, 403);
   // Write-once. A retry of the same verdict is fine; a different one cannot replace it.
   if (typeof entry.verifiedPerson === "boolean") {
     const same = entry.verifiedPerson === verdict.verifiedPerson && (entry.verifiedPersonDegraded === true) === verdict.degraded;
@@ -380,6 +383,8 @@ app.post("/precise-location", async (c) => {
   if (cipher.length > MAX_CIPHER_LEN) return c.json({ error: "cipher too large" }, 413);
   const entry = getProof(proofHash);
   if (!entry) return c.json({ error: "unknown proofHash" }, 404);
+  // The programme key is public, so anyone can seal a plausible fake point: see ownerRefused.
+  if (ownerRefused(proofHash, body.evidenceToken)) return c.json({ error: "evidence token required" }, 403);
   // Write-once: this route is unauthenticated, so without it anyone could replace a proof's
   // sealed location with garbage. Re-sending the identical blob (an app retry) is accepted.
   if (entry.preciseLocationCipher !== undefined && entry.preciseLocationCipher !== cipher) {

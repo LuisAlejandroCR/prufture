@@ -1,7 +1,7 @@
-// liveness-owner.test.ts: /liveness-result is unauthenticated and proof hashes are public, so the
-// verdict must come from the device that first synced the proof. The same evidence token that gates
-// /evidence proves it. LIVENESS_REQUIRE_TOKEN turns a missing token into a refusal once every build
-// in the field sends one; a wrong token is always refused.
+// owner-token.test.ts: /liveness-result and /precise-location are unauthenticated, write-once and
+// keyed by a public proofHash, so only the device that first synced the proof may write. The same
+// evidence token that gates /evidence proves it. REQUIRE_EVIDENCE_TOKEN turns a missing token into a
+// refusal once every build in the field sends one; a wrong token is always refused.
 
 import { test, afterEach } from "node:test";
 import assert from "node:assert/strict";
@@ -40,7 +40,7 @@ const pass = issueTicket({ verifiedPerson: true, degraded: false });
 const fail = issueTicket({ verifiedPerson: false, degraded: false });
 
 afterEach(() => {
-  delete process.env.LIVENESS_REQUIRE_TOKEN;
+  delete process.env.REQUIRE_EVIDENCE_TOKEN;
 });
 
 test("the device's own token records the verdict", async () => {
@@ -59,7 +59,7 @@ test("a stranger's token is refused, so a public hash cannot get someone else's 
 });
 
 test("a stranger cannot lock out the real verdict by attaching a failed one first", async () => {
-  process.env.LIVENESS_REQUIRE_TOKEN = "true";
+  process.env.REQUIRE_EVIDENCE_TOKEN = "true";
   const token = hex32();
   const hash = await synced(token);
   assert.equal((await post("/liveness-result", { proofHash: hash, ticket: fail })).status, 403);
@@ -75,8 +75,34 @@ test("without the flag, a missing token still records (builds that do not send i
 });
 
 test("a proof synced with no token hash accepts the attach either way (nothing to prove against)", async () => {
-  process.env.LIVENESS_REQUIRE_TOKEN = "true";
+  process.env.REQUIRE_EVIDENCE_TOKEN = "true";
   const hash = await synced();
   const res = await post("/liveness-result", { proofHash: hash, ticket: pass });
   assert.equal(res.status, 200);
+});
+
+
+test("/precise-location: the device's own token stores the sealed point", async () => {
+  const token = hex32();
+  const hash = await synced(token);
+  const res = await post("/precise-location", { proofHash: hash, cipher: "aa".repeat(40), evidenceToken: token });
+  assert.equal(res.status, 200);
+});
+
+test("/precise-location: a stranger cannot plant a point, even one sealed to the public programme key", async () => {
+  const token = hex32();
+  const hash = await synced(token);
+  const fake = await post("/precise-location", { proofHash: hash, cipher: "bb".repeat(40), evidenceToken: hex32() });
+  assert.equal(fake.status, 403);
+  // The real point is not locked out by the refused write.
+  const real = await post("/precise-location", { proofHash: hash, cipher: "cc".repeat(40), evidenceToken: token });
+  assert.equal(real.status, 200);
+});
+
+test("/precise-location: with the flag, a tokenless write is refused; without it, accepted", async () => {
+  const hash = await synced(hex32());
+  process.env.REQUIRE_EVIDENCE_TOKEN = "true";
+  assert.equal((await post("/precise-location", { proofHash: hash, cipher: "dd".repeat(40) })).status, 403);
+  delete process.env.REQUIRE_EVIDENCE_TOKEN;
+  assert.equal((await post("/precise-location", { proofHash: hash, cipher: "dd".repeat(40) })).status, 200);
 });
