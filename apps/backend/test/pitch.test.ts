@@ -1,11 +1,27 @@
-// pitch.test.ts: unit + invariant tests for the /pitch paging helpers and the vendored QR encoder.
-// wrapIndex always lands in range, pageFromKey maps only the intended keys, and QR output is
-// deterministic, well-formed, with finder patterns and a quiet-zone border.
+// pitch.test.ts: unit + invariant tests for the /pitch paging helpers and the vendored QR encoder,
+// plus a status guard: the public deck must not list shipped work as "not built" or point at the
+// retired Expo Go demo.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { pageFromKey, wrapIndex } from "../app/pitch/nav.js";
 import { QrCode, Ecc, qrPath } from "../app/pitch/qr.js";
+import { readFileSync } from "node:fs";
+
+const DECK = readFileSync(new URL("../app/pitch/page.tsx", import.meta.url), "utf8")
+  .split(/\r?\n/)
+  .filter((line) => !line.trim().startsWith("//"))
+  .join("\n");
+
+test("status: the deck does not describe shipped work as not built", () => {
+  const notBuilt = DECK.slice(DECK.indexOf("not built"));
+  for (const shipped of ["store build", "Selfie-liveness", "ZK unlinkability", "liveness vendor"]) {
+    assert.ok(!notBuilt.includes(shipped), `"${shipped}" is listed as not built`);
+  }
+  assert.ok(!DECK.includes("Expo Go"), "the demo no longer runs in Expo Go");
+  assert.ok(!/\b\d{2,4} tests green/.test(DECK), "a hard-coded test count goes stale");
+  assert.ok(!DECK.toLowerCase().includes("no zero-knowledge"), "the programme pass is a zero-knowledge proof");
+});
 
 test("wrapIndex: unit vectors over a 6-slide deck", () => {
   assert.equal(wrapIndex(0, 6), 0);

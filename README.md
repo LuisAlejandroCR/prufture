@@ -92,8 +92,9 @@ breaks the offline capture flow.
 Designed for data minimization. Exactly four non-identifying fields leave the device toward the
 chain, and the on-chain decode of the live attestation confirms it carries nothing else. This is
 **not** claimed as GDPR-compliant, anonymous, ZK, TEE-backed, hardware-attested, or
-"deepfake-proof". The selfie liveness check keeps a server-side boolean only — nothing about the
-person is signed or put on-chain. Pilot legal pre-conditions (named controller, lawful basis,
+"deepfake-proof". The optional face check keeps a pass/fail only — nothing about the person is
+signed or put on-chain. A photo leaves the phone only if the reporter chooses to share it, sealed to
+the programme team's key and deleted after 90 days. Pilot legal pre-conditions (named controller, lawful basis,
 biometric consent, retention policy) are a programme/legal workstream, not a claim this
 repository makes.
 
@@ -115,36 +116,53 @@ contacted, so no real report is ever sent to a provider under evaluation.
 - WhatsApp delivery of the verification link through Kapso's v24 Meta endpoint with the approved
   `report_ready` template (`apps/api/src/channels.ts`); the Meta business account is still under
   review. Email degrades cleanly.
-- iOS 1.0 built with EAS (`apps/frontend/eas.json`) and submitted to App Store review on
-  2026-09-29; not yet approved.
+- iOS app built with EAS (`apps/frontend/eas.json`). 1.0 was submitted to App Store review on
+  2026-09-29; 1.1.0, with the face check and the programme pass turned on, is in review and not
+  yet approved.
+- Community confirmations: an independent nearby report of the same task counts toward the task's
+  target (`GET /proof/:hash/confirmations`), shown on the reporter's status screen. On a
+  high-assurance task only participant-confirmed reports count.
+- Missions within reach: an assignment can be reported only within 25 km of its area
+  (`REPORTABLE_KM`, compared on the phone from coarse cells); the rest are listed as missions
+  around the world.
+- Opt-in photo sharing: a reporter can share a report's photos with the programme team, or approve a
+  coordinator's request for them. Photos are sealed on the phone to the programme key, stored as
+  ciphertext behind an S3-compatible port (`EVIDENCE_STORAGE`, `none` by default) and purged after
+  `EVIDENCE_RETENTION_DAYS` (90). They never reach `/verify`, the chain or a notification.
+- Coordinator review in the app (Me → Coordinator review): a RevenueCat subscription unlocks the
+  report list, accept/reject and a summary the coordinator can email (counts and activity names
+  only, drafted in the phone's mail app); the CSV export stays on the web dashboard. iOS offer
+  codes can be redeemed from the paywall.
+  Reporting is free.
 - A programme pass (group-membership proof) generated on the phone: a Semaphore v4 prover (depth
   10, Rust + `circom-prover`) in `packages/zk-prover`, wrapped by `apps/frontend/modules/prufture-zk`
   (iOS and Android). A hidden benchmark route, `apps/frontend/app/zk-bench.tsx`, measured about
   55 ms per proof on one iPhone.
-- **v1.1 (in preparation, off by default):** with the pass turned on, the app proves membership for
+- **v1.1 (off by default in code, turned on in the production build):** with the pass on, the app
+  proves membership for
   each report after it syncs, binding the proof to the report hash and to a scope it reads from the
   api (`GET /personhood/scope`; the phone no longer computes it). The result (`verified`, `invalid`,
   `reused` or `unavailable`) is kept on the phone and shown on the report's status screen; an
   `unavailable` check is retried on later sync passes (at most 5 tries within 7 days). The Me screen
   explains in-person enrolment and shows whether the phone's code is on the programme list. Proving
-  never blocks capture, saving or syncing. It stays off until
-  `EXPO_PUBLIC_PERSONHOOD_PROVIDER=semaphore` is set in the build and `PERSONHOOD_PROVIDER=semaphore`
-  on the api; v1.0 does not include it.
+  never blocks capture, saving or syncing. It is on only when
+  `EXPO_PUBLIC_PERSONHOOD_PROVIDER=semaphore` is set in the build (the production EAS profile sets
+  it) and `PERSONHOOD_PROVIDER=semaphore` on the api; v1.0 does not include it.
 - Server-side verification of those membership proofs in `apps/api/src/personhood.ts`, with
   coordinator enrolment, scope and proof routes, off by default (enabled only by
   `PERSONHOOD_PROVIDER=semaphore`). Staff enrol codes from the web dashboard.
-- An optional one-time face check through AWS Rekognition Face Liveness, off by default on both
-  sides. The api adapter (`LIVENESS_PROVIDER=aws`) opens single-use sessions behind a per-IP limit
+- An optional one-time face check through AWS Rekognition Face Liveness, off by default in code
+  and turned on in the production build. The api adapter (`LIVENESS_PROVIDER=aws`) opens single-use sessions behind a per-IP limit
   and a daily cap, and keeps only a pass/fail boolean. The app flow (`app/face-check.tsx`, enabled
   by `EXPO_PUBLIC_LIVENESS_PROVIDER=aws`) runs the iOS capture in
   `apps/frontend/modules/prufture-liveness` (official Swift SDK) and attaches the resulting signed
   ticket to later reports. It is a liveness verdict only: not identification and not uniqueness.
-- Automated tests: `packages/core` 22 · `apps/api` 368 · `apps/backend` 91 · `apps/frontend` 345
-  (826 total).
+- Automated tests: `packages/core` 22 · `apps/api` 375 · `apps/backend` 93 · `apps/frontend` 361
+  (851 total).
 
 **Scoped next, not implemented:** hardware attestation / TEE signing; App Store approval and
-Play Store publication; releasing v1.1 with the programme pass turned on (measured on a device
-with a real enrolled group first); a server adapter
+Play Store publication; one enrolled phone reaching `verified` against the deployed api with a
+real programme group; a server adapter
 for verified attributes through a chosen vendor (see *Replacing Dwellir and
 Neuro*); binding the sealed precise location and a membership commitment into a schema v2.
 
@@ -322,7 +340,7 @@ and MOSIP's statement that the platform
 
 ## Plan status
 
-As of 2026-09-28. "Done" means the code is merged and covered by tests. An exit criterion that needs
+As of 2026-09-30. "Done" means the code is merged and covered by tests. An exit criterion that needs
 live credentials, a provider sandbox, or a programme decision is listed as open, even when the code
 behind it is finished.
 
@@ -338,7 +356,9 @@ behind it is finished.
 | Hardening | Caps on signed field sizes at `/sync`; CSV formula injection neutralised in both exporters; store extras cannot reach `/proof`; explicit timeouts on every delivery channel; malformed bodies answer 400, never 500; a body-size cap on every route; no adapter error can carry an endpoint URL |
 | Public write routes | `/notify` sends only to the fixed programme recipient, with a per-proof cooldown; `/liveness-result` records only a verdict signed by the server at `/verify-identity`, never one claimed by the caller; the liveness verdict and the sealed precise location are write-once |
 | CI | Typecheck and tests on Node 20 and 22 for every push and pull request |
-| Programme pass (v1.1, off) | On-device proof after sync with the api-derived scope; per-report outcome on the status screen; retry of `unavailable`; in-person enrolment explained on Me. Contract-tested against the real api routes |
+| Programme pass (v1.1) | On-device proof after sync with the api-derived scope; per-report outcome on the status screen; retry of `unavailable`; in-person enrolment on its own screen (Me → Programme pass). Contract-tested against the real api routes; on in the production build |
+| Face check (v1.1) | AWS Face Liveness session flow with a spend guard; CloudFormation stack `prufture-liveness` in `infra/aws-liveness.yaml`; on in the production build |
+| Community and coordinator | Nearby independent reports count as community confirmations; opt-in sealed photo sharing with a 90-day purge; in-app Coordinator review behind a RevenueCat entitlement, with iOS offer codes |
 
 ### Open
 
@@ -350,7 +370,8 @@ behind it is finished.
 | Phase 3 sandbox check | One consented end-to-end check before any adapter is labelled verified |
 | Phase 4 observation window | `shadow-compare` of `local-key` against `openzeppelin-relayer` in the sandbox: READY over 5 synthetic proofs. The real window runs once the relayer is deployed; keep `local-key` configured through it |
 | CI runners | GitHub Actions jobs on the account stopped starting on 2026-09-26 (billing). Until they run again, `npm run verify` locally is the gate |
-| Programme pass release | v1.1 build with the pass flags set, one enrolled phone reaching `verified` against the deployed api, then App Store review |
+| Programme pass release | One enrolled phone reaching `verified` against the deployed api, then App Store approval of 1.1 |
+| Photo sharing storage | One real shared photo stored and purged on the deployed api (`EVIDENCE_STORAGE` pointing at an S3-compatible bucket). With `none`, a shared photo waits on the phone |
 | Scoped next | Hardware attestation / TEE signing, App Store approval and Play Store publication, schema v2 with the sealed precise location |
 | Programme inputs | A baseline for the cost figure (reports per month, re-visit share, cost per trip) and the pilot legal preconditions — programme work, not code |
 
