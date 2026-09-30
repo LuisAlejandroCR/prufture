@@ -38,9 +38,11 @@ All tokens live in `app/globals.css` as CSS custom properties. Components use th
 
 The public journey speaks plainly. `/verify` lifecycle: Report received / Waiting for more
 confirmation / Report confirmed, plus honest "Report not found" and "Verification temporarily
-unavailable". The dashboard uses: Ready to review / Needs another report / Confirmed / Needs
-attention. The full public reference and any external-record link live only inside a collapsed
-`<details class="tech">` section.
+unavailable". "Report confirmed" needs enough pass-confirmed reports of the same task nearby
+(`lib/confirmations.ts`), never the on-chain attestation count; "Anonymous pass" comes only from
+the programme pass, and the face check has its own card. The dashboard uses: Ready to review /
+Needs another report / Confirmed / Needs attention. The full public reference and any
+external-record link live only inside a collapsed `<details class="tech">` section.
 
 ## Shared chrome
 

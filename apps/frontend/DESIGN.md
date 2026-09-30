@@ -44,7 +44,9 @@ same one warm palette used by `apps/backend/app/globals.css`.
 ## Product language
 
 The reporter journey uses friendly words only. `friendlyStatus()` maps the stored queue status
-to: Ready to send / Sending / Sent / Waiting for another report / Confirmed / Needs your attention.
+to: Ready to send / Sending / Sent / Being recorded / Recorded publicly / Needs your attention.
+"Recorded publicly" is the on-chain record, never a community confirmation: "Confirmed" is used
+only once an assignment's community count is met (`src/progress.ts`).
 The words blockchain, wallet, gas, relayer, hash, signature, attestation, transaction, and
 zero-knowledge do not appear in any screen. `status/[id].tsx` keeps a collapsed "Technical
 details" section for demo or expert users; it still shows no PII and no exact location.
@@ -70,16 +72,19 @@ back controls.
 
 `app/(tabs)/index.tsx` merges the old Home and Tasks tabs (Alternative C, screen 1). Top to
 bottom: `BrandMark` + `OfflinePill` (only without signal), time-of-day greeting, a private
-contribution strip counting **confirmed reports** (never "helped", see `src/home.ts`), resume and
+contribution strip counting **recorded reports** (never "helped", see `src/home.ts`), resume and
 saved-on-this-phone notices, then "Missions near you · Approximate areas only" with a List / Map
-toggle. List shows a short map preview; Map shows a tall one. Both draw 5-char cells as shaded
+toggle. A mission is reportable only within 25 km of the reporter's cell (`REPORTABLE_KM`,
+checked on the phone); the rest are listed view-only under "Missions around the world", and the
+map still shows every mission. Self-started reports work anywhere. List shows a short map preview; Map shows a tall one. Both draw 5-char cells as shaded
 rectangles with no centre pin (`CellMap`). Mission rows use `CategoryBadge` (soft category tint +
 category icon), the first closed question, and "Nearby area" or a rounded distance. A final row
 opens the full catalog.
 
 ## Polish (Alternative C)
 
-- Every icon container is round: `Row`, Help, Intro facts and Me toggles match `CategoryBadge`.
+- Every icon container is round: `Row`, Help, Intro facts and the Accessibility toggles match
+  `CategoryBadge`.
 - My reports rows lead with the task's `CategoryBadge`, like Missions.
 - Missions remembers List or Map across launches (`src/view-pref.ts`, secure store, default List).
 - While `EXAMPLE_ASSIGNMENTS` is true, Missions shows "Example missions for this pilot", so demo
@@ -105,10 +110,20 @@ opens the full catalog.
 - Live camera: numbered step circles (sage check done, terracotta current, rails between) above
   the prompt, and a 260 ms white shutter flash over the viewfinder (skipped under reduce motion).
 - Status opens with the shared `TaskHeader` (category circle + title).
-- My reports: All / In progress / Confirmed chips with counts (`src/report-groups.ts`; "In
+- My reports: All / In progress / Recorded chips with counts (`src/report-groups.ts`; "In
   progress" = ready or waiting; counts always add up to All), with a calm empty line per filter.
 - Missions: pull to refresh re-runs the waiting-report sync; `Screen` takes optional
   `onRefresh` / `refreshing`.
+
+## Me
+
+`app/(tabs)/me.tsx` is short rows only; each opens its own screen. Top to bottom: a one-line
+contribution summary; **Your checks** (Face check, Programme pass; shown only when their flags
+are on); **Settings** (Data and privacy, Offline storage, Accessibility); **For coordinators**
+(Coordinator review); **Support** (Help, Contact support, Privacy policy, About Prufture). The
+programme pass code and its enrolment copy live on `app/programme-pass.tsx`, the Haptics and
+motion switches on `app/accessibility.tsx`. There is no Language row (English only) and no second
+"waiting to send" banner: the Offline storage row already says it.
 
 ## Links open in-app
 
@@ -193,12 +208,14 @@ keyed by the local reportId, shown on `status/[id]` as "Your private note"). It 
 ## Contribution (Pilot 1)
 
 No reward, points, gift, token, cash, or leaderboard wording anywhere (grep-verified: 0 hits).
-My reports opens with a **private contribution card** (growth scene, "N reports confirmed", "No
+My reports opens with a **private contribution card** (growth scene, "N reports recorded", "No
 ranking. Every useful report counts."), and Me repeats the summary. N counts reports, not photos,
-and only once every photo of a report is confirmed (`confirmedReportCount`). Visible only to the
-reporter and never linked to a public report. The status timeline (`status/[id]`) shows Saved on
-this phone / Sent to programme / Community reviewed / Confirmed, each with a one-line
-description.
+and only once every photo of a report is recorded publicly (`recordedReportCount`). Visible only
+to the reporter and never linked to a public report. The report screen (`status/[id]`) shows a
+compact horizontal stepper, Saved / Sent / Recorded, plus Confirmed for assignments that ask for
+community confirmations, with one line for the current step. Confirmed is done only when the live
+count of pass-confirmed nearby reports is met. The screen has one action (See public record) and
+pull to refresh.
 
 ## Feedback and celebration
 
@@ -223,7 +240,8 @@ turned celebrations off OR the OS reduce-motion setting is on):
   congratulations block that names what the reporter helped document. When celebrations are not
   allowed: no confetti, no motion, both haptics still fire, static success state.
 
-The "Celebrations and motion" and "Haptics" toggles live on the Me screen under Accessibility.
+The "Celebrations and motion" and "Haptics" toggles live on their own Accessibility screen
+(`app/accessibility.tsx`), reached from Me.
 
 The live camera (`report/capture`) and the optional selfie check (`report/identity`) are the only
 dark screens. The selfie check's large gesture glyph is decorative: it does not scale with Larger
@@ -247,7 +265,7 @@ and shared component with the TypeScript compiler:
   Every `Image` has a label or is explicitly decorative. Every route screen has a heading, so the
   rotor's Headings list works (the camera's instruction is the heading on the camera screens).
 - Compound items read as one element (`accessible` + one label): photo slots, the contribution
-  card, and each status timeline stage. A stage says in words what its dot shows in colour
+  card, and each status stepper stage. A stage says in words what its dot shows in colour
   ("Done", "Current step", "Not yet", `stageSpoken` in `src/announce.ts`).
 - Photos set `accessibilityIgnoresInvertColors`, so iOS Smart Invert never shows them as negatives.
 
