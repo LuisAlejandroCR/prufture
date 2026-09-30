@@ -22,7 +22,7 @@ test("Me explains how a reporter joins: in person, the coordinator adds the code
 });
 
 test("Data and privacy lists the pass only when it is on", () => {
-  assert.match(privacy, /personhoodProvider\(\) === "semaphore" \? \[\.\.\.ITEMS, PASS_ITEM\] : ITEMS/);
+  assert.match(privacy, /\.\.\.\(personhoodProvider\(\) === "semaphore" \? \[PASS_ITEM\] : \[\]\)/);
   assert.match(privacy, /does not send the code, your name, phone number or location/);
 });
 

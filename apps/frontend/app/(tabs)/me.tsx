@@ -15,7 +15,8 @@ import {
   setCelebrationsEnabled,
   setHapticsEnabled,
 } from "../../src/feedback";
-import { personhoodProvider } from "../../src/flags";
+import { loadLivenessPass, passUntilLabel } from "../../src/face-liveness";
+import { livenessProvider, personhoodProvider } from "../../src/flags";
 import { confirmedReportCount } from "../../src/home";
 import { getCommitment, getEnrolment } from "../../src/personhood-device";
 import type { Enrolment } from "../../src/personhood-proof";
@@ -34,6 +35,8 @@ export default function MeScreen() {
   const [passCode, setPassCode] = useState<string | null>(null);
   const [passError, setPassError] = useState(false);
   const [enrolment, setEnrolment] = useState<Enrolment>("unknown");
+  const faceCheckOn = livenessProvider() === "aws";
+  const [faceCheckUntil, setFaceCheckUntil] = useState<number | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -48,6 +51,7 @@ export default function MeScreen() {
           .then(setEnrolment)
           .catch(() => setEnrolment("unknown"));
       }
+      if (faceCheckOn) void loadLivenessPass().then((p) => setFaceCheckUntil(p?.usableUntil ?? null));
       void hydrateFeedbackSettings().then(() => {
         setHaptics(isHapticsEnabled());
         setCelebrations(isCelebrationsEnabled());
@@ -63,7 +67,7 @@ export default function MeScreen() {
           setConfirmed(0);
           setActivities(0);
         });
-    }, [passOn]),
+    }, [passOn, faceCheckOn]),
   );
 
   return (
@@ -114,6 +118,14 @@ export default function MeScreen() {
           subtitle={pending === 0 ? "Nothing waiting" : `${pending} waiting to send`}
           onPress={() => router.push("/updates")}
         />
+        {faceCheckOn ? (
+          <Row
+            icon="shield"
+            title="Face check"
+            subtitle={faceCheckUntil ? `Done until ${passUntilLabel(faceCheckUntil)}` : "Optional, once. Not needed to report"}
+            onPress={() => router.push("/face-check")}
+          />
+        ) : null}
         {passOn ? (
           <View style={styles.passRow}>
             <View style={styles.toggleIcon}><Icon name="programme" size={20} color={color.text} /></View>

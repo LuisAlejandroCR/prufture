@@ -133,16 +133,19 @@ contacted, so no real report is ever sent to a provider under evaluation.
 - Server-side verification of those membership proofs in `apps/api/src/personhood.ts`, with
   coordinator enrolment, scope and proof routes, off by default (enabled only by
   `PERSONHOOD_PROVIDER=semaphore`). Staff enrol codes from the web dashboard.
-- `apps/frontend/modules/prufture-liveness` wraps AWS Face Liveness (official Swift SDK). It is
-  dormant, and the server has no liveness adapter for it yet (`apps/api/src/assurance.ts` offers
-  only `none`).
-- Automated tests: `packages/core` 22 · `apps/api` 360 · `apps/backend` 90 · `apps/frontend` 328
-  (800 total).
+- An optional one-time face check through AWS Rekognition Face Liveness, off by default on both
+  sides. The api adapter (`LIVENESS_PROVIDER=aws`) opens single-use sessions behind a per-IP limit
+  and a daily cap, and keeps only a pass/fail boolean. The app flow (`app/face-check.tsx`, enabled
+  by `EXPO_PUBLIC_LIVENESS_PROVIDER=aws`) runs the iOS capture in
+  `apps/frontend/modules/prufture-liveness` (official Swift SDK) and attaches the resulting signed
+  ticket to later reports. It is a liveness verdict only: not identification and not uniqueness.
+- Automated tests: `packages/core` 22 · `apps/api` 368 · `apps/backend` 91 · `apps/frontend` 345
+  (826 total).
 
 **Scoped next, not implemented:** hardware attestation / TEE signing; App Store approval and
 Play Store publication; releasing v1.1 with the programme pass turned on (measured on a device
 with a real enrolled group first); a server adapter
-for selfie liveness and verified attributes through a chosen vendor (see *Replacing Dwellir and
+for verified attributes through a chosen vendor (see *Replacing Dwellir and
 Neuro*); binding the sealed precise location and a membership commitment into a schema v2.
 
 ---
@@ -330,7 +333,7 @@ behind it is finished.
 | Core pipeline | Offline capture → sha256 + ed25519 → SQLite queue → auto-sync; a live EAS attestation on Base Sepolia; public `/verify` and `/dashboard`; WhatsApp delivery (see *What runs today*) |
 | Phase 1 — RPC | `RPC_URL`, with `DWELLIR_RPC_URL` kept as a deprecated fallback; switching provider is a configuration change; `RPC_FALLBACK_URLS` failover; the `rpc-check` suite, passed live against two independent public endpoints |
 | Phase 2 — submission | `AttestationSubmitter` port with `local-key`, `openzeppelin-relayer` and `none` adapters; fail-closed allowlist (chain, contract, `attest()` selector, schema, zero value); idempotency by `proofHash` checked before any transaction; explicit RPC timeout |
-| Phase 3 — assurance | Neuro removed. `LivenessPort` with a `none` adapter only, off; the minimal verdict and a throwing or non-conforming adapter are contract-tested at the port; the re-attachable verified-attribute mode is gone |
+| Phase 3 — assurance | Neuro removed. `LivenessPort` with a `none` adapter and an `aws` session-flow adapter, both off by default, `/liveness/session` rate-limited per IP and capped per day; the minimal verdict and a throwing or non-conforming adapter are contract-tested at the port; the re-attachable verified-attribute mode is gone |
 | Phase 4 — cutover | Synthetic-only side-by-side comparison enforced in code; `shadow-compare` holds a cutover on any divergence or empty run |
 | Hardening | Caps on signed field sizes at `/sync`; CSV formula injection neutralised in both exporters; store extras cannot reach `/proof`; explicit timeouts on every delivery channel; malformed bodies answer 400, never 500; a body-size cap on every route; no adapter error can carry an endpoint URL |
 | Public write routes | `/notify` sends only to the fixed programme recipient, with a per-proof cooldown; `/liveness-result` records only a verdict signed by the server at `/verify-identity`, never one claimed by the caller; the liveness verdict and the sealed precise location are write-once |
