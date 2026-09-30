@@ -83,6 +83,13 @@ services:
       # /precise-location.
       - key: REQUIRE_EVIDENCE_TOKEN
         sync: false
+      # Programme pass: "semaphore" turns it on.
+      - key: PERSONHOOD_PROVIDER
+        sync: false
+      # Who may enrol members and start rounds: the dashboard's COORDINATOR_APP_USER_ID (comma
+      # separated). Empty closes enrolment.
+      - key: PERSONHOOD_ADMIN_APP_USER_IDS
+        sync: false
       # Paid sessions per UTC day across all callers (default 200; 0 closes the route).
       - key: LIVENESS_SESSION_DAILY_CAP
         sync: false

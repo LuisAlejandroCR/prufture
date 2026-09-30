@@ -55,6 +55,7 @@ import { sendVerifyUrl, type Channel } from "./channels.js";
 import { issueTicket, readTicket } from "./liveness-ticket.js";
 import { maybeNotify } from "./notify.js";
 import {
+  APP_USER_HEADER,
   isReviewStatus,
   requireCoordinator,
   REVIEW_NOTE_MAX,
@@ -136,6 +137,8 @@ app.get("/health", (c) =>
     ok: true,
     chainId: env.chainId,
     coordinatorBilling: Boolean(env.revenuecatSecretKey && env.revenuecatProjectId && coordinatorEntitlementId()),
+    // Whether anyone may enrol members (PERSONHOOD_ADMIN_APP_USER_IDS); never who.
+    personhoodEnrolment: env.personhoodAdminAppUserIds.length > 0,
   }),
 );
 
@@ -587,6 +590,17 @@ app.use("/coordinator/*", requireCoordinator);
 
 // Enrolment, coordinator-run: the coordinator adds a commitment the reporter shows them in person.
 // The coordinator therefore knows whose commitment it is; the proofs are unlinkable to the api only.
+// Enrolment decides who counts as a distinct member, which is what community confirmations rest on.
+// coordinator_pro alone is not enough: any subscriber holds it and could enrol their own commitments
+// or start a new round for any programme. Only the programme admins (the dashboard's account) may.
+app.use("/coordinator/personhood/*", async (c, next) => {
+  const caller = c.req.header(APP_USER_HEADER)?.trim() ?? "";
+  if (!env.personhoodAdminAppUserIds.includes(caller)) {
+    return c.json({ error: "programme admin required" }, 403);
+  }
+  await next();
+});
+
 app.post("/coordinator/personhood/enrol", async (c) => {
   const body = await readJsonObject(c);
   if (!body) return c.json({ error: "invalid json" }, 400);
