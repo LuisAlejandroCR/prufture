@@ -1,6 +1,6 @@
-<!-- packages/zk-prover/NOTICE.md: origen y licencias de los binarios de terceros de este crate,
-     con sus sha256. Distinto de docs/zk_semaphore_plan.md (plan y verificación): aquí solo va
-     de dónde viene cada artefacto y bajo qué licencia se usa. -->
+<!-- packages/zk-prover/NOTICE.md: origin, license, and sha256 of each third-party artifact in this
+     crate, plus how to build and gate the native prover.
+     Distinct from the root LICENSE, which covers Prufture's own source code. -->
 
 # Third-party artifacts
 

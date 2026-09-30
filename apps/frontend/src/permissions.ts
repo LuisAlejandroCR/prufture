@@ -11,7 +11,7 @@ export interface PermissionState {
   /** Camera is REQUIRED-HARD: no camera means no capture and no report. */
   camera: PermissionStatus;
   /** Location is REQUIRED-HARD: proof of where the activity happened is the point of the
-   *  product. Denied -> the report cannot be submitted (see docs/location_privacy.md). */
+   *  product. Denied -> the report cannot be submitted. */
   location: PermissionStatus;
 }
 

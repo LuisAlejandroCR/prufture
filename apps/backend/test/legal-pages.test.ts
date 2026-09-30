@@ -22,7 +22,7 @@ const PAGES: [string, string][] = [
   ["support", SUPPORT],
 ];
 
-// AGENTS.md / CLAUDE.md: never claim a guarantee the code does not implement.
+// Honesty rule: never claim a guarantee the code does not implement.
 const BANNED = [
   "gdpr-compliant",
   "gdpr compliant",

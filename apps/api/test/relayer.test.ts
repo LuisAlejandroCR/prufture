@@ -1,5 +1,5 @@
 // relayer.test.ts: exercises the EAS schema encoding and the degradation contract.
-// It does not hit the chain — the real attest() tx is proven in docs/verification.md.
+// It does not hit the chain — the real attest() tx is linked from the README.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";

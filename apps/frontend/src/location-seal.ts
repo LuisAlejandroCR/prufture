@@ -1,6 +1,6 @@
 // location-seal.ts: seals the precise location on-device to the programme team's X25519 public key
 // (ephemeral X25519 -> HKDF-SHA256 -> XChaCha20-Poly1305); the app never holds a decrypt key. This
-// precise tier is never signed and never reaches the chain (see docs/location_privacy.md).
+// precise tier is never signed and never reaches the chain.
 
 import { xchacha20poly1305 } from "@noble/ciphers/chacha";
 import { x25519 } from "@noble/curves/ed25519";

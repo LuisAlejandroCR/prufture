@@ -1,5 +1,5 @@
 // relayer.invariant.test.ts: properties that must hold for EVERY payload, always.
-// These encode the AGENTS.md rules for the relayer: least privilege (attest() only),
+// These encode the project rules for the relayer: least privilege (attest() only),
 // no funds ever move, zero PII on the wire, and the user flow never throws.
 
 import { test } from "node:test";

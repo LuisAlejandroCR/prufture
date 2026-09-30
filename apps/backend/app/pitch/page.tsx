@@ -1,6 +1,6 @@
 // page.tsx: the public /pitch route — a 6-slide deck built server-side and paged by Deck.tsx. Slides
-// 4-6 carry QR codes to the app, dashboard, a real proof and the repo. Content tracks docs/verification.md
-// and docs/location_privacy.md; unknowns render as visible "TBD:" chips or QR placeholders.
+// 4-6 carry QR codes to the app, dashboard, a real proof and the repo. Content tracks verified
+// on-chain evidence; unknowns render as visible "TBD:" chips or QR placeholders.
 
 import { Fragment } from "react";
 import Deck from "./Deck";
@@ -11,7 +11,7 @@ export const metadata = {
   description: "Proof at capture: the pitch for the FIRSTBLOCK-ATHON submission.",
 };
 
-// Known on-chain evidence (docs/verification.md, "Real EAS attestation on Base Sepolia").
+// Known on-chain evidence: the real EAS attestation on Base Sepolia.
 const TX_HASH = "0xee879341dbb965363bf37e1c3c8b56af8fdc732902ff3f736e6389d6b0994a9b";
 const ATTESTATION_UID = "0x4798879a555b6442a876a9b9a9dacfd7c3a73c3bd7fb3978f492b0fd72522905";
 const EASSCAN_TX = `https://base-sepolia.easscan.org/attestation/view/${ATTESTATION_UID}`;
