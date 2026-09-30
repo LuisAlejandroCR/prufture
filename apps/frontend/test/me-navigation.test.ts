@@ -24,14 +24,16 @@ test("Help stays focused on guidance instead of repeating the privacy screen", (
 test("Contact support opens a native destination with safe next steps", () => {
   assert.match(me, /router\.push\("\/support"\)/);
   assert.doesNotMatch(me, /siteUrl\("support"\)/);
+  assert.match(me, /siteUrl\("privacy"\)/, "the full privacy policy stays reachable in the app (App Store 5.1.1)");
+  assert.match(support, /siteUrl\("support"\)/, "support keeps a real contact route");
   assert.match(support, /router\.push\("\/help"\)/);
   assert.match(support, /router\.push\("\/data-privacy"\)/);
   assert.match(support, /Do not send photos of people/);
 });
 
-test("the shared screen chrome uses the approved app icon", () => {
+test("the brand mark uses the approved app icon, once, and it is not announced twice", () => {
   assert.match(ui, /assets\/icon\.png/);
-  assert.match(ui, /screenAppIcon/);
+  assert.doesNotMatch(ui, /screenAppIcon/, "no floating icon on every screen: it overlapped header actions");
   assert.match(ui, /accessibilityLabel="Prufture"/);
   assert.match(ui, /accessible=\{false\}/);
 });

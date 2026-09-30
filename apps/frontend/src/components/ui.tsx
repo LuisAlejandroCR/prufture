@@ -98,14 +98,6 @@ export function Screen({
       behavior={kb.avoidBehavior}
       style={[s.screen, { paddingTop: screenPaddingTop(insets.top) }]}
     >
-      <View
-        pointerEvents="none"
-        style={[s.screenAppIcon, { top: screenPaddingTop(insets.top) + space.xs }]}
-        accessibilityRole="image"
-        accessibilityLabel="Prufture"
-      >
-        <Image source={APP_ICON} style={s.screenAppIconImage} accessible={false} accessibilityIgnoresInvertColors />
-      </View>
       {body}
       {footer ? (
         <View style={[s.footer, { paddingBottom: insets.bottom + space.md }]}>{footer}</View>
@@ -612,21 +604,6 @@ const s = StyleSheet.create({
   offlineCaption: { ...type.meta, fontSize: 11, color: color.muted },
   flex: { flex: 1 },
   screen: { flex: 1, backgroundColor: color.background },
-  screenAppIcon: {
-    position: "absolute",
-    right: space.lg,
-    zIndex: 2,
-    width: 30,
-    height: 30,
-    borderRadius: 9,
-    overflow: "hidden",
-    shadowColor: color.text,
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 2,
-  },
-  screenAppIconImage: { width: 30, height: 30 },
   footer: {
     paddingHorizontal: space.lg,
     paddingTop: space.md,

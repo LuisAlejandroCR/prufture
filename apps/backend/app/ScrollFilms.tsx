@@ -49,16 +49,14 @@ export function ScrollFilms() {
     if (!root) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
-    // On compact screens, a modest rate lift keeps the scroll chapters from feeling sluggish.
-    // The clip holds its last frame when it ends and scrolling is never blocked.
-    const playbackRate = window.matchMedia("(max-width: 640px)").matches ? 1.25 : 1;
+    // Play at normal speed once the pinned card is mostly on screen; the clip
+    // holds its last frame when it ends and scrolling is never blocked.
     const player = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           const video = entry.target.querySelector("video");
           if (!video) return;
           if (entry.isIntersecting) {
-            video.playbackRate = playbackRate;
             if (video.paused && !video.ended) void video.play().catch(() => undefined);
           } else {
             video.pause();

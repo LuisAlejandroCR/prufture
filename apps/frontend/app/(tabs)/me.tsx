@@ -18,6 +18,7 @@ import {
 import { loadLivenessPass, passUntilLabel } from "../../src/face-liveness";
 import { livenessProvider, personhoodProvider } from "../../src/flags";
 import { confirmedReportCount } from "../../src/home";
+import { openInApp, siteUrl } from "../../src/links";
 import { getCommitment, getEnrolment } from "../../src/personhood-device";
 import type { Enrolment } from "../../src/personhood-proof";
 import { listProofs } from "../../src/queue";
@@ -195,6 +196,7 @@ export default function MeScreen() {
         <SectionLabel>Support</SectionLabel>
         <Row icon="help" title="Help" subtitle="How the app works" onPress={() => router.push("/help")} />
         <Row icon="info" title="About Prufture" subtitle="Version" onPress={() => router.push("/about")} />
+        <Row icon="privacy" title="Privacy policy" subtitle="Opens inside the app" onPress={() => void openInApp(siteUrl("privacy"))} />
         <Row icon="community" title="Contact support" subtitle="Get the right next step" onPress={() => router.push("/support")} />
       </View>
 
