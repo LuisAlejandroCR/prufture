@@ -98,6 +98,21 @@ export function retryCandidates(rows: RowLike[], records: OutcomeRecord[], now: 
     .reverse();
 }
 
+/**
+ * One programme pass per report. Every photo of a report shares the task's scope, so once one photo
+ * is verified the others could only come back "reused". Session memory only; after a restart
+ * retryCandidates skips verified reports the same way. A row without a reportId is its own report.
+ */
+export function createReportGate() {
+  const verified = new Set<string>();
+  return {
+    shouldProve: (reportId?: string) => !reportId || !verified.has(reportId),
+    record: (reportId: string | undefined, outcome: PersonhoodOutcome) => {
+      if (reportId && outcome === "verified") verified.add(reportId);
+    },
+  };
+}
+
 export interface ReportPass {
   outcome: PersonhoodOutcome;
   /** "unavailable" only: true while a later sync pass will still try again. */

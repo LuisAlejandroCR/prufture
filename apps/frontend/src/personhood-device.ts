@@ -10,6 +10,7 @@ import { proveOnDevice, zkProverAvailable } from "../modules/prufture-zk";
 import { personhoodProgrammeId, personhoodProvider } from "./flags";
 import { createPersonhoodIdentity, type IdentityStorage } from "./personhood-identity";
 import {
+  createReportGate,
   recordAttempt,
   retryCandidates,
   toRecord,
@@ -128,12 +129,18 @@ export async function getEnrolment(apiUrl: string): Promise<Enrolment> {
 let chain: Promise<unknown> = Promise.resolve();
 // Queued or running, so the retry pass never schedules a proof the post-sync hook already has.
 const scheduled = new Set<string>();
+// Checked when the proof's turn comes, so a photo queued behind its verified sibling is skipped
+// without a record (it would only come back "reused"); the report already shows as accepted.
+const reports = createReportGate();
 
-function schedule(apiUrl: string, row: { proofHash: string; taskId: string }): Promise<PersonhoodOutcome> {
+type ProvableRow = { proofHash: string; taskId: string; reportId?: string };
+
+function schedule(apiUrl: string, row: ProvableRow): Promise<PersonhoodOutcome> {
   scheduled.add(row.proofHash);
   const run = chain
-    .then(() =>
-      recordAttempt(row.proofHash, outcomes, () =>
+    .then(async (): Promise<PersonhoodOutcome> => {
+      if (!reports.shouldProve(row.reportId)) return "verified";
+      const outcome = await recordAttempt(row.proofHash, outcomes, () =>
         attachPersonhoodProof(
           { proofHash: row.proofHash, taskId: row.taskId, programmeId: personhoodProgrammeId() },
           {
@@ -145,15 +152,23 @@ function schedule(apiUrl: string, row: { proofHash: string; taskId: string }): P
             getIdentity: identity.getIdentity,
           },
         ),
-      ),
-    )
+      );
+      reports.record(row.reportId, outcome);
+      return outcome;
+    })
     .finally(() => scheduled.delete(row.proofHash));
   chain = run.catch(() => undefined);
   return run;
 }
 
-/** SyncDeps.onSynced. Returns immediately; the proof runs after any earlier one finishes. */
-export function attachPersonhoodAfterSync(apiUrl: string, row: QueuedProof): Promise<PersonhoodOutcome> {
+/**
+ * SyncDeps.onSynced. Returns immediately; the proof runs after any earlier one finishes. The row comes
+ * from listProofs, so it carries the local reportId that groups a report's photos.
+ */
+export function attachPersonhoodAfterSync(
+  apiUrl: string,
+  row: QueuedProof & { reportId?: string },
+): Promise<PersonhoodOutcome> {
   if (!personhoodOn() || scheduled.has(row.proofHash)) return Promise.resolve("unavailable");
   return schedule(apiUrl, row);
 }
