@@ -122,12 +122,17 @@ contacted, so no real report is ever sent to a provider under evaluation.
 - Community confirmations: an independent nearby report of the same task counts toward the task's
   target (`GET /proof/:hash/confirmations`), shown on the reporter's status screen. On a
   high-assurance task only participant-confirmed reports count.
+- Missions within reach: an assignment can be reported only within 25 km of its area
+  (`REPORTABLE_KM`, compared on the phone from coarse cells); the rest are listed as missions
+  around the world.
 - Opt-in photo sharing: a reporter can share a report's photos with the programme team, or approve a
   coordinator's request for them. Photos are sealed on the phone to the programme key, stored as
   ciphertext behind an S3-compatible port (`EVIDENCE_STORAGE`, `none` by default) and purged after
   `EVIDENCE_RETENTION_DAYS` (90). They never reach `/verify`, the chain or a notification.
 - Coordinator review in the app (Me → Coordinator review): a RevenueCat subscription unlocks the
-  report list, accept/reject and CSV export; iOS offer codes can be redeemed from the paywall.
+  report list, accept/reject and a summary the coordinator can email (counts and activity names
+  only, drafted in the phone's mail app); the CSV export stays on the web dashboard. iOS offer
+  codes can be redeemed from the paywall.
   Reporting is free.
 - A programme pass (group-membership proof) generated on the phone: a Semaphore v4 prover (depth
   10, Rust + `circom-prover`) in `packages/zk-prover`, wrapped by `apps/frontend/modules/prufture-zk`
@@ -152,8 +157,8 @@ contacted, so no real report is ever sent to a provider under evaluation.
   by `EXPO_PUBLIC_LIVENESS_PROVIDER=aws`) runs the iOS capture in
   `apps/frontend/modules/prufture-liveness` (official Swift SDK) and attaches the resulting signed
   ticket to later reports. It is a liveness verdict only: not identification and not uniqueness.
-- Automated tests: `packages/core` 22 · `apps/api` 375 · `apps/backend` 93 · `apps/frontend` 352
-  (842 total).
+- Automated tests: `packages/core` 22 · `apps/api` 375 · `apps/backend` 93 · `apps/frontend` 361
+  (851 total).
 
 **Scoped next, not implemented:** hardware attestation / TEE signing; App Store approval and
 Play Store publication; one enrolled phone reaching `verified` against the deployed api with a
