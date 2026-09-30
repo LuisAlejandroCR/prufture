@@ -7,7 +7,7 @@ Pod::Spec.new do |s|
   s.summary        = 'AWS Face Liveness check presented from JS'
   s.description    = 'Wraps FaceLivenessDetectorView; returns only a completion status to JS.'
   s.author         = 'Prufture'
-  s.homepage       = 'https://github.com/LuisAlejandroCR/unicef-firstblockathon'
+  s.homepage       = 'https://github.com/LuisAlejandroCR/prufture'
   s.license        = 'MIT'
   s.platforms      = { :ios => '15.1' }
   s.source         = { :git => '' }

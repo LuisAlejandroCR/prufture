@@ -29,7 +29,7 @@ const SAMPLE_HASH = "992f8d6232210e99a6ed60a9c23dc22b3a304cd0c0d13bbdecf16f3c573
 const APP_URL: string | null = process.env.NEXT_PUBLIC_APP_STORE_URL || null;
 const DASHBOARD_URL: string | null = DEPLOY_BASE ? `${DEPLOY_BASE}/dashboard` : null;
 const VERIFY_URL: string | null = DEPLOY_BASE ? `${DEPLOY_BASE}/verify/${SAMPLE_HASH}` : null;
-const REPO_URL: string | null = "https://github.com/LuisAlejandroCR/unicef-firstblockathon";
+const REPO_URL: string | null = "https://github.com/LuisAlejandroCR/prufture";
 
 const slideBodies: React.ReactNode[] = [
   // 1 — title + context
