@@ -287,7 +287,7 @@ app.post("/verify-identity", async (c) => {
 app.post("/liveness-result", async (c) => {
   const raw = await readJsonObject(c);
   if (!raw) return c.json({ error: "invalid json" }, 400);
-  const body = raw as { proofHash?: unknown; ticket?: unknown };
+  const body = raw as { proofHash?: unknown; ticket?: unknown; evidenceToken?: unknown };
   const proofHash = typeof body.proofHash === "string" ? body.proofHash : "";
   if (!proofHash) return c.json({ error: "missing proofHash" }, 400);
   // The verdict comes from the server-signed ticket /verify-identity issued, never from the
@@ -297,6 +297,18 @@ app.post("/liveness-result", async (c) => {
 
   const entry = getProof(proofHash);
   if (!entry) return c.json({ error: "unknown proofHash" }, 404);
+  // Proof hashes are public and a ticket is not bound to a proof, so without this anyone holding a
+  // ticket could stamp a verdict on someone else's report, or lock out the real one (write-once).
+  // The device that first synced the proof holds its evidence token. A wrong token is always
+  // refused; a missing one only once LIVENESS_REQUIRE_TOKEN is on, since older builds do not send
+  // it. A proof synced without a token hash has nothing to prove against and is accepted.
+  const rec = getEvidenceRecord(proofHash);
+  if (rec?.tokenHash) {
+    const given = body.evidenceToken !== undefined;
+    if (given ? !tokenMatches(rec, body.evidenceToken) : env.livenessRequireToken) {
+      return c.json({ error: "evidence token required" }, 403);
+    }
+  }
   // Write-once. A retry of the same verdict is fine; a different one cannot replace it.
   if (typeof entry.verifiedPerson === "boolean") {
     const same = entry.verifiedPerson === verdict.verifiedPerson && (entry.verifiedPersonDegraded === true) === verdict.degraded;

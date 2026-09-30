@@ -79,6 +79,9 @@ services:
       # >= 32 chars, keeps liveness tickets valid across restarts.
       - key: LIVENESS_TICKET_SECRET
         sync: false
+      # "true" once every build in the field sends the evidence token with /liveness-result.
+      - key: LIVENESS_REQUIRE_TOKEN
+        sync: false
       # Paid sessions per UTC day across all callers (default 200; 0 closes the route).
       - key: LIVENESS_SESSION_DAILY_CAP
         sync: false

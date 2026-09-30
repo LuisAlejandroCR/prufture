@@ -2,6 +2,8 @@
 // /verify-identity). Nothing is signed or committed; frames + nonce leave the device exactly once and
 // are never stored — the api turns them into one verifiedPerson boolean against the proofHash.
 
+import { evidenceTokenFor } from "./evidence-token";
+
 export type Gesture = "center" | "left" | "right" | "blink";
 
 export interface Challenge {
@@ -127,11 +129,16 @@ async function tryAttach(
   item: PendingAttach,
   fetchImpl: typeof fetch = fetch,
 ): Promise<boolean> {
-  const res = await post(apiUrl, "/liveness-result", item, fetchImpl);
+  // The evidence token proves this device synced the proof: its hash is public, and the api will
+  // not take a verdict for it from anyone else. Without a token the api decides (older proofs).
+  const evidenceToken = await evidenceTokenFor(item.proofHash);
+  const body = evidenceToken ? { ...item, evidenceToken } : item;
+  const res = await post(apiUrl, "/liveness-result", body, fetchImpl);
   if (!res) return false; // offline: keep it pending
   // 404 = proof not on the api yet; keep it pending for the next sync pass. A 400 (ticket
-  // refused, e.g. expired) or 409 (a verdict is already recorded) will never succeed on retry.
-  return res.ok || res.status === 400 || res.status === 409;
+  // refused, e.g. expired), 403 (not this device's proof) or 409 (a verdict is already recorded)
+  // will never succeed on retry.
+  return res.ok || res.status === 400 || res.status === 403 || res.status === 409;
 }
 
 /**
