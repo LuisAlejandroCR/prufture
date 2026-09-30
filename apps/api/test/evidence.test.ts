@@ -5,7 +5,7 @@
 
 import { test, afterEach, beforeEach } from "node:test";
 import assert from "node:assert/strict";
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { generateKeyPair, signPayload } from "@proof/core";
 import { app } from "../src/index.js";
 import { APP_USER_HEADER } from "../src/coordinator.js";
@@ -34,14 +34,23 @@ function sealedBlob(len = 400): Uint8Array {
 const b64 = (b: Uint8Array) => Buffer.from(b).toString("base64");
 
 let counter = 0;
-async function syncedProof(): Promise<string> {
+/** proofHash -> the evidence token only the syncing device holds. */
+const tokens = new Map<string, string>();
+const tok = (hash: string) => tokens.get(hash) ?? "0".repeat(64);
+const sha256hex = (s: string) => createHash("sha256").update(s, "utf8").digest("hex");
+
+async function syncedProof(opts: { withToken?: boolean } = {}): Promise<string> {
   counter += 1;
   const hash = (counter.toString(16).padStart(8, "0") + "ab").padEnd(64, "e");
-  const res = await post("/sync", signPayload(
+  const token = randomBytes(32).toString("hex");
+  const signed = signPayload(
     { proofHash: hash, taskId: "solar-panel-installation", geohash: "9q8yy", capturedAt: "2026-09-06T14:32:00.000Z" },
     kp.privateKey,
-  ));
+  );
+  const withToken = opts.withToken ?? true;
+  const res = await post("/sync", withToken ? { ...signed, evidenceTokenHash: sha256hex(token) } : signed);
   assert.equal(res.status, 200);
+  if (withToken) tokens.set(hash, token);
   return hash;
 }
 
@@ -113,13 +122,13 @@ afterEach(() => {
 test("default storage is 'none': upload and coordinator request are typed unavailable, nothing stored", async () => {
   assert.equal(evidenceStorage().kind, "none");
   const hash = await syncedProof();
-  const res = await post("/evidence", { proofHash: hash, cipher: b64(sealedBlob()) });
+  const res = await post("/evidence", { proofHash: hash, token: tok(hash), cipher: b64(sealedBlob()) });
   assert.equal(res.status, 503);
   const j = (await res.json()) as { stored: boolean; result: { available: boolean; source: string } };
   assert.equal(j.stored, false);
   assert.equal(j.result.available, false);
   assert.equal(j.result.source, "evidence-storage");
-  assert.equal(getEvidenceRecord(hash), undefined);
+  assert.deepEqual(Object.keys(getEvidenceRecord(hash) ?? {}), ["tokenHash"], "only the token hash");
 });
 
 test("EVIDENCE_STORAGE=s3 with a missing setting degrades typed, naming the missing key only", async () => {
@@ -133,25 +142,25 @@ test("EVIDENCE_STORAGE=s3 with a missing setting degrades typed, naming the miss
 
 test("input validation: bad proofHash 400, unknown proof 404, non-base64 400, too short 400", async () => {
   stubWorld();
-  assert.equal((await post("/evidence", { proofHash: "nope", cipher: b64(sealedBlob()) })).status, 400);
-  assert.equal((await post("/evidence", { proofHash: "d".repeat(64), cipher: b64(sealedBlob()) })).status, 404);
+  assert.equal((await post("/evidence", { proofHash: "nope", token: tok("nope"), cipher: b64(sealedBlob()) })).status, 400);
+  assert.equal((await post("/evidence", { proofHash: "d".repeat(64), token: tok("d".repeat(64)), cipher: b64(sealedBlob()) })).status, 404);
   const hash = await syncedProof();
-  assert.equal((await post("/evidence", { proofHash: hash, cipher: "!!not base64!!" })).status, 400);
-  assert.equal((await post("/evidence", { proofHash: hash, cipher: b64(sealedBlob(SEALED_OVERHEAD)) })).status, 400);
-  assert.equal((await post("/evidence", { proofHash: hash })).status, 400);
+  assert.equal((await post("/evidence", { proofHash: hash, token: tok(hash), cipher: "!!not base64!!" })).status, 400);
+  assert.equal((await post("/evidence", { proofHash: hash, token: tok(hash), cipher: b64(sealedBlob(SEALED_OVERHEAD)) })).status, 400);
+  assert.equal((await post("/evidence", { proofHash: hash, token: tok(hash) })).status, 400);
 });
 
 test("size cap: a sealed blob over EVIDENCE_MAX_BYTES is 413 and never reaches storage", async () => {
   const { calls } = stubWorld();
   process.env.EVIDENCE_MAX_BYTES = "1000";
   const hash = await syncedProof();
-  const over = await post("/evidence", { proofHash: hash, cipher: b64(sealedBlob(1001)) });
+  const over = await post("/evidence", { proofHash: hash, token: tok(hash), cipher: b64(sealedBlob(1001)) });
   assert.equal(over.status, 413);
   // Far over the cap is stopped by the body limit before the JSON is even parsed.
-  const huge = await post("/evidence", { proofHash: hash, cipher: "A".repeat(10_000) });
+  const huge = await post("/evidence", { proofHash: hash, token: tok(hash), cipher: "A".repeat(10_000) });
   assert.equal(huge.status, 413);
   assert.equal(calls.filter((c) => c.method === "PUT").length, 0);
-  const atCap = await post("/evidence", { proofHash: hash, cipher: b64(sealedBlob(1000)) });
+  const atCap = await post("/evidence", { proofHash: hash, token: tok(hash), cipher: b64(sealedBlob(1000)) });
   assert.equal(atCap.status, 200);
 });
 
@@ -159,7 +168,7 @@ test("invariant: plaintext image bytes are refused and never reach storage", asy
   const { calls } = stubWorld();
   const hash = await syncedProof();
   for (const img of [JPEG, PNG, HEIC]) {
-    const res = await post("/evidence", { proofHash: hash, cipher: b64(img) });
+    const res = await post("/evidence", { proofHash: hash, token: tok(hash), cipher: b64(img) });
     assert.equal(res.status, 400);
     assert.match(((await res.json()) as { error: string }).error, /plaintext image refused/);
   }
@@ -174,7 +183,7 @@ test("s3: stores exactly the ciphertext, SigV4-signed, and talks to nothing but 
   process.env.PROGRAMME_EMAIL = "programme@example.test";
   try {
     const blob = sealedBlob();
-    const res = await post("/evidence", { proofHash: hash, cipher: b64(blob) });
+    const res = await post("/evidence", { proofHash: hash, token: tok(hash), cipher: b64(blob) });
     assert.equal(res.status, 200);
     assert.deepEqual(await res.json(), { status: "stored", duplicate: false });
 
@@ -191,11 +200,11 @@ test("s3: stores exactly the ciphertext, SigV4-signed, and talks to nothing but 
     assert.match(rec.cipherSha256 ?? "", /^[0-9a-f]{64}$/);
 
     // Idempotent retry; a different blob cannot replace it.
-    assert.deepEqual(await (await post("/evidence", { proofHash: hash, cipher: b64(blob) })).json(), {
+    assert.deepEqual(await (await post("/evidence", { proofHash: hash, token: tok(hash), cipher: b64(blob) })).json(), {
       status: "stored",
       duplicate: true,
     });
-    assert.equal((await post("/evidence", { proofHash: hash, cipher: b64(sealedBlob()) })).status, 409);
+    assert.equal((await post("/evidence", { proofHash: hash, token: tok(hash), cipher: b64(sealedBlob()) })).status, 409);
   } finally {
     delete process.env.NOTIFY_ENABLED;
     delete process.env.PROGRAMME_EMAIL;
@@ -205,12 +214,12 @@ test("s3: stores exactly the ciphertext, SigV4-signed, and talks to nothing but 
 test("storage failure is 503 typed, and the S3 error body / secret never reach the response", async () => {
   stubWorld({ s3Status: 500 });
   const hash = await syncedProof();
-  const res = await post("/evidence", { proofHash: hash, cipher: b64(sealedBlob()) });
+  const res = await post("/evidence", { proofHash: hash, token: tok(hash), cipher: b64(sealedBlob()) });
   assert.equal(res.status, 503);
   const text = await res.text();
   assert.ok(!text.includes(S3_SECRET));
   assert.match(text, /storage PUT 500/);
-  assert.equal(getEvidenceRecord(hash), undefined, "nothing recorded when the write failed");
+  assert.deepEqual(Object.keys(getEvidenceRecord(hash) ?? {}), ["tokenHash"], "nothing recorded when the write failed");
 });
 
 test("coordinator flow: request -> app sees it -> upload -> coordinator downloads the same bytes", async () => {
@@ -229,12 +238,12 @@ test("coordinator flow: request -> app sees it -> upload -> coordinator download
   assert.equal(before.status, 404);
   assert.equal(((await before.json()) as { state: string }).state, "requested");
 
-  const check = await post("/evidence-requests", { proofHashes: [hash, other, "junk"] });
+  const check = await post("/evidence-requests", { proofs: [hash, other, "junk"].map((h) => ({ proofHash: h, token: tok(h) })) });
   assert.deepEqual(await check.json(), { requested: [hash] });
 
   const blob = sealedBlob();
-  assert.equal((await post("/evidence", { proofHash: hash, cipher: b64(blob) })).status, 200);
-  assert.deepEqual(await (await post("/evidence-requests", { proofHashes: [hash] })).json(), { requested: [] });
+  assert.equal((await post("/evidence", { proofHash: hash, token: tok(hash), cipher: b64(blob) })).status, 200);
+  assert.deepEqual(await (await post("/evidence-requests", { proofs: [{ proofHash: hash, token: tok(hash) }] })).json(), { requested: [] });
 
   const dl = await get(`/coordinator/evidence/${hash}`, asCoordinator);
   assert.equal(dl.status, 200);
@@ -253,20 +262,20 @@ test("coordinator request refuses when storage is 'none' (would prompt the repor
   const hash = await syncedProof();
   const res = await post("/coordinator/evidence-request", { proofHash: hash }, asCoordinator);
   assert.equal(res.status, 503);
-  assert.equal(getEvidenceRecord(hash), undefined);
+  assert.deepEqual(Object.keys(getEvidenceRecord(hash) ?? {}), ["tokenHash"], "only the token hash");
 });
 
 test("/evidence-requests caps the list", async () => {
-  const res = await post("/evidence-requests", { proofHashes: Array.from({ length: 201 }, () => "a".repeat(64)) });
+  const res = await post("/evidence-requests", { proofs: Array.from({ length: 201 }, () => ({ proofHash: "a".repeat(64), token: "b".repeat(64) })) });
   assert.equal(res.status, 413);
-  assert.equal((await post("/evidence-requests", { proofHashes: "x" })).status, 400);
+  assert.equal((await post("/evidence-requests", { proofs: "x" })).status, 400);
 });
 
 test("no public route exposes the blob, its digest or its existence", async () => {
   stubWorld();
   const hash = await syncedProof();
   const blob = sealedBlob();
-  await post("/evidence", { proofHash: hash, cipher: b64(blob) });
+  await post("/evidence", { proofHash: hash, token: tok(hash), cipher: b64(blob) });
   const digest = getEvidenceRecord(hash)!.cipherSha256!;
 
   const bodies = [
@@ -289,13 +298,13 @@ test("retention purge: deletes blobs older than EVIDENCE_RETENTION_DAYS, keeps f
   const fresh = await syncedProof();
   const staleReq = await syncedProof();
   for (const h of [old, fresh]) {
-    assert.equal((await post("/evidence", { proofHash: h, cipher: b64(sealedBlob()) })).status, 200);
+    assert.equal((await post("/evidence", { proofHash: h, token: tok(h), cipher: b64(sealedBlob()) })).status, 200);
   }
   const now = Date.now();
   const days = (n: number) => new Date(now - n * 86_400_000).toISOString();
   putEvidenceRecord(old, { ...getEvidenceRecord(old)!, storedAt: days(91) });
   putEvidenceRecord(fresh, { ...getEvidenceRecord(fresh)!, storedAt: days(89) });
-  putEvidenceRecord(staleReq, { requestedAt: days(120) });
+  putEvidenceRecord(staleReq, { ...getEvidenceRecord(staleReq)!, requestedAt: days(120) });
 
   const summary = await purgeExpiredEvidence(evidenceStorage(), now);
   assert.deepEqual(summary, { purged: 1, failed: 0, expiredRequests: 1 });
@@ -303,13 +312,13 @@ test("retention purge: deletes blobs older than EVIDENCE_RETENTION_DAYS, keeps f
   assert.ok(calls.some((c) => c.method === "DELETE" && c.url.endsWith(`/evidence/${old}`)));
   assert.equal(objects.has(`/prufture-evidence/evidence/${old}`), false);
   assert.equal(objects.has(`/prufture-evidence/evidence/${fresh}`), true);
-  assert.deepEqual(Object.keys(getEvidenceRecord(old)!), ["purgedAt"], "only the purge time is kept");
-  assert.equal(getEvidenceRecord(staleReq), undefined);
+  assert.deepEqual(Object.keys(getEvidenceRecord(old)!).sort(), ["purgedAt", "tokenHash"], "only the purge time and token hash are kept");
+  assert.deepEqual(Object.keys(getEvidenceRecord(staleReq)!), ["tokenHash"], "the stale request is dropped, the token kept");
 
   const dl = await get(`/coordinator/evidence/${old}`, asCoordinator);
   assert.equal(dl.status, 404);
   assert.equal(((await dl.json()) as { state: string }).state, "expired");
-  assert.equal((await post("/evidence", { proofHash: old, cipher: b64(sealedBlob()) })).status, 410);
+  assert.equal((await post("/evidence", { proofHash: old, token: tok(old), cipher: b64(sealedBlob()) })).status, 410);
 
   // A second run is a no-op.
   assert.deepEqual(await purgeExpiredEvidence(evidenceStorage(), now), { purged: 0, failed: 0, expiredRequests: 0 });
@@ -333,4 +342,49 @@ test("EVIDENCE_RETENTION_DAYS defaults to 90 and ignores junk", async () => {
   assert.equal(env.evidenceRetentionDays, 90);
   process.env.EVIDENCE_RETENTION_DAYS = "30";
   assert.equal(env.evidenceRetentionDays, 30);
+});
+
+test("evidence token: a stranger who knows the public proofHash cannot upload for it or see its requests", async () => {
+  const { objects } = stubWorld();
+  const hash = await syncedProof();
+  const stranger = randomBytes(32).toString("hex");
+
+  // No token, a wrong token, or junk: 403, and nothing reaches storage.
+  for (const token of [undefined, stranger, "nope", tok(hash).toUpperCase()]) {
+    const res = await post("/evidence", { proofHash: hash, token, cipher: b64(sealedBlob()) });
+    assert.equal(res.status, 403, String(token));
+  }
+  assert.equal(objects.size, 0);
+
+  // Replaying the public proof with the attacker's own token hash cannot claim it after the fact.
+  const signed = signPayload(
+    { proofHash: hash, taskId: "solar-panel-installation", geohash: "9q8yy", capturedAt: "2026-09-06T14:32:00.000Z" },
+    kp.privateKey,
+  );
+  assert.equal((await post("/sync", { ...signed, evidenceTokenHash: sha256hex(stranger) })).status, 200);
+  assert.equal((await post("/evidence", { proofHash: hash, token: stranger, cipher: b64(sealedBlob()) })).status, 403);
+
+  // A coordinator request is invisible without the token, visible with it.
+  assert.equal((await post("/coordinator/evidence-request", { proofHash: hash }, asCoordinator)).status, 200);
+  const probe = await post("/evidence-requests", { proofs: [{ proofHash: hash, token: stranger }, { proofHash: hash }] });
+  assert.deepEqual(await probe.json(), { requested: [] });
+  const mine = await post("/evidence-requests", { proofs: [{ proofHash: hash, token: tok(hash) }] });
+  assert.deepEqual(await mine.json(), { requested: [hash] });
+
+  // The real device still uploads, and the request carried the token through.
+  assert.equal((await post("/evidence", { proofHash: hash, token: tok(hash), cipher: b64(sealedBlob()) })).status, 200);
+  assert.equal(getEvidenceRecord(hash)?.tokenHash, sha256hex(tok(hash)));
+});
+
+test("evidence token: a proof first synced without one can never take evidence", async () => {
+  stubWorld();
+  const hash = await syncedProof({ withToken: false });
+  const late = randomBytes(32).toString("hex");
+  const signed = signPayload(
+    { proofHash: hash, taskId: "solar-panel-installation", geohash: "9q8yy", capturedAt: "2026-09-06T14:32:00.000Z" },
+    kp.privateKey,
+  );
+  assert.equal((await post("/sync", { ...signed, evidenceTokenHash: sha256hex(late) })).status, 200);
+  assert.equal(getEvidenceRecord(hash), undefined, "a later sync cannot register a token");
+  assert.equal((await post("/evidence", { proofHash: hash, token: late, cipher: b64(sealedBlob()) })).status, 403);
 });

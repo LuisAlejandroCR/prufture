@@ -2,7 +2,7 @@
 // shape, refuse anything that looks like a plaintext image), key it in storage, and purge blobs past
 // EVIDENCE_RETENTION_DAYS. The api never holds a decrypt key; a blob is opaque ciphertext here.
 
-import { createHash } from "node:crypto";
+import { createHash, timingSafeEqual } from "node:crypto";
 import { env } from "./env.js";
 import type { EvidenceStorage } from "./evidence-storage.js";
 import { allEvidenceRecords, putEvidenceRecord } from "./store.js";
@@ -13,6 +13,28 @@ export const SEALED_OVERHEAD = 32 + 24 + 16;
 export const MAX_REQUEST_CHECK = 200;
 
 export const isProofHash = (x: unknown): x is string => typeof x === "string" && /^[0-9a-f]{64}$/.test(x);
+
+/** A per-proof evidence token, and its sha256, are both 32 bytes of lowercase hex. */
+export const isEvidenceToken = isProofHash;
+
+export function evidenceTokenHash(token: string): string {
+  return createHash("sha256").update(token, "utf8").digest("hex");
+}
+
+/**
+ * True only when the record holds a token hash (set on the proof's first /sync) and `token` hashes to
+ * it. Proof hashes are public, so this is what stops a stranger from uploading junk for someone else's
+ * report (write-once would lock the real photo out) or probing which reports a coordinator asked about.
+ */
+export function tokenMatches(rec: { tokenHash?: string } | undefined, token: unknown): boolean {
+  if (!rec?.tokenHash || !isEvidenceToken(token)) return false;
+  const a = Buffer.from(evidenceTokenHash(token), "hex");
+  const b = Buffer.from(rec.tokenHash, "hex");
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+
+/** The token hash to carry over when a record is rewritten, so no rewrite ever drops it. */
+export const keepToken = (rec: { tokenHash?: string } | undefined) => (rec?.tokenHash ? { tokenHash: rec.tokenHash } : {});
 
 /** Storage object key for a proof's sealed photo. proofHash is validated hex, so the key is safe. */
 export function evidenceKey(proofHash: string): string {
@@ -93,13 +115,13 @@ export async function purgeExpiredEvidence(
       if (!older(rec.storedAt)) continue;
       const res = await storage.delete(evidenceKey(hash)).catch(() => null);
       if (res?.available) {
-        putEvidenceRecord(hash, { purgedAt: new Date(now).toISOString() });
+        putEvidenceRecord(hash, { purgedAt: new Date(now).toISOString(), ...keepToken(rec) });
         summary.purged += 1;
       } else {
         summary.failed += 1;
       }
     } else if (!rec.storedAt && !rec.purgedAt && older(rec.requestedAt)) {
-      putEvidenceRecord(hash, undefined);
+      putEvidenceRecord(hash, rec.tokenHash ? keepToken(rec) : undefined);
       summary.expiredRequests += 1;
     }
   }

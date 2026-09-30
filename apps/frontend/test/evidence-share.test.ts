@@ -8,6 +8,7 @@ import assert from "node:assert/strict";
 import { x25519 } from "@noble/curves/ed25519";
 import { hashBytes } from "@proof/core";
 import { openEvidence } from "../src/evidence-seal.js";
+import { __setEvidenceSecretSource, deriveEvidenceToken } from "../src/evidence-token.js";
 import {
   __setEvidenceBackend,
   approveEvidenceRequest,
@@ -45,9 +46,14 @@ function photo(seed: number): Uint8Array {
   return Uint8Array.from([0xff, 0xd8, 0xff, 0xe0, ...MARKER, ...body]);
 }
 
+/** The device evidence secret for every test; tokens derive from it deterministically. */
+const SECRET = "5e".repeat(32);
+const tokenOf = (proofHash: string) => deriveEvidenceToken(SECRET, proofHash);
+
 let disk: string | null = null;
 beforeEach(() => {
   disk = null;
+  __setEvidenceSecretSource(async () => SECRET);
   __setEvidenceBackend({
     read: async () => disk,
     write: async (t) => {
@@ -135,8 +141,9 @@ test("invariant + round-trip: opt-in upload carries only ciphertext that opens t
 
   for (const s of sent) {
     assert.equal(s.url, "https://api.example.test/evidence");
-    const body = JSON.parse(s.body) as { proofHash: string; cipher: string };
-    assert.deepEqual(Object.keys(body).sort(), ["cipher", "proofHash"], "no other field on the wire");
+    const body = JSON.parse(s.body) as { proofHash: string; token: string; cipher: string };
+    assert.deepEqual(Object.keys(body).sort(), ["cipher", "proofHash", "token"], "no other field on the wire");
+    assert.equal(body.token, tokenOf(body.proofHash), "the upload carries this proof's own token");
     const opened = openEvidence(PRIV, Buffer.from(body.cipher, "base64"));
     assert.equal(hashBytes(opened), body.proofHash);
   }
@@ -168,7 +175,10 @@ test("coordinator request: nothing is sent until the reporter says yes", async (
   assert.deepEqual(await pendingEvidenceRequests(), [hash]);
   assert.equal(sent.filter((s) => s.url.endsWith("/evidence")).length, 0, "a request alone uploads nothing");
   const check = sent.find((s) => s.url.endsWith("/evidence-requests"))!;
-  assert.deepEqual(Object.keys(JSON.parse(check.body) as object), ["proofHashes"]);
+  // Each hash travels with its own token, and nothing else is in the body.
+  const asked = JSON.parse(check.body) as { proofs: { proofHash: string; token: string }[] };
+  assert.deepEqual(Object.keys(asked), ["proofs"]);
+  assert.deepEqual(asked.proofs.map((p) => p.token), asked.proofs.map((p) => tokenOf(p.proofHash)));
 
   const res = await approveEvidenceRequest([{ proofHash: hash, readPhoto: async () => p }], API, fetchImpl, PUB);
   assert.deepEqual(res, { ok: true, queued: 1, missing: 0 });
@@ -267,4 +277,21 @@ test("saveDraft: toggle on seals each saved photo into the outbox as ciphertext"
     __setDraftStoreBackend(null);
     __setNotesBackend(null);
   }
+});
+
+test("no evidence token (secret store unavailable): the photo stays queued and nothing is sent", async () => {
+  const p = photo(11);
+  await queueOptInEvidence([{ proofHash: hashBytes(p), bytes: p }], PUB);
+  __setEvidenceSecretSource(async () => null);
+  const { sent, fetchImpl } = fakeApi();
+  assert.deepEqual(await flushEvidenceOutbox(API, fetchImpl), { sent: 0, kept: 1, dropped: 0 });
+  assert.equal(sent.length, 0);
+  assert.deepEqual(await checkEvidenceRequests(API, [hashBytes(p)], fetchImpl), []);
+  assert.equal(sent.length, 0, "no request check without a token either");
+});
+
+test("403 (proof synced by an older app without a token) drops the queued photo", async () => {
+  const p = photo(12);
+  await queueOptInEvidence([{ proofHash: hashBytes(p), bytes: p }], PUB);
+  assert.deepEqual(await flushEvidenceOutbox(API, fakeApi({ evidenceStatus: 403 }).fetchImpl), { sent: 0, kept: 0, dropped: 1 });
 });

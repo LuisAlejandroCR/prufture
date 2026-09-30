@@ -66,9 +66,12 @@ import {
   decodeSealedBlob,
   evidenceKey,
   evidenceState,
+  isEvidenceToken,
   isProofHash,
+  keepToken,
   maxBase64Len,
   purgeExpiredEvidence,
+  tokenMatches,
 } from "./evidence.js";
 import { getEvidenceRecord, putEvidenceRecord } from "./store.js";
 
@@ -131,7 +134,7 @@ app.post("/sync", async (c) => {
   // the 1..N photos of one field report so the programme team gets ONE notification per report.
   const raw = await readJsonObject(c);
   if (!raw) return c.json({ error: "invalid json" }, 400);
-  const body = raw as unknown as SignedProof & { reportId?: string };
+  const body = raw as unknown as SignedProof & { reportId?: string; evidenceTokenHash?: unknown };
   if (!verifyProof(body)) return c.json({ error: "invalid signature" }, 400);
 
   // Trust boundary for location precision. The geohash is inside the signed payload, so the
@@ -155,7 +158,14 @@ app.post("/sync", async (c) => {
     typeof body.reportId === "string" && body.reportId && body.reportId.length <= MAX_REPORT_ID_LEN
       ? body.reportId
       : undefined;
+  const firstSync = !getProof(payload.proofHash);
   upsertProof(payload, reportId);
+  // Evidence token, FIRST sync only: until the device syncs, the proofHash exists nowhere else, so
+  // the first registration is the device's. A later /sync of the now-public proof (anyone can replay
+  // it) can never set or change the token hash.
+  if (firstSync && isEvidenceToken(body.evidenceTokenHash)) {
+    putEvidenceRecord(payload.proofHash, { ...getEvidenceRecord(payload.proofHash), tokenHash: body.evidenceTokenHash });
+  }
 
   // On-chain attestation is best-effort. A degraded relayer must not fail the sync:
   // the proof is safely queued server-side and returns 200 with status "synced".
@@ -359,6 +369,10 @@ app.post("/evidence", async (c) => {
   const proofHash = body.proofHash;
   if (!isProofHash(proofHash)) return c.json({ error: "invalid proofHash" }, 400);
   if (!getProof(proofHash)) return c.json({ error: "unknown proofHash" }, 404);
+  // Proof hashes are public; only the device that first synced this proof holds its token.
+  if (!tokenMatches(getEvidenceRecord(proofHash), body.token)) {
+    return c.json({ error: "evidence token required" }, 403);
+  }
 
   const decoded = decodeSealedBlob(body.cipher);
   if (!decoded.ok) {
@@ -378,6 +392,7 @@ app.post("/evidence", async (c) => {
   if (!result.available) return c.json({ stored: false, result }, 503);
   putEvidenceRecord(proofHash, {
     ...(rec?.requestedAt ? { requestedAt: rec.requestedAt } : {}),
+    ...keepToken(rec),
     storedAt: new Date().toISOString(),
     bytes: decoded.bytes.length,
     cipherSha256: decoded.sha256,
@@ -390,13 +405,20 @@ app.post("/evidence", async (c) => {
 app.post("/evidence-requests", async (c) => {
   const body = await readJsonObject(c);
   if (!body) return c.json({ error: "invalid json" }, 400);
-  if (!Array.isArray(body.proofHashes)) return c.json({ error: "proofHashes must be an array" }, 400);
-  if (body.proofHashes.length > MAX_REQUEST_CHECK) {
-    return c.json({ error: "too many proofHashes", max: MAX_REQUEST_CHECK }, 413);
+  if (!Array.isArray(body.proofs)) return c.json({ error: "proofs must be an array" }, 400);
+  if (body.proofs.length > MAX_REQUEST_CHECK) {
+    return c.json({ error: "too many proofs", max: MAX_REQUEST_CHECK }, 413);
   }
-  const requested = body.proofHashes
-    .filter(isProofHash)
-    .filter((h) => evidenceState(getEvidenceRecord(h)) === "requested");
+  // Each hash must come with its evidence token: a request is only revealed to the reporter's device,
+  // never to someone probing public proof hashes for which reports are under review.
+  const requested = (body.proofs as unknown[])
+    .map((p) => (p && typeof p === "object" ? (p as { proofHash?: unknown; token?: unknown }) : {}))
+    .filter((p): p is { proofHash: string; token: unknown } => isProofHash(p.proofHash))
+    .filter((p) => {
+      const rec = getEvidenceRecord(p.proofHash);
+      return tokenMatches(rec, p.token) && evidenceState(rec) === "requested";
+    })
+    .map((p) => p.proofHash);
   return c.json({ requested: [...new Set(requested)] }, 200);
 });
 
@@ -604,7 +626,9 @@ app.post("/coordinator/evidence-request", async (c) => {
   const rec = getEvidenceRecord(proofHash);
   const state = evidenceState(rec);
   if (state === "available") return c.json({ state }, 200);
-  if (state !== "requested") putEvidenceRecord(proofHash, { requestedAt: new Date().toISOString() });
+  if (state !== "requested") {
+    putEvidenceRecord(proofHash, { requestedAt: new Date().toISOString(), ...keepToken(rec) });
+  }
   return c.json({ state: "requested" }, 200);
 });
 

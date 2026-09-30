@@ -84,6 +84,12 @@ export interface EvidenceRecord {
   cipherSha256?: string;
   /** Set when the retention purge deleted the blob. */
   purgedAt?: string;
+  /**
+   * sha256 hex of the device's per-proof evidence token, registered on the proof's FIRST /sync only.
+   * /evidence and /evidence-requests require the matching token, so knowing a public proofHash is
+   * not enough to upload for, or learn about requests on, someone else's report.
+   */
+  tokenHash?: string;
 }
 
 // SWAP POINT: a JSON file needs a host with a persistent writable disk (Render disk, Railway or
@@ -230,6 +236,7 @@ function loadEvidence(value: unknown): void {
       rec.cipherSha256 = v.cipherSha256;
     }
     if (isShortString(v.purgedAt)) rec.purgedAt = v.purgedAt;
+    if (typeof v.tokenHash === "string" && /^[0-9a-f]{64}$/.test(v.tokenHash)) rec.tokenHash = v.tokenHash;
     if (Object.keys(rec).length > 0) evidence.set(hash, rec);
   }
 }

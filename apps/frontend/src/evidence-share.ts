@@ -4,6 +4,7 @@
 
 import { hashBytes } from "@proof/core";
 import { bytesToBase64, isProgrammeKey, sealEvidence } from "./evidence-seal";
+import { evidenceTokenFor } from "./evidence-token";
 
 /** Expo inlines EXPO_PUBLIC_* at build time. "" means photo sharing is not set up. */
 export function programmePubKey(): string {
@@ -189,12 +190,19 @@ export async function flushEvidenceOutbox(apiUrl: string, fetchImpl: typeof fetc
   const base = apiUrl.replace(/\/+$/, "");
   const keep: OutboxItem[] = [];
   for (const item of state.outbox) {
+    // Without this proof's token the api refuses the upload, so wait for the secret store instead.
+    const token = await evidenceTokenFor(item.proofHash);
+    if (!token) {
+      summary.kept += 1;
+      keep.push(item);
+      continue;
+    }
     let status = 0;
     try {
       const res = await fetchImpl(`${base}/evidence`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ proofHash: item.proofHash, cipher: item.cipher }),
+        body: JSON.stringify({ proofHash: item.proofHash, token, cipher: item.cipher }),
       });
       status = res.status;
     } catch {
@@ -203,7 +211,8 @@ export async function flushEvidenceOutbox(apiUrl: string, fetchImpl: typeof fetc
     if (status === 200 || status === 409) {
       summary.sent += 1;
       if (!state.shared.includes(item.proofHash)) state.shared.push(item.proofHash);
-    } else if (status === 410 || status === 400 || status === 413) {
+    } else if (status === 410 || status === 400 || status === 403 || status === 413) {
+      // 403: this proof was first synced without a token (an older app), so it can never take evidence.
       summary.dropped += 1;
     } else {
       summary.kept += 1;
@@ -229,10 +238,17 @@ export async function checkEvidenceRequests(
   const ask = [...new Set(proofHashes)].filter((h) => !answered.has(h)).slice(0, MAX_REQUEST_CHECK);
   if (ask.length === 0) return state.requests;
   try {
+    // Each hash travels with its token; the api only reveals requests to the device that holds it.
+    const proofs: { proofHash: string; token: string }[] = [];
+    for (const proofHash of ask) {
+      const token = await evidenceTokenFor(proofHash);
+      if (token) proofs.push({ proofHash, token });
+    }
+    if (proofs.length === 0) return state.requests;
     const res = await fetchImpl(`${apiUrl.replace(/\/+$/, "")}/evidence-requests`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ proofHashes: ask }),
+      body: JSON.stringify({ proofs }),
     });
     if (!res.ok) return state.requests;
     const data = (await res.json()) as { requested?: unknown };

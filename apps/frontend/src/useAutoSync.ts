@@ -8,6 +8,7 @@ import NetInfo from "@react-native-community/netinfo";
 import { attachPersonhoodAfterSync } from "./personhood-device";
 import { listProofs, markAttested, markSynced } from "./queue";
 import { syncEvidence } from "./evidence-share";
+import { evidenceTokenHashFor } from "./evidence-token";
 import { PENDING_STATUS, syncPending, type SyncSummary } from "./sync";
 
 // Expo inlines EXPO_PUBLIC_* at build time. Local-dev fallback only.
@@ -40,6 +41,7 @@ export function runPendingSync(): Promise<SyncSummary> {
     // Programme pass: a no-op unless EXPO_PUBLIC_PERSONHOOD_PROVIDER=semaphore and the prover is in
     // this build. Fire-and-forget; its outcome never changes the sync.
     onSynced: (row) => attachPersonhoodAfterSync(API_URL, row),
+    evidenceTokenHash: evidenceTokenHashFor,
   })
     .then(async (summary) => {
       // After the proofs: post any sealed photos the reporter agreed to share, and look for

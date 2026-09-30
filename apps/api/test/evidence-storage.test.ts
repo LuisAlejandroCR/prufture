@@ -91,6 +91,7 @@ test("store: __evidence__ round-trips, is whitelisted on load, and never becomes
     storedAt: "2026-09-02T00:00:00.000Z",
     bytes: 1234,
     cipherSha256: "a".repeat(64),
+    tokenHash: "b".repeat(64),
   });
   __flushForTests();
 
@@ -104,6 +105,7 @@ test("store: __evidence__ round-trips, is whitelisted on load, and never becomes
     storedAt: "2026-09-02T00:00:00.000Z",
     bytes: 1234,
     cipherSha256: "a".repeat(64),
+    tokenHash: "b".repeat(64),
   });
   assert.ok(getProof(hash));
   assert.equal(allProofs().length, 1, "__evidence__ is not loaded as a proof");
@@ -113,6 +115,7 @@ test("store: __evidence__ round-trips, is whitelisted on load, and never becomes
   edited.__evidence__![hash] = {
     storedAt: "2026-09-02T00:00:00.000Z",
     cipherSha256: "not-hex",
+    tokenHash: "B".repeat(64),
     plaintextPhoto: "/9j/4AAQSkZJRg",
     bytes: -1,
   };
