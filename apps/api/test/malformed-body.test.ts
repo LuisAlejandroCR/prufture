@@ -7,10 +7,10 @@ import assert from "node:assert/strict";
 import { generateKeyPair, signPayload } from "@proof/core";
 import { app } from "../src/index.js";
 
+// /notify is for coordinators (401 before the body is read); notify-route.test.ts covers its body.
 const POST_ROUTES = [
   "/sync",
   "/attest",
-  "/notify",
   "/verify-identity",
   "/liveness-result",
   "/precise-location",
@@ -48,7 +48,8 @@ test("/attest: a non-string proofHash is a 404, not a crash", async () => {
 
 test("/notify: a caller-supplied recipient of any size is refused before it reaches a provider", async () => {
   // The recipient used to be relayed verbatim into a provider request; it is now fixed
-  // server-side, so any `to` — oversized or not — is a 400 and never leaves the process.
+  // server-side, and the route is for coordinators, so an anonymous `to` — oversized or not — is
+  // refused (401) and never leaves the process. notify-route.test.ts covers a coordinator's `to`.
   const kp = generateKeyPair();
   const proofHash = "d".repeat(64);
   const synced = await app.request("/sync", {
@@ -70,6 +71,6 @@ test("/notify: a caller-supplied recipient of any size is refused before it reac
 
   for (const to of [`${"x".repeat(400)}@e.test`, "someone@example.org"]) {
     const res = await post("/notify", JSON.stringify({ proofHash, channel: "email", to }));
-    assert.equal(res.status, 400);
+    assert.equal(res.status, 401);
   }
 });

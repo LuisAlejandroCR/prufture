@@ -1,28 +1,45 @@
-// notify-route.test.ts: POST /notify is unauthenticated and proof hashes are public, so a caller-chosen
-// `to` made the programme's WhatsApp/email credentials an open relay. Holds the fixed-recipient contract:
-// the caller picks a channel, never a recipient, and a delivered re-send has a cooldown.
+// notify-route.test.ts: POST /notify re-sends a report's public link to the programme's fixed recipient.
+// Proof hashes are public, so an anonymous caller could walk /proofs and make the programme pay for a
+// message per proof: the route is for coordinators only. A caller-chosen `to` made the programme's
+// WhatsApp/email credentials an open relay, so the caller picks a channel, never a recipient, and a
+// delivered re-send has a cooldown.
 
 import { test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { randomBytes } from "node:crypto";
 import { signPayload, generateKeyPair } from "@proof/core";
 import { app } from "../src/index.js";
+import { APP_USER_HEADER } from "../src/coordinator.js";
 
 const kp = generateKeyPair();
-const KEYS = ["EMAIL_API_KEY", "EMAIL_FROM", "PROGRAMME_EMAIL", "KAPSO_API_KEY", "KAPSO_PHONE_NUMBER_ID", "PROGRAMME_WHATSAPP", "TELEGRAM_BOT_TOKEN", "PROGRAMME_TELEGRAM_CHAT_ID"];
+const KEYS = ["REVENUECAT_SECRET_KEY", "REVENUECAT_PROJECT_ID", "REVENUECAT_COORDINATOR_ENTITLEMENT_ID", "EMAIL_API_KEY", "EMAIL_FROM", "PROGRAMME_EMAIL", "KAPSO_API_KEY", "KAPSO_PHONE_NUMBER_ID", "PROGRAMME_WHATSAPP", "TELEGRAM_BOT_TOKEN", "PROGRAMME_TELEGRAM_CHAT_ID"];
 let saved: Record<string, string | undefined> = {};
 const realFetch = globalThis.fetch;
 let sent: { url: string; body: string }[] = [];
+let entitled = true;
 
 beforeEach(() => {
   saved = Object.fromEntries(KEYS.map((k) => [k, process.env[k]]));
   for (const k of KEYS) delete process.env[k];
   sent = [];
-  globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
-    sent.push({ url: String(url), body: String(init?.body ?? "") });
-    return new Response(JSON.stringify({ id: "msg_1" }), { status: 200, headers: { "content-type": "application/json" } });
-  }) as typeof fetch;
+  entitled = true;
+  process.env.REVENUECAT_SECRET_KEY = "sk_test";
+  process.env.REVENUECAT_PROJECT_ID = "proj1ab2c3d4";
+  process.env.REVENUECAT_COORDINATOR_ENTITLEMENT_ID = "entl0c00rd1n4";
+  providers(() => new Response(JSON.stringify({ id: "msg_1" }), { status: 200, headers: { "content-type": "application/json" } }));
 });
+
+/** Stub fetch: the coordinator check reaches RevenueCat; everything else is a delivery provider. */
+function providers(respond: () => Response): void {
+  globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
+    if (String(url).includes("revenuecat")) {
+      const items = entitled ? [{ entitlement_id: "entl0c00rd1n4" }] : [];
+      return new Response(JSON.stringify({ items }), { status: 200 });
+    }
+    sent.push({ url: String(url), body: String(init?.body ?? "") });
+    return respond();
+  }) as typeof fetch;
+}
 
 afterEach(() => {
   globalThis.fetch = realFetch;
@@ -32,8 +49,12 @@ afterEach(() => {
   }
 });
 
-const post = (body: unknown) =>
-  app.request("/notify", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+const post = (body: unknown, headers: Record<string, string> = { [APP_USER_HEADER]: "coordinator-1" }) =>
+  app.request("/notify", {
+    method: "POST",
+    headers: { "content-type": "application/json", ...headers },
+    body: JSON.stringify(body),
+  });
 
 async function syncedProof(): Promise<string> {
   const proofHash = randomBytes(32).toString("hex");
@@ -109,13 +130,38 @@ test("a delivered re-send starts a cooldown per proof and channel", async () => 
 test("a failed delivery does not start the cooldown, so it can be retried", async () => {
   configureEmail();
   const proofHash = await syncedProof();
-  globalThis.fetch = (async () => new Response("{}", { status: 503 })) as typeof fetch;
+  providers(() => new Response("{}", { status: 503 }));
   const first = (await (await post({ proofHash, channel: "email" })).json()) as { sent: boolean };
   assert.equal(first.sent, false);
 
-  globalThis.fetch = (async () =>
-    new Response(JSON.stringify({ id: "m" }), { status: 200, headers: { "content-type": "application/json" } })) as typeof fetch;
+  providers(() => new Response(JSON.stringify({ id: "m" }), { status: 200, headers: { "content-type": "application/json" } }));
   const second = await post({ proofHash, channel: "email" });
   assert.equal(second.status, 200);
   assert.equal(((await second.json()) as { sent: boolean }).sent, true);
+});
+
+test("an anonymous caller is refused before anything is sent", async () => {
+  configureEmail();
+  const proofHash = await syncedProof();
+  const res = await post({ proofHash, channel: "email" }, {});
+  assert.equal(res.status, 401);
+  assert.deepEqual(sent, []);
+});
+
+test("a caller without the coordinator plan is refused before anything is sent", async () => {
+  configureEmail();
+  const proofHash = await syncedProof();
+  entitled = false;
+  const res = await post({ proofHash, channel: "email" });
+  assert.equal(res.status, 402);
+  assert.deepEqual(sent, []);
+});
+
+test("a coordinator's malformed body is a 400, never a 500", async () => {
+  const res = await app.request("/notify", {
+    method: "POST",
+    headers: { "content-type": "application/json", [APP_USER_HEADER]: "coordinator-1" },
+    body: "{not json",
+  });
+  assert.equal(res.status, 400);
 });

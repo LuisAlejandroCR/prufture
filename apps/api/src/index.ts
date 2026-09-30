@@ -90,7 +90,7 @@ function programmeRecipient(channel: Channel): string {
 }
 
 // Even a fixed recipient can be spammed. One manual re-send per proof and channel per window
-// bounds what an anonymous caller can make the programme pay for. In memory on purpose: a
+// bounds what a coordinator (or a leaked coordinator id) can make the programme pay for. In memory on purpose: a
 // restart resetting it costs at most one extra message per proof.
 export const NOTIFY_COOLDOWN_MS = 10 * 60 * 1000;
 const lastManualNotify = new Map<string, number>();
@@ -232,6 +232,10 @@ app.post("/attest", async (c) => {
   });
 });
 
+// A manual re-send is a programme-team action: an anonymous caller could walk /proofs and make the
+// programme pay for one message per proof and channel every cooldown window. No client calls it;
+// automatic delivery on /sync and /attest (maybeNotify) is unaffected.
+app.use("/notify", requireCoordinator);
 app.post("/notify", async (c) => {
   const body = await readJsonObject(c);
   if (!body) return c.json({ error: "invalid json" }, 400);
