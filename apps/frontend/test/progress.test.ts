@@ -56,19 +56,42 @@ test("findReport resolves a reportId, a row id or a proofHash to the whole repor
   assert.deepEqual(findReport(rows, ""), []);
 });
 
-test("stages: saved, sent, reviewed, confirmed, each with a plain description", () => {
-  const pending = reportStages([row({ status: "pending_sync" })]);
-  assert.deepEqual(pending.map((s) => s.label), ["Saved on this phone", "Sent to programme", "Community reviewed", "Confirmed"]);
-  assert.deepEqual(pending.map((s) => s.done), [true, false, false, false]);
+test("stages without community confirmations: saved, sent, recorded publicly", () => {
+  const pending = reportStages([row({ status: "pending_sync" })], null);
+  assert.deepEqual(pending.map((s) => s.label), ["Saved on this phone", "Sent to programme", "Recorded publicly"]);
+  assert.deepEqual(pending.map((s) => s.short), ["Saved", "Sent", "Recorded"]);
+  assert.deepEqual(pending.map((s) => s.done), [true, false, false]);
   assert.ok(pending.every((s) => s.detail.length > 0));
 
-  const mixed = reportStages([row({ status: "synced" }), row({ status: "pending_sync" })]);
+  const mixed = reportStages([row({ status: "synced" }), row({ status: "pending_sync" })], null);
   assert.equal(mixed[1]!.done, false, "sent only when every photo is sent");
 
-  const waiting = reportStages([row({ status: "synced" })]);
-  assert.deepEqual(waiting.map((s) => s.done), [true, true, false, false]);
+  const waiting = reportStages([row({ status: "synced" })], null);
+  assert.deepEqual(waiting.map((s) => s.done), [true, true, false]);
   assert.equal(waiting[2]!.current, true);
 
-  const confirmed = reportStages([row({ status: "attested" }), row({ status: "synced", attestationCount: 1 })]);
-  assert.deepEqual(confirmed.map((s) => s.done), [true, true, true, true]);
+  const recorded = reportStages([row({ status: "attested" }), row({ status: "synced", attestationCount: 1 })], null);
+  assert.deepEqual(recorded.map((s) => s.done), [true, true, true]);
+});
+
+test("regression: a public record alone is never 'confirmed by the community'", () => {
+  // The old timeline ticked "Confirmed" on the on-chain record while the card read 0 of 3.
+  const attested = [row({ status: "attested", attestationCount: 1 })];
+  const none = reportStages(attested, { have: 0, need: 3 });
+  assert.deepEqual(none.map((s) => s.label), [
+    "Saved on this phone",
+    "Sent to programme",
+    "Recorded publicly",
+    "Confirmed by the community",
+  ]);
+  assert.deepEqual(none.map((s) => s.done), [true, true, true, false]);
+  assert.equal(none[3]!.current, true);
+  assert.match(none[3]!.detail, /0 of 3 nearby reports/);
+
+  const unknown = reportStages(attested, { have: null, need: 3 });
+  assert.equal(unknown[3]!.done, false);
+  assert.match(unknown[3]!.detail, /online/);
+
+  const full = reportStages(attested, { have: 3, need: 3 });
+  assert.equal(full[3]!.done, true);
 });
