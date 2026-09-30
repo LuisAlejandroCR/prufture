@@ -6,6 +6,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   canRetry,
+  createReportGate,
   MAX_ATTEMPTS,
   recordAttempt,
   reportPass,
@@ -167,4 +168,19 @@ test("toRecord: only well-formed rows come back", () => {
   assert.equal(toRecord({ ...rec("a", "reused"), outcome: "maybe" }), null);
   assert.equal(toRecord({ ...rec("a", "reused"), attempts: "2" }), null);
   assert.equal(toRecord({ ...rec("a", "reused"), proofHash: 1 }), null);
+});
+
+test("one pass per report: once a photo is verified, the report's other photos are not proved", () => {
+  // Every photo shares the task scope, so a second proof could only come back "reused" (seen live:
+  // verified, reused, reused for one 3-photo report).
+  const gate = createReportGate();
+  assert.equal(gate.shouldProve("R"), true);
+  gate.record("R", "unavailable");
+  assert.equal(gate.shouldProve("R"), true, "an unfinished check lets the next photo try");
+  gate.record("R", "verified");
+  assert.equal(gate.shouldProve("R"), false);
+  assert.equal(gate.shouldProve("S"), true, "other reports are unaffected");
+  gate.record("", "verified");
+  assert.equal(gate.shouldProve(""), true, "a row without a reportId is its own report");
+  assert.equal(gate.shouldProve(undefined), true);
 });
