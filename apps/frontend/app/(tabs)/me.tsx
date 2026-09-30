@@ -14,7 +14,9 @@ import {
   setCelebrationsEnabled,
   setHapticsEnabled,
 } from "../../src/feedback";
+import { personhoodProvider } from "../../src/flags";
 import { confirmedReportCount } from "../../src/home";
+import { getCommitment } from "../../src/personhood-device";
 import { listProofs } from "../../src/queue";
 import { color, radius, space, target, type } from "../../src/theme";
 
@@ -25,9 +27,20 @@ export default function MeScreen() {
   const [activities, setActivities] = useState(0);
   const [haptics, setHaptics] = useState(true);
   const [celebrations, setCelebrations] = useState(true);
+  const passOn = personhoodProvider() === "semaphore";
+  const [passCode, setPassCode] = useState<string | null>(null);
+  const [passError, setPassError] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
+      if (passOn) {
+        getCommitment()
+          .then((c) => {
+            setPassCode(c);
+            setPassError(false);
+          })
+          .catch(() => setPassError(true));
+      }
       void hydrateFeedbackSettings().then(() => {
         setHaptics(isHapticsEnabled());
         setCelebrations(isCelebrationsEnabled());
@@ -43,7 +56,7 @@ export default function MeScreen() {
           setConfirmed(0);
           setActivities(0);
         });
-    }, []),
+    }, [passOn]),
   );
 
   return (
@@ -94,6 +107,27 @@ export default function MeScreen() {
           subtitle={pending === 0 ? "Nothing waiting" : `${pending} waiting to send`}
           onPress={() => router.push("/updates")}
         />
+        {passOn ? (
+          <View style={styles.passRow}>
+            <View style={styles.toggleIcon}><Icon name="programme" size={20} color={color.text} /></View>
+            <View style={{ flex: 1, gap: space.xs }}>
+              <Text style={styles.toggleTitle}>Programme pass</Text>
+              <Text style={styles.toggleSub}>
+                Show this code to your coordinator once to join the programme. It does not include
+                your name, your phone or your location.
+              </Text>
+              <Text
+                style={styles.passCode}
+                selectable
+                accessibilityLabel={
+                  passCode ? `Programme pass code. ${passCode}` : "Programme pass code not ready"
+                }
+              >
+                {passCode ?? (passError ? "Could not load the code. Open this screen again." : "Preparing code…")}
+              </Text>
+            </View>
+          </View>
+        ) : null}
       </View>
 
       <View style={{ gap: space.sm }}>
@@ -200,6 +234,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  passRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: space.md,
+    padding: space.md,
+    borderRadius: radius.md,
+    backgroundColor: color.surface,
+    borderWidth: 1,
+    borderColor: color.border,
+  },
+  passCode: { ...type.body, color: color.text, fontWeight: "600", fontVariant: ["tabular-nums"] },
   toggleTitle: { ...type.subtitle, color: color.text },
   toggleSub: { ...type.meta, color: color.muted },
   contribution: {
