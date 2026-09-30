@@ -3,7 +3,7 @@
 // Every claim must stay true to the code: no ZK, TEE or deployment claim.
 
 import Link from "next/link";
-import { qrPath } from "./pitch/qr";
+import { qrPath } from "../lib/qr";
 import { ScrollFilms } from "./ScrollFilms";
 import { HeroPhone } from "./HeroPhone";
 
@@ -113,7 +113,7 @@ export default function Home() {
       </section>
 
       <section className="experience-section" id="experience">
-        <div className="experience-copy"><div className="section-index">04 / EXPERIENCE</div><h2>Built for a thumb.<br /><em>Clear at a glance.</em></h2><p>Friendly language, reassuring offline states, and one next action at every step.</p><Link className="landing-btn landing-btn-dark" href="/pitch">Open the story deck <ArrowIcon /></Link></div>
+        <div className="experience-copy"><div className="section-index">04 / EXPERIENCE</div><h2>Built for a thumb.<br /><em>Clear at a glance.</em></h2><p>Friendly language, reassuring offline states, and one next action at every step.</p></div>
         <div className="status-stack" aria-label="Example report statuses">
           <div className="status-card status-ready"><span className="status-icon">↓</span><div><small>OFFLINE</small><strong>Saved on this phone</strong><p>We&apos;ll send it when signal returns.</p></div></div>
           <div className="status-card status-sent"><span className="status-icon">↑</span><div><small>SENT</small><strong>Report received</strong><p>Your work is ready to be checked.</p></div></div>
@@ -128,7 +128,7 @@ export default function Home() {
 
       <section className="closing-section"><Mark compact /><p>Evidence should travel farther than connectivity.</p><h2>Make every completed task<br /><em>visible, verifiable, and human.</em></h2><Link className="landing-btn landing-btn-white" href={`/verify/${SAMPLE_HASH}`}>Explore Prufture <ArrowIcon /></Link></section>
 
-      <footer className="landing-footer"><div><Mark /><p>An open prototype for community field reporting.</p></div><div className="footer-links"><Link href="/dashboard">Dashboard</Link><Link href="/pitch">Pitch</Link><Link href="/support">Support</Link><Link href="/privacy">Privacy</Link></div><p className="footer-note">Built for a hackathon. Not a UNICEF product or endorsement.</p></footer>
+      <footer className="landing-footer"><div><Mark /><p>An open prototype for community field reporting.</p></div><div className="footer-links"><Link href="/dashboard">Dashboard</Link><Link href="/support">Support</Link><Link href="/privacy">Privacy</Link></div><p className="footer-note">Built for a hackathon. Not a UNICEF product or endorsement.</p></footer>
     </main>
   );
 }

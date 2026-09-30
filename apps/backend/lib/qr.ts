@@ -1,7 +1,7 @@
 // @ts-nocheck -- vendored third-party encoder; kept close to the upstream source.
 // qr.ts: vendored QR Code encoder, trimmed from Project Nayuki's "QR Code generator library" (MIT,
 // https://www.nayuki.io/page/qr-code-generator-library) to the encoder + an SVG-path helper. No
-// runtime dependency, so the /pitch QR codes render server-side and work offline at the venue.
+// runtime dependency, so the landing and /verify QR codes render server-side with no network.
 
 // Copyright (c) Project Nayuki. (MIT License)
 // Permission is hereby granted, free of charge, to any person obtaining a copy of

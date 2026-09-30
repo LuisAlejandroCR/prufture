@@ -1,5 +1,5 @@
 // staff-auth.ts: when staff sign-in (Clerk) is on, and which paths it guards. Only /dashboard is
-// staff-only; the landing, /verify, legal pages and /pitch stay public and never load Clerk.
+// staff-only; the landing, /verify and legal pages stay public and never load Clerk.
 // Pure so middleware, layouts and tests share one definition.
 
 type Env = Record<string, string | undefined>;

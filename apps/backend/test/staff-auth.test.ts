@@ -18,7 +18,7 @@ test("Clerk is on only when both keys are non-empty", () => {
 
 test("only /dashboard and its children are staff paths", () => {
   for (const p of ["/dashboard", "/dashboard/reports", "/dashboard/exports/csv"]) assert.equal(isStaffPath(p), true, p);
-  for (const p of ["/", "/verify/0xabc", "/privacy", "/support", "/pitch", "/dashboards", "/sign-in"])
+  for (const p of ["/", "/verify/0xabc", "/privacy", "/support", "/dashboards", "/sign-in"])
     assert.equal(isStaffPath(p), false, p);
 });
 
