@@ -3,8 +3,9 @@
 // collapsed. Coarse region only — no reporter identity, exact location or private media.
 
 import Link from "next/link";
-import { assuranceFromProof, assuranceLabel, isNeutralAssurance } from "../../../lib/assurance";
-import { fetchProof } from "../../../lib/api";
+import { assuranceFromProof, faceCheckLabel, isNeutralAssurance, passLabel } from "../../../lib/assurance";
+import { fetchConfirmations, fetchProof } from "../../../lib/api";
+import { nearbyReportCount, stageFor, type Stage } from "../../../lib/confirmations";
 import { activityLabel, programmeName } from "../../../lib/dashboard";
 import { Icon, SiteFooter, SiteHeader, type IconName } from "../../_components/brand";
 import { qrPath } from "../../../lib/qr";
@@ -12,12 +13,10 @@ import { ShareLink } from "./ShareLink";
 
 const VERIFY_BASE = process.env.NEXT_PUBLIC_VERIFY_BASE_URL ?? "http://localhost:3000";
 
-type Stage = "received" | "waiting" | "confirmed";
-
-function stageFor(count: number): Stage {
-  if (count >= 2) return "confirmed";
-  if (count === 1) return "waiting";
-  return "received";
+/** Pass-confirmed reports near this one, this one included; null when the confirmations route is down. */
+async function nearbyFor(proof: { proofHash: string; geohashRegion: string }): Promise<number | null> {
+  const reports = await fetchConfirmations(proof.proofHash);
+  return reports ? nearbyReportCount(proof.geohashRegion, reports) : null;
 }
 
 const STAGE_COPY: Record<Stage, { pill: string; cls: string; line: string }> = {
@@ -29,12 +28,12 @@ const STAGE_COPY: Record<Stage, { pill: string; cls: string; line: string }> = {
   waiting: {
     pill: "Waiting for more confirmation",
     cls: "wait",
-    line: "One community report is in. It is marked confirmed once a second community member reports the same activity.",
+    line: "This report is on record. It is marked confirmed once two nearby reports each carry a programme pass, which a member can use only once per activity.",
   },
   confirmed: {
     pill: "Report confirmed",
     cls: "ok",
-    line: "More than one community member has reported this activity.",
+    line: "Two or more nearby reports carry a programme pass, so at least two enrolled members reported this activity.",
   },
 };
 
@@ -50,7 +49,8 @@ export async function generateMetadata({ params }: { params: Promise<{ hash: str
   const { hash } = await params;
   const r = await fetchProof(hash);
   if (r.state !== "ok") return { title: "Field report · Prufture" };
-  const title = `${activityLabel(r.proof.taskId)} · ${STAGE_COPY[stageFor(r.proof.attestationCount)].pill}`;
+  const stage = stageFor(await nearbyFor(r.proof), r.proof.attestationCount);
+  const title = `${activityLabel(r.proof.taskId)} · ${STAGE_COPY[stage].pill}`;
   const description = "A community field report on Prufture. Checkable by anyone, with no personal data.";
   return { title: `${title} · Prufture`, description, openGraph: { title, description, siteName: "Prufture" } };
 }
@@ -108,12 +108,13 @@ export default async function VerifyPage({ params }: { params: Promise<{ hash: s
   }
 
   const { proof } = result;
-  const stage = stageFor(proof.attestationCount);
+  const nearby = await nearbyFor(proof);
+  const stage = stageFor(nearby, proof.attestationCount);
   const copy = STAGE_COPY[stage];
   const stageIndex = STAGES.findIndex((s) => s.key === stage);
   // Encodes only the public link (proofHash), the same thing the share field shows.
   const qr = qrPath(shareUrl);
-  const assurance = assuranceFromProof(proof);
+  const faceCheck = assuranceFromProof(proof);
   const captured = new Date(proof.capturedAt);
   const capturedText = Number.isNaN(captured.getTime())
     ? proof.capturedAt
@@ -162,13 +163,20 @@ export default async function VerifyPage({ params }: { params: Promise<{ hash: s
         </div>
         <div className="fact">
           <span className="fact-icon"><Icon name="users" /></span>
-          <small>Confirmations</small>
-          <strong>{proof.attestationCount}</strong>
+          <small>Pass-confirmed reports</small>
+          <strong>{nearby ?? "Unavailable"}</strong>
+          <span className="fact-note">{nearby === null ? "could not be checked right now" : "within 5 km, one pass per member"}</span>
         </div>
-        <div className={`fact ${isNeutralAssurance(assurance) ? "is-neutral" : ""}`}>
+        <div className={`fact ${proof.membership === "verified" ? "" : "is-neutral"}`}>
           <span className="fact-icon"><Icon name="shield" /></span>
           <small>Anonymous pass</small>
-          <strong>{assuranceLabel(assurance)}</strong>
+          <strong>{passLabel(proof.membership)}</strong>
+        </div>
+        <div className={`fact ${isNeutralAssurance(faceCheck) ? "is-neutral" : ""}`}>
+          <span className="fact-icon"><Icon name="eyeOff" /></span>
+          <small>Face check</small>
+          <strong>{faceCheckLabel(faceCheck)}</strong>
+          <span className="fact-note">pass or fail only, no image kept</span>
         </div>
         <div className="fact">
           <span className="fact-icon"><Icon name="link" /></span>
@@ -230,8 +238,7 @@ export default async function VerifyPage({ params }: { params: Promise<{ hash: s
             </ul>
           ) : (
             <p className="faint" style={{ marginBottom: 0 }}>
-              No external record yet. A second community report, or the delivery service coming back
-              online, will add one.
+              No on-chain record yet. It is added when the delivery service is back online.
             </p>
           )}
         </div>
