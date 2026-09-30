@@ -3,7 +3,7 @@
 // nearest first, plus a way into the full catalog. Home and the old Tasks tab are one screen now.
 
 import { useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import { CellMap, type MapCell } from "../../src/components/CellMap";
 import { Icon, type IconName } from "../../src/components/icons/Icon";
@@ -44,6 +44,7 @@ export default function MissionsScreen() {
   const [confirmed, setConfirmed] = useState(0);
   const [lastSync, setLastSync] = useState({ synced: 0, failed: 0 });
   const [view, setView] = useState<View_>("list");
+  const picked = useRef(false);
   const [unfinished, setUnfinished] = useState<{ taskId: string } | null>(null);
   const missions = useMemo(() => sortByDistance(listTasks(), cell), [cell]);
 
@@ -85,9 +86,15 @@ export default function MissionsScreen() {
   }, [online, syncWaiting]);
 
   useEffect(() => {
-    loadMissionsView().then(setView).catch(() => undefined);
+    // The stored view loads in the background; a choice the user already made wins over it.
+    loadMissionsView()
+      .then((v) => {
+        if (!picked.current) setView(v);
+      })
+      .catch(() => undefined);
   }, []);
   const chooseView = (v: View_) => {
+    picked.current = true;
     if (v !== view) void select();
     setView(v);
     void saveMissionsView(v);

@@ -17,6 +17,9 @@ test("site pages hang off the same origin as the verify base", () => {
   assert.equal(siteUrl("privacy", BASE), "https://prufture.vercel.app/privacy");
   assert.equal(siteUrl("support", BASE), "https://prufture.vercel.app/support");
   assert.equal(siteUrl("", BASE), "https://prufture.vercel.app/");
+  // A base without a scheme must not throw inside a tap handler; it falls back to the default site.
+  assert.equal(siteUrl("privacy", "prufture.vercel.app/verify"), "https://prufture.vercel.app/privacy");
+  assert.equal(siteUrl("support", "/verify"), "https://prufture.vercel.app/support");
 });
 
 test("only https, or http on a local dev host, may be opened", () => {

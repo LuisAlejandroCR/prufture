@@ -5,16 +5,22 @@
 
 import { color } from "./theme";
 
+const DEFAULT_VERIFY_BASE = "https://prufture.vercel.app/verify";
 // `||`, not `??`: an empty EXPO_PUBLIC_VERIFY_URL (as in .env.example) must also fall back.
-export const VERIFY_BASE = process.env.EXPO_PUBLIC_VERIFY_URL || "https://prufture.vercel.app/verify";
+export const VERIFY_BASE = process.env.EXPO_PUBLIC_VERIFY_URL || DEFAULT_VERIFY_BASE;
 
 export function publicRecordUrl(proofHash: string, base = VERIFY_BASE): string {
   return `${base.replace(/\/+$/, "")}/${encodeURIComponent(proofHash)}`;
 }
 
-/** A page on the public site, on the same origin as the verify base. */
+/** A page on the public site, on the same origin as the verify base. A base that is not an absolute
+ *  URL (e.g. no scheme) falls back to the default site rather than throwing in a tap handler. */
 export function siteUrl(path: "" | "privacy" | "support", base = VERIFY_BASE): string {
-  return new URL(`/${path}`, base).toString();
+  try {
+    return new URL(`/${path}`, base).toString();
+  } catch {
+    return new URL(`/${path}`, DEFAULT_VERIFY_BASE).toString();
+  }
 }
 
 const LOCAL_HOST = /^(localhost|127\.0\.0\.1|\[::1\]|10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|[\w-]+\.local)$/;
