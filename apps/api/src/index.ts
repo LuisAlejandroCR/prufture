@@ -4,7 +4,7 @@
 // choose the status code or the recipient. Evidence photos are opaque ciphertext here and never leave
 // via a public route.
 import { serve } from "@hono/node-server";
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import {
   COARSE_GEOHASH_LEN,
@@ -63,6 +63,7 @@ import {
   toCsv,
 } from "./coordinator.js";
 import { coordinatorEntitlementId } from "./entitlement.js";
+import { SAMPLE_HEADER, sampleRows, setSampleReview } from "./coordinator-sample.js";
 import { evidenceStorage } from "./evidence-storage.js";
 import {
   MAX_REQUEST_CHECK,
@@ -592,6 +593,18 @@ app.get("/proofs", (c) =>
 
 app.use("/coordinator/*", requireCoordinator);
 
+/** Staff of the programme review its real reports; any other subscriber gets a sample inbox. */
+function isProgrammeStaff(c: Context): boolean {
+  const caller = c.req.header(APP_USER_HEADER)?.trim() ?? "";
+  return caller !== "" && env.programmeStaffAppUserIds.includes(caller);
+}
+
+// Asking a reporter for a photo, or fetching one, is programme work: never for a sample inbox.
+app.use("/coordinator/evidence*", async (c, next) => {
+  if (!isProgrammeStaff(c)) return c.json({ error: "programme staff required" }, 403);
+  await next();
+});
+
 // Enrolment, coordinator-run: the coordinator adds a commitment the reporter shows them in person.
 // The coordinator therefore knows whose commitment it is; the proofs are unlinkable to the api only.
 // Enrolment decides who counts as a distinct member, which is what community confirmations rest on.
@@ -626,9 +639,14 @@ app.post("/coordinator/personhood/epoch", async (c) => {
   return c.json({ epoch: group.epoch + 1 }, 200);
 });
 
-app.get("/coordinator/reports", (c) =>
-  c.json(allProofs().map((e) => toCoordinatorRow(e, REGION_PREFIX_LEN))),
-);
+// coordinator_pro is sold to anyone, so the plan alone never opens the programme's reports.
+app.get("/coordinator/reports", (c) => {
+  if (!isProgrammeStaff(c)) {
+    c.header(SAMPLE_HEADER, "1");
+    return c.json(sampleRows(c.req.header(APP_USER_HEADER)!.trim()));
+  }
+  return c.json(allProofs().map((e) => toCoordinatorRow(e, REGION_PREFIX_LEN)));
+});
 
 app.post("/coordinator/review", async (c) => {
   const body = await readJsonObject(c);
@@ -645,11 +663,16 @@ app.post("/coordinator/review", async (c) => {
     return c.json({ error: "note too long", maxLength: REVIEW_NOTE_MAX }, 413);
   }
 
-  const recorded = setReview(proofHash, {
-    status: body.status,
-    note,
-    reviewedAt: new Date().toISOString(),
-  });
+  const review = { status: body.status, note, reviewedAt: new Date().toISOString() };
+  // A subscriber reviews only their own sample rows; a real report answers like an unknown one, so
+  // its existence is not confirmed. Staff never write a sample row into the real store.
+  if (!isProgrammeStaff(c)) {
+    c.header(SAMPLE_HEADER, "1");
+    const row = setSampleReview(c.req.header(APP_USER_HEADER)!.trim(), proofHash, review);
+    if (!row) return c.json({ error: "unknown proofHash" }, 404);
+    return c.json({ status: "recorded", review: row }, 200);
+  }
+  const recorded = setReview(proofHash, review);
   if (!recorded) return c.json({ error: "unknown proofHash" }, 404);
 
   const entry = getProof(proofHash)!;
@@ -657,12 +680,18 @@ app.post("/coordinator/review", async (c) => {
 });
 
 app.get("/coordinator/export.csv", (c) => {
-  const csv = toCsv(allProofs().map((e) => toCoordinatorRow(e, REGION_PREFIX_LEN)));
+  const staff = isProgrammeStaff(c);
+  const csv = toCsv(
+    staff
+      ? allProofs().map((e) => toCoordinatorRow(e, REGION_PREFIX_LEN))
+      : sampleRows(c.req.header(APP_USER_HEADER)!.trim()),
+  );
   return new Response(csv, {
     status: 200,
     headers: {
       "content-type": "text/csv; charset=utf-8",
       "content-disposition": 'attachment; filename="prufture-reports.csv"',
+      ...(staff ? {} : { [SAMPLE_HEADER]: "1" }),
     },
   });
 });
