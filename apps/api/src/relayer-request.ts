@@ -37,7 +37,7 @@ const EAS_ATTEST_ABI = [
   },
 ] as const;
 
-// Schema registered on Base Sepolia (see docs/verification.md):
+// Schema registered on Base Sepolia (easscan schema #2438):
 // proofHash bytes32, taskId string, geohash string, capturedAt uint64
 const SCHEMA_PARAMS = parseAbiParameters(
   "bytes32 proofHash, string taskId, string geohash, uint64 capturedAt",

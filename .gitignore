@@ -30,6 +30,10 @@ web-build/
 # Local agent scratch + throwaway worktrees (never tracked)
 .claude/
 
+# Swarm coordination — append-only completion log + live state board, never public
+inbox.md
+index.md
+
 # OS / editor
 .DS_Store
 Thumbs.db
@@ -40,3 +44,7 @@ demo-captures/
 *.mp4
 !docs/**/*.mp4
 !apps/backend/public/media/app-journey.mp4
+
+# Local design explorations and audio drafts
+apps/alternative-*.png
+apps/audio-prufture.mp3

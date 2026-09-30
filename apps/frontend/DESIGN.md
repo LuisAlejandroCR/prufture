@@ -198,7 +198,7 @@ ranking. Every useful report counts."), and Me repeats the summary. N counts rep
 and only once every photo of a report is confirmed (`confirmedReportCount`). Visible only to the
 reporter and never linked to a public report. The status timeline (`status/[id]`) shows Saved on
 this phone / Sent to programme / Community reviewed / Confirmed, each with a one-line
-description. Full model in `docs/pilot_engagement.md`.
+description.
 
 ## Feedback and celebration
 

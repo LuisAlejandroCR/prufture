@@ -35,7 +35,7 @@ export interface Entry {
   /**
    * Encrypted precise-location point, sealed on the device to the programme team's key.
    * Opaque hex — this process never decrypts or parses it, and it is NEVER returned by
-   * any public route (see docs/location_privacy.md).
+   * any public route.
    */
   preciseLocationCipher?: string;
   /** Coordinator triage verdict. Absent until /coordinator/review is called; reads as "pending". */

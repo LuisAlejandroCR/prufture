@@ -1,5 +1,5 @@
 // result.ts: typed envelope for every call that crosses a process boundary.
-// AGENTS.md rule: external calls never throw through the user flow.
+// Rule: external calls never throw through the user flow.
 // Distinct from types.ts (domain data) — this wraps availability, not proofs.
 
 export interface ExternalOk<T> {

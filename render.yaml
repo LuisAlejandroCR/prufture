@@ -1,10 +1,10 @@
 # render.yaml: Render Blueprint for the Prufture relayer/index API (apps/api, Hono + Node).
-# Needs a persistent writable disk so proofs survive a redeploy (worker/api-persist store.ts,
+# Needs a persistent writable disk so proofs survive a redeploy (apps/api/src/store.ts,
 # STORE_PATH). Distinct from vercel.json, which deploys the Next.js public site (apps/backend).
 #
 # NOTE: persistent disks require a paid instance ("starter" or above) — Render's free web
 # service has an ephemeral filesystem. On free tier the store resets on every cold start and
-# redeploy; see docs/delivery.md for the Fly.io / Railway volume alternatives.
+# redeploy; Fly.io or Railway volumes are alternatives.
 
 services:
   - type: web
@@ -24,7 +24,7 @@ services:
     envVars:
       - key: NODE_VERSION
         value: "20.18.0"
-      # Durable proof store on the mounted disk (worker/api-persist).
+      # Durable proof store on the mounted disk.
       - key: STORE_PATH
         value: /data/store.json
       # Public site base, used to build the verifyUrl in POST /notify. Set to the Vercel URL.

@@ -563,7 +563,7 @@ app.get("/proofs", (c) =>
 );
 
 // Coordinator surface: requires an active coordinator_pro entitlement, checked server-side on every
-// request (see docs/pilot_engagement.md). Adds review state only — never a reporter identity, a
+// request. Adds review state only — never a reporter identity, a
 // precise location, a signature or a public key.
 
 app.use("/coordinator/*", requireCoordinator);
