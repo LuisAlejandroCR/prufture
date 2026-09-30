@@ -117,25 +117,35 @@ contacted, so no real report is ever sent to a provider under evaluation.
   review. Email degrades cleanly.
 - iOS 1.0 built with EAS (`apps/frontend/eas.json`) and submitted to App Store review on
   2026-09-29; not yet approved.
-- A group-membership proof generated on the phone: a Semaphore v4 prover (depth 10, Rust +
-  `circom-prover`) in `packages/zk-prover`, wrapped for iOS only by
-  `apps/frontend/modules/prufture-zk`. Off by default: the reporter journey does not call it. A
-  hidden benchmark route, `apps/frontend/app/zk-bench.tsx`, measured about 55 ms per proof on one
-  iPhone.
+- A programme pass (group-membership proof) generated on the phone: a Semaphore v4 prover (depth
+  10, Rust + `circom-prover`) in `packages/zk-prover`, wrapped by `apps/frontend/modules/prufture-zk`
+  (iOS and Android). A hidden benchmark route, `apps/frontend/app/zk-bench.tsx`, measured about
+  55 ms per proof on one iPhone.
+- **v1.1 (in preparation, off by default):** with the pass turned on, the app proves membership for
+  each report after it syncs, binding the proof to the report hash and to a scope it reads from the
+  api (`GET /personhood/scope`; the phone no longer computes it). The result (`verified`, `invalid`,
+  `reused` or `unavailable`) is kept on the phone and shown on the report's status screen; an
+  `unavailable` check is retried on later sync passes (at most 5 tries within 7 days). The Me screen
+  explains in-person enrolment and shows whether the phone's code is on the programme list. Proving
+  never blocks capture, saving or syncing. It stays off until
+  `EXPO_PUBLIC_PERSONHOOD_PROVIDER=semaphore` is set in the build and `PERSONHOOD_PROVIDER=semaphore`
+  on the api; v1.0 does not include it.
 - Server-side verification of those membership proofs in `apps/api/src/personhood.ts`, with
-  enrolment and proof routes, off by default (enabled only by `PERSONHOOD_PROVIDER=semaphore`).
+  coordinator enrolment, scope and proof routes, off by default (enabled only by
+  `PERSONHOOD_PROVIDER=semaphore`). Staff enrol codes from the web dashboard.
 - An optional one-time face check through AWS Rekognition Face Liveness, off by default on both
   sides. The api adapter (`LIVENESS_PROVIDER=aws`) opens single-use sessions behind a per-IP limit
   and a daily cap, and keeps only a pass/fail boolean. The app flow (`app/face-check.tsx`, enabled
   by `EXPO_PUBLIC_LIVENESS_PROVIDER=aws`) runs the iOS capture in
   `apps/frontend/modules/prufture-liveness` (official Swift SDK) and attaches the resulting signed
   ticket to later reports. It is a liveness verdict only: not identification and not uniqueness.
-- Automated tests: `packages/core` 22 · `apps/api` 292 · `apps/backend` 37 · `apps/frontend` 139
-  (490 total).
+- Automated tests: `packages/core` 22 · `apps/api` 368 · `apps/backend` 91 · `apps/frontend` 345
+  (826 total).
 
 **Scoped next, not implemented:** hardware attestation / TEE signing; App Store approval and
-Play Store publication; turning on the membership proof in the reporter journey; a server adapter
-for selfie liveness and verified attributes through a chosen vendor (see *Replacing Dwellir and
+Play Store publication; releasing v1.1 with the programme pass turned on (measured on a device
+with a real enrolled group first); a server adapter
+for verified attributes through a chosen vendor (see *Replacing Dwellir and
 Neuro*); binding the sealed precise location and a membership commitment into a schema v2.
 
 ---
@@ -328,6 +338,7 @@ behind it is finished.
 | Hardening | Caps on signed field sizes at `/sync`; CSV formula injection neutralised in both exporters; store extras cannot reach `/proof`; explicit timeouts on every delivery channel; malformed bodies answer 400, never 500; a body-size cap on every route; no adapter error can carry an endpoint URL |
 | Public write routes | `/notify` sends only to the fixed programme recipient, with a per-proof cooldown; `/liveness-result` records only a verdict signed by the server at `/verify-identity`, never one claimed by the caller; the liveness verdict and the sealed precise location are write-once |
 | CI | Typecheck and tests on Node 20 and 22 for every push and pull request |
+| Programme pass (v1.1, off) | On-device proof after sync with the api-derived scope; per-report outcome on the status screen; retry of `unavailable`; in-person enrolment explained on Me. Contract-tested against the real api routes |
 
 ### Open
 
@@ -339,7 +350,8 @@ behind it is finished.
 | Phase 3 sandbox check | One consented end-to-end check before any adapter is labelled verified |
 | Phase 4 observation window | `shadow-compare` of `local-key` against `openzeppelin-relayer` in the sandbox: READY over 5 synthetic proofs. The real window runs once the relayer is deployed; keep `local-key` configured through it |
 | CI runners | GitHub Actions jobs on the account stopped starting on 2026-09-26 (billing). Until they run again, `npm run verify` locally is the gate |
-| Scoped next | Membership proof on in the reporter journey (the prover exists, off by default), hardware attestation / TEE signing, App Store approval and Play Store publication, schema v2 with the sealed precise location |
+| Programme pass release | v1.1 build with the pass flags set, one enrolled phone reaching `verified` against the deployed api, then App Store review |
+| Scoped next | Hardware attestation / TEE signing, App Store approval and Play Store publication, schema v2 with the sealed precise location |
 | Programme inputs | A baseline for the cost figure (reports per month, re-visit share, cost per trip) and the pilot legal preconditions — programme work, not code |
 
 ### Replacing Dwellir and Neuro: vendor findings

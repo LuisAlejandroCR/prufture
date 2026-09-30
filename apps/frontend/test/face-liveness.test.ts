@@ -369,7 +369,7 @@ test("wiring: the face check is reachable and disclosed only when the flag is on
   const me = read("app/(tabs)/me.tsx");
   assert.match(me, /faceCheckOn \? \(\s*<Row[\s\S]*?router\.push\("\/face-check"\)/);
   const privacy = read("app/data-privacy.tsx");
-  assert.match(privacy, /livenessProvider\(\) === "aws" \? \[\.\.\.ITEMS, FACE_CHECK\] : ITEMS/);
+  assert.match(privacy, /\.\.\.\(livenessProvider\(\) === "aws" \? \[FACE_CHECK\] : \[\]\)/);
   assert.match(privacy, /processed by Amazon Web Services \(AWS\)/);
   assert.match(privacy, /No image of your face is stored by Prufture/);
   assert.match(privacy, /keeps only a pass or fail/);

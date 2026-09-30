@@ -1,11 +1,12 @@
-// data-privacy.tsx: a plain-language inventory of what a report keeps, shares, and leaves on-device.
-// This is separate from task help so privacy promises are easy to find and do not get repeated.
+// data-privacy.tsx: a plain-language inventory of what a report keeps, shares, and leaves on-device,
+// plus the programme pass when this build has it on. Separate from task help so privacy promises are
+// easy to find and do not get repeated.
 
 import { useRouter } from "expo-router";
 import { StyleSheet, Text, View } from "react-native";
 import { Icon, type IconName } from "../src/components/icons/Icon";
 import { BackLink, Notice, Screen, ScreenTitle } from "../src/components/ui";
-import { livenessProvider } from "../src/flags";
+import { livenessProvider, personhoodProvider } from "../src/flags";
 import { color, radius, space, type } from "../src/theme";
 
 const ITEMS: { icon: IconName; title: string; detail: string }[] = [
@@ -15,6 +16,12 @@ const ITEMS: { icon: IconName; title: string; detail: string }[] = [
   { icon: "privacy", title: "No identity in reports", detail: "Your name, phone number, identity documents, and account details are not part of a report." },
   { icon: "offline", title: "Saved locally when offline", detail: "Unsent reports wait on this phone and retry when a connection returns." },
 ];
+
+const PASS_ITEM = {
+  icon: "programme" as IconName,
+  title: "Programme pass",
+  detail: "Your pass code is made and kept on this phone. You show it to your coordinator once, in person. The check sent with each report says only that it came from someone on the programme list; it does not send the code, your name, phone number or location. When the check passes, the report is marked as coming from an enrolled programme member.",
+};
 
 // Listed only in builds where the one-time face check exists; a build without it says nothing about it.
 const FACE_CHECK = {
@@ -26,13 +33,18 @@ const FACE_CHECK = {
 
 export default function DataPrivacyScreen() {
   const router = useRouter();
+  const items = [
+    ...ITEMS,
+    ...(personhoodProvider() === "semaphore" ? [PASS_ITEM] : []),
+    ...(livenessProvider() === "aws" ? [FACE_CHECK] : []),
+  ];
   return (
     <Screen>
       <BackLink label="Me" onPress={() => router.back()} />
       <ScreenTitle hint="A clear summary of the data used by a report.">Data and privacy</ScreenTitle>
       <Notice tone="info" icon="shield">Public reports contain a proof reference, task, approximate area, and capture time. Never your identity.</Notice>
       <View style={styles.list}>
-        {(livenessProvider() === "aws" ? [...ITEMS, FACE_CHECK] : ITEMS).map((item) => (
+        {items.map((item) => (
           <View key={item.title} style={styles.item}>
             <View style={styles.icon}><Icon name={item.icon} size={20} color={color.primary} /></View>
             <View style={styles.copy}>
