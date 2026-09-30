@@ -6,6 +6,12 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import {
+  faceLivenessConfig,
+  livenessProvider,
+  personhoodProgrammeId,
+  personhoodProvider,
+} from "../src/flags.js";
 
 const easPath = fileURLToPath(new URL("../eas.json", import.meta.url));
 const appPath = fileURLToPath(new URL("../app.json", import.meta.url));
@@ -75,12 +81,34 @@ test("production store build carries the same public config as preview, and no p
   assert.match(env.EXPO_PUBLIC_VERIFY_URL!, /^https:\/\/.+\/verify$/);
   assert.match(env.EXPO_PUBLIC_PROGRAMME_PUBKEY!, /^[0-9a-f]{64}$/);
   assert.equal(env.EXPO_PUBLIC_IDENTITY_STEP, "off");
-  // The AWS face check ships dormant: no store profile turns it on until its release is ready.
-  assert.notEqual(env.EXPO_PUBLIC_LIVENESS_PROVIDER, "aws", "the face check must stay off in store builds");
   for (const [key, value] of Object.entries(env)) {
     assert.ok(!/<<|>>|human fills/i.test(value), `${key} still holds a placeholder`);
   }
   assert.ok(!("EXPO_PUBLIC_REVENUECAT_TEST_KEY" in env), "a Test Store key must never reach a store build");
+});
+
+test("store build turns on the face check and programme pass with config the app's own parsers accept", () => {
+  // Release 1.2 enables both. A flag set with a malformed region, pool or programme id silently
+  // degrades to "unavailable" on every phone, so the store env runs through src/flags.ts itself.
+  const env = resolved("production").env as Record<string, string>;
+  const keys = Object.keys(env).filter((k) => /LIVENESS|AWS_REGION|PERSONHOOD/.test(k));
+  const prev = keys.map((k) => process.env[k]);
+  try {
+    for (const k of keys) process.env[k] = env[k];
+    assert.equal(livenessProvider(), "aws");
+    assert.deepEqual(faceLivenessConfig(), {
+      region: "us-east-1",
+      identityPoolId: "us-east-1:3012b828-386e-4c26-a6f5-6db47ee36533",
+      identityPoolRegion: "us-east-1",
+    });
+    assert.equal(personhoodProvider(), "semaphore");
+    assert.equal(personhoodProgrammeId(), "unicef-prufture-001");
+  } finally {
+    keys.forEach((k, i) => (prev[i] === undefined ? delete process.env[k] : (process.env[k] = prev[i])));
+  }
+  // Internal builds stay dormant, so a preview install never opens a paid AWS session by accident.
+  const preview = resolved("preview").env as Record<string, string>;
+  assert.notEqual(preview.EXPO_PUBLIC_LIVENESS_PROVIDER, "aws");
 });
 
 test("app.json: android.package + versionCode set, eas.projectId is a real UUID", () => {
