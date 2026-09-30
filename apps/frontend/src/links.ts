@@ -5,7 +5,7 @@
 
 import { color } from "./theme";
 
-const DEFAULT_VERIFY_BASE = "https://prufture.vercel.app/verify";
+const DEFAULT_VERIFY_BASE = "https://prufture.voltarut.com/verify";
 // `||`, not `??`: an empty EXPO_PUBLIC_VERIFY_URL (as in .env.example) must also fall back.
 export const VERIFY_BASE = process.env.EXPO_PUBLIC_VERIFY_URL || DEFAULT_VERIFY_BASE;
 

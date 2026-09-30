@@ -40,11 +40,11 @@ test("summary counts states, lists the busiest activities first, and the latest 
 });
 
 test("the email carries counts, activity names and the dashboard link only", () => {
-  const { subject, body } = summaryEmail(coordinatorSummary(rows), "https://prufture.vercel.app/dashboard");
+  const { subject, body } = summaryEmail(coordinatorSummary(rows), "https://prufture.voltarut.com/dashboard");
   assert.equal(subject, "Prufture reports summary: 3 to review");
   assert.match(body, /5 reports: 3 to review, 1 accepted, 1 rejected\./);
   assert.match(body, /Check the new vaccine fridge at the health centre: 2/);
-  assert.match(body, /Full list and CSV export: https:\/\/prufture\.vercel\.app\/dashboard/);
+  assert.match(body, /Full list and CSV export: https:\/\/prufture\.voltarut\.com\/dashboard/);
   for (const leak of ["a".repeat(12), "d2g62", "private reviewer note"]) {
     assert.ok(!body.includes(leak), `email must not include ${leak}`);
   }
