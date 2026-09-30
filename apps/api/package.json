@@ -15,6 +15,7 @@
     "personhood-fixtures": "tsx scripts/make-personhood-fixtures.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-rekognition": "^3.1142.0",
     "@hono/node-server": "^1.13.0",
     "@proof/core": "*",
     "@semaphore-protocol/group": "^4.14.3",

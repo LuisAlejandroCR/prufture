@@ -3,14 +3,30 @@
 // proofHash), marking a stage done only when every proof reached it. For an assignment it shows live
 // community confirmations from independent nearby reports (src/confirmations.ts). The reporter's
 // private note (local only) shows under the timeline. Proof references sit under Technical details.
-// No PII, exact location or secrets.
+// A coordinator's request for the photos shows as a yes/no prompt; nothing is sent without a yes, and
+// a yes sends sealed photos only (src/evidence-share.ts). No PII, exact location or secrets.
 
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import { LayoutAnimation, Pressable, StyleSheet, Text, View } from "react-native";
 import { Icon } from "../../src/components/icons/Icon";
-import { BackLink, Notice, Screen, SecondaryButton, StatusPill, TaskHeader } from "../../src/components/ui";
-import { announce, stageSpoken, syncResult } from "../../src/announce";
+import {
+  BackLink,
+  Notice,
+  PrimaryButton,
+  Screen,
+  SecondaryButton,
+  StatusPill,
+  TaskHeader,
+} from "../../src/components/ui";
+import { announce, note as spoken, stageSpoken, syncResult } from "../../src/announce";
+import {
+  approveEvidenceRequest,
+  declineEvidenceRequest,
+  pendingEvidenceRequests,
+  readLocalPhoto,
+  shareCopy,
+} from "../../src/evidence-share";
 import {
   confirmationsLabel,
   confirmationsNote,
@@ -36,6 +52,11 @@ export default function ReportStatusScreen() {
   const [showTech, setShowTech] = useState(false);
   const [checking, setChecking] = useState(false);
   const [note, setNote] = useState<string | null>(null);
+  // Coordinator requests for this report's photos, waiting for the reporter's yes or no.
+  const [requested, setRequested] = useState<string[]>([]);
+  const [answering, setAnswering] = useState(false);
+  const [shareNotice, setShareNotice] = useState<string | null>(null);
+  const copy = shareCopy();
   // null = not checked (offline, unsent or api unreachable): no count is shown rather than a guess.
   const [reports, setReports] = useState<ConfirmationReport[] | null>(null);
 
@@ -46,6 +67,10 @@ export default function ReportStatusScreen() {
         setGroup(report);
         const reportId = report[0]?.reportId ?? "";
         getLocalNote(reportId).then(setNote).catch(() => setNote(null));
+        const mine = new Set(report.map((r) => r.proofHash));
+        pendingEvidenceRequests()
+          .then((all) => setRequested(all.filter((h) => mine.has(h))))
+          .catch(() => setRequested([]));
         const sent = report.find((r) => r.status !== "pending_sync");
         if (sent && getTask(sent.taskId).confirmations) {
           fetchConfirmations(API_URL, sent.proofHash).then(setReports).catch(() => setReports(null));
@@ -55,6 +80,37 @@ export default function ReportStatusScreen() {
       })
       .catch(() => setGroup([]));
   }, [id]);
+
+  const approveShare = () => {
+    setAnswering(true);
+    const proofs = group
+      .filter((r) => requested.includes(r.proofHash))
+      .map((r) => ({ proofHash: r.proofHash, readPhoto: () => readLocalPhoto(r.mediaUri) }));
+    approveEvidenceRequest(proofs, API_URL, (input, init) => fetch(input, init))
+      .then((res) => {
+        const message = !res.ok
+          ? copy.unavailable
+          : res.missing > 0
+            ? copy.missing
+            : "Thank you. The photos will be sent, locked, when you have signal.";
+        setShareNotice(message);
+        void announce(spoken(message));
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        setAnswering(false);
+        setRequested([]);
+      });
+  };
+
+  const declineShare = () => {
+    const message = "Okay. Your photos stay on this phone.";
+    void declineEvidenceRequest(requested).finally(() => {
+      setRequested([]);
+      setShareNotice(message);
+      void announce(spoken(message));
+    });
+  };
 
   useFocusEffect(useCallback(() => load(), [load]));
 
@@ -116,6 +172,17 @@ export default function ReportStatusScreen() {
           This report is ready to send. It will go out automatically when you have signal.
         </Notice>
       ) : null}
+
+      {requested.length > 0 ? (
+        <View style={styles.requestCard}>
+          <Text style={styles.sectionTitle} accessibilityRole="header">{copy.requestTitle}</Text>
+          <Text style={styles.body}>{copy.requestBody}</Text>
+          <PrimaryButton label="Share photos" onPress={approveShare} busy={answering} />
+          <SecondaryButton label="Don't share" onPress={declineShare} disabled={answering} />
+        </View>
+      ) : null}
+
+      {shareNotice ? <Notice tone="info" icon="privacy">{shareNotice}</Notice> : null}
 
       <View style={styles.progressCard}>
         <Text style={styles.sectionTitle} accessibilityRole="header">Report progress</Text>
@@ -266,6 +333,7 @@ const styles = StyleSheet.create({
   facts: { gap: space.sm },
   fact: { flexDirection: "row", alignItems: "center", gap: space.sm },
   factText: { ...type.meta, color: color.text, flex: 1 },
+  requestCard: { gap: space.md, padding: space.md, borderRadius: radius.md, backgroundColor: color.surface, borderWidth: 1, borderColor: color.primary },
   progressCard: { gap: space.md, padding: space.md, borderRadius: radius.md, backgroundColor: color.surface, borderWidth: 1, borderColor: color.border },
   sectionTitle: { ...type.subtitle, color: color.text },
   timeline: { gap: 0, paddingVertical: space.sm },

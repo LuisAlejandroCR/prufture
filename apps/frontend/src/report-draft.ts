@@ -12,6 +12,7 @@ import {
   persistDraft,
   readPersistedPhotoBytes,
 } from "./draft-store";
+import { queueOptInEvidence } from "./evidence-share";
 import { attachLiveness } from "./liveness";
 import { sanitizeNote, saveLocalNote } from "./report-note";
 import { attachPreciseLocation } from "./sync";
@@ -71,6 +72,11 @@ export interface ReportDraft {
   livenessDegraded: boolean;
   /** The api's signed receipt for the verdict above (booleans + time + MAC). "" if none. */
   livenessTicket: string;
+  /**
+   * Reporter's per-report opt-in to share the photos, sealed to the programme key (review step).
+   * Absent or false = off, the default: photos stay on this phone.
+   */
+  shareEvidence?: boolean;
   startedAt: number;
 }
 
@@ -159,6 +165,13 @@ export function setPreciseLocation(cipherHex: string): void {
   void persistDraft(current);
 }
 
+/** The review-step opt-in. Only an explicit `true` shares; anything else is off. */
+export function setShareEvidence(on: boolean): void {
+  if (!current) return;
+  current.shareEvidence = on === true;
+  void persistDraft(current);
+}
+
 export function setLiveness(checked: boolean, verified: boolean, degraded = false, ticket = ""): void {
   if (!current) return;
   current.livenessChecked = checked;
@@ -222,6 +235,7 @@ export async function saveDraft(): Promise<SaveResult> {
   let saved = 0;
   let failed = 0;
   let firstProofHash: string | null = null;
+  const sealedForSharing: { proofHash: string; bytes: Uint8Array }[] = [];
 
   const captureProof = captureProofImpl;
   if (!captureProof) return { saved: 0, failed: draft.photos.length, firstProofHash: null };
@@ -241,6 +255,7 @@ export async function saveDraft(): Promise<SaveResult> {
         reportId: draft.reportId,
       });
       firstProofHash = firstProofHash ?? proof.proofHash;
+      if (draft.shareEvidence === true) sealedForSharing.push({ proofHash: proof.proofHash, bytes });
       saved += 1;
     } catch {
       failed += 1;
@@ -253,6 +268,11 @@ export async function saveDraft(): Promise<SaveResult> {
   // The note stays on this phone, next to the report it describes. Awaited so it lands before
   // clearDraft() wipes the draft; saveLocalNote never throws.
   if (saved > 0 && draft.note) await saveLocalNote(draft.reportId, draft.note);
+
+  // Opt-in only: the photos are sealed to the programme key HERE, while their bytes are in memory,
+  // and only the ciphertext is queued. The sync pass posts it once the proof is on the api.
+  // Awaited so the bytes are sealed before clearDraft(); queueOptInEvidence never throws.
+  if (sealedForSharing.length > 0) await queueOptInEvidence(sealedForSharing);
 
   if (firstProofHash) {
     const apiUrl = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8787";

@@ -65,6 +65,32 @@ const NOTIFIED_KEYS_FIELD = "__notifiedKeys__";
 // Reserved keys for the personhood layer. Nullifiers are private: no route ever returns them.
 const PERSONHOOD_GROUPS_FIELD = "__personhoodGroups__";
 const NULLIFIERS_FIELD = "__nullifiers__";
+// Reserved key for sealed-evidence bookkeeping (see evidence.ts). Side data only: the blob itself
+// lives in the storage adapter, and nothing here is part of an Entry or any public route.
+const EVIDENCE_FIELD = "__evidence__";
+
+/**
+ * Bookkeeping for one proof's sealed evidence photo. Holds times, a size and a digest of the
+ * CIPHERTEXT — never the blob, never a key, never anything derived from the plaintext photo.
+ */
+export interface EvidenceRecord {
+  /** Set when a coordinator asked for this proof's photo. */
+  requestedAt?: string;
+  /** Set when a sealed blob was written to storage. */
+  storedAt?: string;
+  /** Sealed blob size in bytes. */
+  bytes?: number;
+  /** sha256 hex of the sealed blob, so an identical app retry is idempotent. */
+  cipherSha256?: string;
+  /** Set when the retention purge deleted the blob. */
+  purgedAt?: string;
+  /**
+   * sha256 hex of the device's per-proof evidence token, registered on the proof's FIRST /sync only.
+   * /evidence and /evidence-requests require the matching token, so knowing a public proofHash is
+   * not enough to upload for, or learn about requests on, someone else's report.
+   */
+  tokenHash?: string;
+}
 
 // SWAP POINT: a JSON file needs a host with a persistent writable disk (Render disk, Railway or
 // Fly volume) — NOT Vercel serverless. If apps/api is deployed somewhere ephemeral, replace only
@@ -97,6 +123,7 @@ const byHash = new Map<string, Entry>();
 const notifiedKeys = new Set<string>();
 const personhoodGroups = new Map<string, PersonhoodGroupRecord>();
 const nullifiers = new Set<string>();
+const evidence = new Map<string, EvidenceRecord>();
 let flushTimer: NodeJS.Timeout | null = null;
 
 /**
@@ -127,6 +154,7 @@ function load(): void {
   notifiedKeys.clear();
   personhoodGroups.clear();
   nullifiers.clear();
+  evidence.clear();
   let raw: string;
   try {
     raw = readFileSync(storePath, "utf8");
@@ -147,6 +175,10 @@ function load(): void {
         }
         if (hash === PERSONHOOD_GROUPS_FIELD) {
           loadGroups(value);
+          continue;
+        }
+        if (hash === EVIDENCE_FIELD) {
+          loadEvidence(value);
           continue;
         }
         const v = value as Entry;
@@ -184,6 +216,28 @@ function load(): void {
     notifiedKeys.clear();
     personhoodGroups.clear();
     nullifiers.clear();
+    evidence.clear();
+  }
+}
+
+const isShortString = (x: unknown): x is string => typeof x === "string" && x.length > 0 && x.length <= 40;
+
+/** Whitelist every evidence field on the way in; unknown keys in the file are dropped. */
+function loadEvidence(value: unknown): void {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return;
+  for (const [hash, r] of Object.entries(value as Record<string, unknown>)) {
+    if (!r || typeof r !== "object") continue;
+    const v = r as Record<string, unknown>;
+    const rec: EvidenceRecord = {};
+    if (isShortString(v.requestedAt)) rec.requestedAt = v.requestedAt;
+    if (isShortString(v.storedAt)) rec.storedAt = v.storedAt;
+    if (typeof v.bytes === "number" && Number.isSafeInteger(v.bytes) && v.bytes >= 0) rec.bytes = v.bytes;
+    if (typeof v.cipherSha256 === "string" && /^[0-9a-f]{64}$/.test(v.cipherSha256)) {
+      rec.cipherSha256 = v.cipherSha256;
+    }
+    if (isShortString(v.purgedAt)) rec.purgedAt = v.purgedAt;
+    if (typeof v.tokenHash === "string" && /^[0-9a-f]{64}$/.test(v.tokenHash)) rec.tokenHash = v.tokenHash;
+    if (Object.keys(rec).length > 0) evidence.set(hash, rec);
   }
 }
 
@@ -214,6 +268,7 @@ function flushNow(): void {
     if (notifiedKeys.size > 0) out[NOTIFIED_KEYS_FIELD] = [...notifiedKeys];
     if (personhoodGroups.size > 0) out[PERSONHOOD_GROUPS_FIELD] = Object.fromEntries(personhoodGroups);
     if (nullifiers.size > 0) out[NULLIFIERS_FIELD] = [...nullifiers];
+    if (evidence.size > 0) out[EVIDENCE_FIELD] = Object.fromEntries(evidence);
     writeFileSync(tmp, JSON.stringify(out));
     renameSync(tmp, storePath);
   } catch {
@@ -335,6 +390,22 @@ export function addNullifier(key: string): void {
     nullifiers.add(key);
     scheduleFlush();
   }
+}
+
+export function getEvidenceRecord(proofHash: string): EvidenceRecord | undefined {
+  const r = evidence.get(proofHash);
+  return r ? { ...r } : undefined;
+}
+
+/** Replace a proof's evidence record; `undefined` removes it. */
+export function putEvidenceRecord(proofHash: string, rec: EvidenceRecord | undefined): void {
+  if (rec === undefined) evidence.delete(proofHash);
+  else evidence.set(proofHash, { ...rec });
+  scheduleFlush();
+}
+
+export function allEvidenceRecords(): [string, EvidenceRecord][] {
+  return [...evidence.entries()].map(([h, r]) => [h, { ...r }]);
 }
 
 export function getProof(proofHash: string): Entry | undefined {

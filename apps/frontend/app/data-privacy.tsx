@@ -8,7 +8,7 @@ import { BackLink, Notice, Screen, ScreenTitle } from "../src/components/ui";
 import { color, radius, space, type } from "../src/theme";
 
 const ITEMS: { icon: IconName; title: string; detail: string }[] = [
-  { icon: "photo", title: "Photos stay on this phone", detail: "The original photo is not uploaded unless you explicitly choose to share it." },
+  { icon: "photo", title: "Photos stay on this phone", detail: "The original photo is not uploaded unless you explicitly choose to share it for a report, or say yes when the programme team asks. A shared photo is locked on this phone so only the programme team can open it, deleted after 90 days, and never shown on the public page." },
   { icon: "location", title: "Only an approximate area is public", detail: "Reports use a shortened location cell. Your exact position is not included in the public report." },
   { icon: "shield", title: "Precise point, encrypted", detail: "When the programme has set up audits, your precise location is encrypted on this phone so only the programme team can open it. It is never shown publicly." },
   { icon: "privacy", title: "No identity in reports", detail: "Your name, phone number, identity documents, and account details are not part of a report." },

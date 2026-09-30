@@ -24,6 +24,8 @@ interface PersistedDraft {
   livenessVerified: boolean;
   livenessDegraded: boolean;
   livenessTicket: string;
+  /** Review-step opt-in to share sealed photos. Absent in older drafts = off. */
+  shareEvidence?: boolean;
   startedAt: number;
   photos: PersistedPhoto[];
 }
@@ -116,6 +118,7 @@ function toPersisted(d: ReportDraft, photos: PersistedPhoto[]): PersistedDraft {
     livenessVerified: d.livenessVerified,
     livenessDegraded: d.livenessDegraded,
     livenessTicket: d.livenessTicket,
+    shareEvidence: d.shareEvidence === true,
     startedAt: d.startedAt,
     photos,
   };
@@ -174,6 +177,8 @@ export async function loadPersistedDraft(): Promise<ReportDraft | null> {
       livenessVerified: Boolean(p.livenessVerified),
       livenessDegraded: Boolean(p.livenessDegraded),
       livenessTicket: typeof p.livenessTicket === "string" ? p.livenessTicket : "",
+      // Only an explicit true survives a resume; anything else is the default, off.
+      shareEvidence: p.shareEvidence === true,
       startedAt: typeof p.startedAt === "number" ? p.startedAt : Date.now(),
       photos: p.photos
         .filter((ph): ph is PersistedPhoto => !!ph && typeof ph.uri === "string")

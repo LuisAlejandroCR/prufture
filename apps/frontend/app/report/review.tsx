@@ -1,11 +1,12 @@
 // report/review.tsx: the evidence sheet (Alternative C, screen 2) — item header, the approximate area
-// on a map, numbered evidence photos (tap one to retake it), the answers, an optional private note and
-// one "Save report" action, enabled only when nothing is missing (src/report-check.ts; each gap links
-// straight to its fix). Saving turns the draft into signed queued proofs via report-draft.saveDraft.
+// on a map, numbered evidence photos (tap one to retake it), the answers, an optional private note, the
+// opt-in (default off) to share sealed photos, and one "Save report" action, enabled only when nothing
+// is missing (src/report-check.ts; each gap links straight to its fix). Saving turns the draft into
+// signed queued proofs via report-draft.saveDraft.
 
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
-import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Pressable, StyleSheet, Switch, Text, TextInput, View } from "react-native";
 import { CellMap } from "../../src/components/CellMap";
 import { Icon } from "../../src/components/icons/Icon";
 import {
@@ -22,7 +23,8 @@ import { announce, failure } from "../../src/announce";
 import { captureProof } from "../../src/capture";
 import { bump, warn } from "../../src/feedback";
 import { identityStepEnabled } from "../../src/flags";
-import { getDraft, saveDraft, setCaptureProof, setNote } from "../../src/report-draft";
+import { evidenceSharingAvailable, shareCopy } from "../../src/evidence-share";
+import { getDraft, saveDraft, setCaptureProof, setNote, setShareEvidence } from "../../src/report-draft";
 import { missingItems, type Missing } from "../../src/report-check";
 import { NOTE_MAX, noteCounter } from "../../src/report-note";
 import { getTask } from "../../src/tasks";
@@ -41,9 +43,17 @@ export default function ReportReviewScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [note, setNoteText] = useState(draft?.note ?? "");
+  // Photo sharing is opt-in per report and OFF by default; disabled when no programme key is set.
+  const canShare = evidenceSharingAvailable();
+  const [share, setShare] = useState(canShare && draft?.shareEvidence === true);
+  const copy = shareCopy();
+  const toggleShare = (on: boolean) => {
+    setShare(on);
+    setShareEvidence(on);
+  };
   // Retake, Change and Location edit the draft on other screens and pop back here; re-read it then.
-  const [, force] = useState(0);
-  useFocusEffect(useCallback(() => force((n) => n + 1), []));
+  const [, refresh] = useState(0);
+  useFocusEffect(useCallback(() => refresh((n) => n + 1), []));
 
   const photos = draft?.photos ?? [];
   const answers = draft?.answers ?? {};
@@ -209,6 +219,24 @@ export default function ReportReviewScreen() {
         </View>
       </View>
 
+      <View style={styles.shareRow}>
+        <View style={{ flex: 1, gap: space.xs }}>
+          <Text style={styles.shareTitle}>{copy.toggleTitle}</Text>
+          <Text style={styles.sub}>
+            {canShare ? (share ? copy.toggleOn : copy.toggleOff) : copy.unavailable}
+          </Text>
+        </View>
+        <Switch
+          value={share}
+          onValueChange={toggleShare}
+          disabled={!canShare}
+          accessibilityLabel={copy.toggleTitle}
+          accessibilityHint={canShare ? copy.toggleOn : copy.unavailable}
+          trackColor={{ false: color.border, true: color.primary }}
+          thumbColor={color.surface}
+        />
+      </View>
+
       {error ? <Notice tone="attention" icon="warning">{error}</Notice> : null}
 
       <View style={styles.privacy}>
@@ -263,6 +291,18 @@ const styles = StyleSheet.create({
   noteHelp: { flexDirection: "row", alignItems: "flex-start", gap: space.xs },
   noteHelpText: { ...type.meta, color: color.muted, flex: 1 },
   counter: { ...type.meta, color: color.text, fontWeight: "700" },
+  shareRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.md,
+    padding: space.md,
+    borderRadius: radius.md,
+    backgroundColor: color.surface,
+    borderWidth: 1,
+    borderColor: color.border,
+    minHeight: target.min + 12,
+  },
+  shareTitle: { ...type.subtitle, color: color.text },
   privacy: { flexDirection: "row", alignItems: "center", gap: space.sm },
   privacyText: { ...type.meta, color: color.text, fontWeight: "600", flex: 1 },
 });
