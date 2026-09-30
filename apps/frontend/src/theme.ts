@@ -91,6 +91,10 @@ export const cameraColor = {
   control: "#E9E1D6",
   /** Decorative only (inactive progress segments), never text. */
   track: "#3A342E",
+  /** Decorative only (outline of an upcoming photo step and its rail), never text. */
+  stepRing: "#6B5E52",
+  /** Shutter flash over the viewfinder. */
+  flash: "#FFFFFF",
 } as const;
 
 export const radius = { sm: 10, md: 14, lg: 20, pill: 999 } as const;

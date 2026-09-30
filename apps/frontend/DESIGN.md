@@ -77,6 +77,67 @@ rectangles with no centre pin (`CellMap`). Mission rows use `CategoryBadge` (sof
 category icon), the first closed question, and "Nearby area" or a rounded distance. A final row
 opens the full catalog.
 
+## Polish (Alternative C)
+
+- Every icon container is round: `Row`, Help, Intro facts and Me toggles match `CategoryBadge`.
+- My reports rows lead with the task's `CategoryBadge`, like Missions.
+- Missions remembers List or Map across launches (`src/view-pref.ts`, secure store, default List).
+- While `EXAMPLE_ASSIGNMENTS` is true, Missions shows "Example missions for this pilot", so demo
+  data is never presented as live programme work.
+- `Appear` fades list rows up with a 40 ms stagger (audit motion table), capped at 8 steps, and
+  renders in place under reduce motion or with celebrations off.
+
+## Flow integrity
+
+- Review enables "Save report" only when nothing is missing (`src/report-check.ts`): every photo
+  step, every required answer, the approximate area. Otherwise an amber "N things left before
+  saving" card lists each gap, and each row opens its fix.
+- Every question shows on Review; "Change" / "Answer" opens that exact question
+  (`questions?q=<index>&from=review`, one question, "Done" returns). Retake and Location opened from
+  Review go back to the same Review instead of stacking a second one, and Review re-reads the draft
+  on focus.
+- Questions: choosing gives a light haptic and moves to the next question after 380 ms; the last
+  question waits for Continue. Redirects run in an effect, never during render.
+- Light haptic on catalog category tiles and on switching List / Map.
+
+## Round 9 details
+
+- Live camera: numbered step circles (sage check done, terracotta current, rails between) above
+  the prompt, and a 260 ms white shutter flash over the viewfinder (skipped under reduce motion).
+- Status opens with the shared `TaskHeader` (category circle + title).
+- My reports: All / In progress / Confirmed chips with counts (`src/report-groups.ts`; "In
+  progress" = ready or waiting; counts always add up to All), with a calm empty line per filter.
+- Missions: pull to refresh re-runs the waiting-report sync; `Screen` takes optional
+  `onRefresh` / `refreshing`.
+
+## Links open in-app
+
+Public pages never send the reporter out of Prufture. `src/links.ts` builds every URL from the one
+`EXPO_PUBLIC_VERIFY_URL` base (a report's public record, and the site's about / privacy / support
+pages), allows only https (or http on a local dev host), and opens them with `expo-web-browser` as
+an in-app sheet (Safari View Controller / Custom Tabs) tinted ivory and terracotta; the system
+browser is only a fallback. Status shows "See public record" once a report is sent; Me links About,
+Privacy policy and Contact support. Links inside those pages (e.g. the external record) stay in the
+same sheet.
+
+## Keyboard and connection notices
+
+Scrolling screens set `automaticallyAdjustKeyboardInsets`, so a focused field (the Review note)
+scrolls above the iOS keyboard instead of under it. "Could not reach the server" on Missions
+follows `showReachError` (`src/home.ts`): only online, only while reports are waiting, only when
+the last pass failed for all of them. Offline is the Offline pill's job, and Missions re-syncs
+when signal returns, so the notice never outlives a successful sync.
+
+## Launch
+
+App icon, adaptive icon, favicon, notification icon and native splash are all the sprout mark
+(`assets/*.svg` rendered to PNG with `sharp`); the old shield is gone. The native splash shows the home
+`BrandMark` sprout on a warm sun disc with "Prufture" below. `app/_layout.tsx` holds it
+(`preventAutoHideAsync`) until the root view lays out, then hands off to `LaunchSplash`, which
+starts from the same mark: sun disc swells, stem grows, right then left leaf unfold (back-eased),
+wordmark and tagline rise in, short hold, then the overlay fades into Missions (about 1.9 s).
+With reduce motion or celebrations off it shows the finished mark for 0.7 s and fades.
+
 ## Shared report pieces (Alternative C)
 
 Every task and report screen is built from the same `src/components/ui.tsx` pieces, so the flow

@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
   factIcon: {
     width: 34,
     height: 34,
-    borderRadius: radius.sm,
+    borderRadius: radius.pill,
     backgroundColor: color.surfaceSoft,
     alignItems: "center",
     justifyContent: "center",

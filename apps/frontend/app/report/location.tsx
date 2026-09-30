@@ -36,7 +36,7 @@ function sealPrecisePoint(lat: number, lng: number, capturedAt: number): string 
 }
 
 export default function ReportLocationScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, from } = useLocalSearchParams<{ id: string; from?: string }>();
   const router = useRouter();
   const task = getTask(id ?? "");
   ensureDraft(task.id);
@@ -82,7 +82,9 @@ export default function ReportLocationScreen() {
   }, [detect]);
 
   const useArea = () => {
-    router.replace({ pathname: "/report/review", params: { id: task.id } });
+    // Opened from Review to fix a missing area: go back to that Review instead of stacking another.
+    if (from === "review") router.back();
+    else router.replace({ pathname: "/report/review", params: { id: task.id } });
   };
 
   return (

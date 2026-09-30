@@ -9,13 +9,20 @@ import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "r
 import { Icon } from "../../src/components/icons/Icon";
 import { Illustration } from "../../src/components/Illustration";
 import { confirmedReportCount } from "../../src/home";
-import { Notice, Screen, ScreenTitle, StatusPill } from "../../src/components/ui";
+import { Appear, CategoryBadge, Notice, Screen, ScreenTitle, StatusPill } from "../../src/components/ui";
 import { listProofs } from "../../src/queue";
 import type { LocalProof } from "../../src/queue-row";
 import { getTask } from "../../src/tasks";
 import { runPendingSync } from "../../src/useAutoSync";
+import {
+  combinedStatus,
+  filterCounts,
+  filterReports,
+  groupReports,
+  type ReportFilter,
+} from "../../src/report-groups";
 import { announce, syncResult } from "../../src/announce";
-import { color, radius, space, type, type FriendlyStatus } from "../../src/theme";
+import { color, radius, space, target, type } from "../../src/theme";
 
 function relativeTime(iso: string): string {
   const then = new Date(iso).getTime();
@@ -26,35 +33,6 @@ function relativeTime(iso: string): string {
   const hrs = Math.round(mins / 60);
   if (hrs < 24) return `${hrs} h ago`;
   return `${Math.round(hrs / 24)} d ago`;
-}
-
-interface ReportGroup {
-  /** reportId when present, otherwise the single row id (pre-hotfix rows). */
-  key: string;
-  rows: LocalProof[];
-}
-
-/** Group per-photo rows into reports. Rows arrive newest-first and stay that way. */
-export function groupReports(rows: LocalProof[]): ReportGroup[] {
-  const order: string[] = [];
-  const byKey = new Map<string, LocalProof[]>();
-  for (const r of rows) {
-    const key = r.reportId || `row:${r.id}`;
-    const bucket = byKey.get(key);
-    if (bucket) bucket.push(r);
-    else {
-      byKey.set(key, [r]);
-      order.push(key);
-    }
-  }
-  return order.map((key) => ({ key, rows: byKey.get(key) as LocalProof[] }));
-}
-
-/** Combined status of a report: the least-advanced of its rows. */
-export function combinedStatus(rows: LocalProof[]): FriendlyStatus {
-  if (rows.some((r) => r.status === "pending_sync")) return "ready";
-  if (rows.some((r) => r.status === "synced" && r.attestationCount === 0)) return "waiting";
-  return "confirmed";
 }
 
 export default function UpdatesScreen() {
@@ -86,7 +64,10 @@ export default function UpdatesScreen() {
       .finally(() => setChecking(false));
   };
 
+  const [filter, setFilter] = useState<ReportFilter>("all");
   const groups = groupReports(rows);
+  const counts = filterCounts(groups);
+  const shown = filterReports(groups, filter);
   const confirmed = confirmedReportCount(rows);
 
   const contribution = (
@@ -134,7 +115,37 @@ export default function UpdatesScreen() {
           refreshControl={<RefreshControl refreshing={checking} onRefresh={checkNow} tintColor={color.primary} />}
         >
           {contribution}
-          {groups.map((g) => {
+          <View style={styles.chips} accessibilityRole="tablist">
+            {(
+              [
+                ["all", "All"],
+                ["progress", "In progress"],
+                ["confirmed", "Confirmed"],
+              ] as const
+            ).map(([key, label]) => {
+              const active = filter === key;
+              return (
+                <Pressable
+                  key={key}
+                  onPress={() => setFilter(key)}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: active }}
+                  accessibilityLabel={`${label}, ${counts[key]}`}
+                  style={[styles.chip, active && styles.chipActive]}
+                >
+                  <Text style={[styles.chipText, active && styles.chipTextActive]}>
+                    {label} {counts[key]}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          {shown.length === 0 ? (
+            <Text style={styles.filterEmpty}>
+              {filter === "confirmed" ? "No confirmed reports yet." : "Nothing in progress. Every report is confirmed."}
+            </Text>
+          ) : null}
+          {shown.map((g, gi) => {
             const newest = g.rows[0];
             if (!newest) return null;
             const task = getTask(newest.taskId);
@@ -142,29 +153,31 @@ export default function UpdatesScreen() {
             const photos = g.rows.length;
             const target = newest.reportId || newest.id;
             return (
-              <Pressable
-                key={g.key}
-                onPress={() => router.push({ pathname: "/status/[id]", params: { id: target } })}
-                accessibilityRole="button"
-                accessibilityLabel={`${task.title}. ${task.area}. Status ${status}. ${photos} ${photos === 1 ? "photo" : "photos"}. ${relativeTime(newest.createdAt)}.`}
-                style={({ pressed }) => [styles.row, pressed && styles.pressed]}
-              >
-                <View style={styles.flex}>
-                  <Text style={styles.rowTitle} numberOfLines={1}>
-                    {task.title}
-                  </Text>
-                  <Text style={styles.rowMeta}>
-                    {task.area} · {relativeTime(newest.createdAt)}
-                  </Text>
-                  <View style={styles.pillRow}>
-                    <StatusPill status={status} />
+              <Appear key={g.key} index={gi}>
+                <Pressable
+                  onPress={() => router.push({ pathname: "/status/[id]", params: { id: target } })}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${task.title}. ${task.area}. Status ${status}. ${photos} ${photos === 1 ? "photo" : "photos"}. ${relativeTime(newest.createdAt)}.`}
+                  style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+                >
+                  <CategoryBadge category={task.category} size={44} />
+                  <View style={styles.flex}>
+                    <Text style={styles.rowTitle} numberOfLines={2}>
+                      {task.title}
+                    </Text>
+                    <Text style={styles.rowMeta}>
+                      {task.area} · {relativeTime(newest.createdAt)}
+                    </Text>
+                    <View style={styles.pillRow}>
+                      <StatusPill status={status} />
+                    </View>
+                    <Text style={styles.count}>
+                      {photos} {photos === 1 ? "photo" : "photos"}
+                    </Text>
                   </View>
-                  <Text style={styles.count}>
-                    {photos} {photos === 1 ? "photo" : "photos"}
-                  </Text>
-                </View>
-                <Icon name="chevron" size={18} color={color.faint} />
-              </Pressable>
+                  <Icon name="chevron" size={18} color={color.faint} />
+                </Pressable>
+              </Appear>
             );
           })}
         </ScrollView>
@@ -193,6 +206,20 @@ const styles = StyleSheet.create({
   rowMeta: { ...type.meta, color: color.muted, marginTop: 2 },
   pillRow: { marginTop: space.sm },
   count: { ...type.meta, color: color.faint, marginTop: space.xs },
+  chips: { flexDirection: "row", gap: space.sm, flexWrap: "wrap" },
+  chip: {
+    minHeight: target.min - space.xs,
+    justifyContent: "center",
+    paddingHorizontal: space.md,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: color.border,
+    backgroundColor: color.surface,
+  },
+  chipActive: { backgroundColor: color.primary, borderColor: color.primary },
+  chipText: { ...type.meta, color: color.text, fontWeight: "600" },
+  chipTextActive: { color: color.onPrimary, fontWeight: "700" },
+  filterEmpty: { ...type.body, color: color.muted, textAlign: "center", paddingVertical: space.lg },
   contribution: {
     alignSelf: "stretch",
     borderRadius: radius.md,

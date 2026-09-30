@@ -8,7 +8,7 @@
 
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
-import { Linking, LayoutAnimation, Pressable, StyleSheet, Text, View } from "react-native";
+import { LayoutAnimation, Pressable, StyleSheet, Text, View } from "react-native";
 import { Icon } from "../../src/components/icons/Icon";
 import {
   BackLink,
@@ -37,14 +37,13 @@ import {
 import { identityStepEnabled } from "../../src/flags";
 import { listProofs } from "../../src/queue";
 import type { LocalProof } from "../../src/queue-row";
+import { openInApp, publicRecordUrl } from "../../src/links";
 import { findReport, reportStages } from "../../src/progress";
 import { getLocalNote } from "../../src/report-note";
 import { getTask } from "../../src/tasks";
 import { API_URL, runPendingSync } from "../../src/useAutoSync";
 import { color, friendlyStatus, radius, space, type } from "../../src/theme";
 
-// `||`, not `??`: an empty EXPO_PUBLIC_VERIFY_URL (as in .env.example) must also fall back.
-const VERIFY_BASE = process.env.EXPO_PUBLIC_VERIFY_URL || "https://prufture.vercel.app/verify";
 
 export default function ReportStatusScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -250,7 +249,14 @@ export default function ReportStatusScreen() {
       ) : null}
 
       {!anyPending ? (
-        <SecondaryButton label="Check for updates" icon="retry" onPress={checkNow} disabled={checking} />
+        <>
+          <SecondaryButton
+            label="See public record"
+            icon="review"
+            onPress={() => void openInApp(publicRecordUrl(newest.proofHash))}
+          />
+          <SecondaryButton label="Check for updates" icon="retry" onPress={checkNow} disabled={checking} />
+        </>
       ) : null}
 
       <Pressable
@@ -285,7 +291,7 @@ export default function ReportStatusScreen() {
           {group.map((r) => (
             <Pressable
               key={r.id}
-              onPress={() => Linking.openURL(`${VERIFY_BASE}/${r.proofHash}`).catch(() => undefined)}
+              onPress={() => void openInApp(publicRecordUrl(r.proofHash))}
               accessibilityRole="link"
               accessibilityLabel={`Open the public status page for photo reference ${r.proofHash.slice(0, 8)}`}
               style={styles.refRow}

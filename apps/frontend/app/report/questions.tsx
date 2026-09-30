@@ -1,10 +1,12 @@
 // report/questions.tsx: only the answers needed to understand the activity — one question per view,
-// large choices toned by meaning (works / problem / unsure, src/answer-tone.ts), no free text, no PII. Answers live in the in-memory draft and survive going offline.
-// Each question is its own stack screen (`q` param, src/question-flow.ts), so the iOS swipe back and
-// the Back control both return to the previous question; `from=review` edits one answer and pops back.
+// large choices toned by meaning (works / problem / unsure, src/answer-tone.ts), no free text, no PII.
+// Choosing gives a light haptic and moves to the next question by itself. Answers live in the draft
+// and survive going offline. Each question is its own stack screen (`q` param, src/question-flow.ts),
+// so the iOS swipe back and the Back control both return to the previous question; `from=review`
+// edits one answer and pops back.
 
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { answerTone } from "../../src/answer-tone";
 import { Icon } from "../../src/components/icons/Icon";
@@ -28,19 +30,22 @@ export default function ReportQuestionsScreen() {
   const q = questions[index];
   const [, force] = useState(0);
   const current = getDraft()?.answers[q?.id ?? ""] ?? null;
+  const autoNext = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  if (!q) {
-    router.replace({ pathname: "/report/location", params: { id: task.id } });
-    return null;
-  }
+  // No questions for this task: move on in an effect, never during render.
+  useEffect(() => {
+    if (!q) router.replace({ pathname: "/report/location", params: { id: task.id } });
+  }, [q, router, task.id]);
+  useEffect(() => () => {
+    if (autoNext.current) clearTimeout(autoNext.current);
+  }, []);
 
-  const choose = (value: string) => {
-    if (value !== current) void select();
-    setAnswer(q.id, value);
-    force((n) => n + 1);
-  };
+  if (!q) return null;
+
+  const isLast = index + 1 >= questions.length;
 
   const advance = () => {
+    if (autoNext.current) clearTimeout(autoNext.current);
     const next = afterQuestion({ index, total: questions.length, fromReview });
     if (next.kind === "review") router.back();
     else if (next.kind === "question") {
@@ -48,13 +53,27 @@ export default function ReportQuestionsScreen() {
     } else router.push({ pathname: "/report/location", params: { id: task.id } });
   };
 
-  const back = () => router.back();
+  const choose = (value: string) => {
+    if (value !== current) void select();
+    setAnswer(q.id, value);
+    force((n) => n + 1);
+    // Move on by itself to the next question after a short beat; the last one waits for Continue.
+    if (!fromReview && !isLast) {
+      if (autoNext.current) clearTimeout(autoNext.current);
+      autoNext.current = setTimeout(advance, 380);
+    }
+  };
+
+  const back = () => {
+    if (autoNext.current) clearTimeout(autoNext.current);
+    router.back();
+  };
 
   return (
     <Screen
       footer={
         <PrimaryButton
-          label={index + 1 < questions.length ? "Next" : "Continue"}
+          label={fromReview ? "Done" : isLast ? "Continue" : "Next"}
           onPress={advance}
           disabled={q.required && !current}
           accessibilityHint={q.required && !current ? "Choose an answer to continue" : undefined}

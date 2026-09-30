@@ -21,7 +21,7 @@ const TOPICS: Topic[] = [
     title: "How to make a report",
     line: "Pick a task, take the photos, answer a few questions.",
     detail:
-      "Open a task from Home or Tasks, follow the steps in order, confirm the area, then review and finish. Each step is short and you can go back.",
+      "Open a mission from Missions, or tap Report to pick anything else, follow the steps in order, confirm the area, then review and finish. Each step is short and you can go back.",
   },
   {
     icon: "photo",
@@ -87,7 +87,9 @@ export default function HelpScreen() {
                   <Text style={styles.title}>{t.title}</Text>
                   <Text style={styles.line}>{t.line}</Text>
                 </View>
-                <Icon name={expanded ? "back" : "chevron"} size={16} color={color.faint} />
+                <View style={expanded ? styles.chevronOpen : undefined}>
+                  <Icon name="chevron" size={16} color={color.faint} />
+                </View>
               </Pressable>
               {expanded ? <Text style={styles.detail}>{t.detail}</Text> : null}
             </View>
@@ -99,6 +101,7 @@ export default function HelpScreen() {
 }
 
 const styles = StyleSheet.create({
+  chevronOpen: { transform: [{ rotate: "90deg" }] },
   flex: { flex: 1 },
   item: {
     borderRadius: radius.md,

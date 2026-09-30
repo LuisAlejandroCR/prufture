@@ -8,7 +8,7 @@ import * as FileSystem from "expo-file-system";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useRef, useState } from "react";
-import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { Animated, Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { cameraFramePadding } from "../../src/camera-frame";
 import { announce, failure, photoTaken } from "../../src/announce";
@@ -23,7 +23,7 @@ import {
   Screen,
   SecondaryButton,
 } from "../../src/components/ui";
-import { tap } from "../../src/feedback";
+import { celebrationsAllowed, tap } from "../../src/feedback";
 import { identityStepEnabled } from "../../src/flags";
 import { addPhoto, ensureDraft, getDraft } from "../../src/report-draft";
 import { getTask } from "../../src/tasks";
@@ -47,6 +47,16 @@ export default function ReportCaptureScreen() {
   const [busy, setBusy] = useState(false);
   const [shot, setShot] = useState<Shot | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const flashV = useRef(new Animated.Value(0)).current;
+
+  // Brief shutter flash over the viewfinder (audit motion table). Skipped under reduce motion.
+  const shutterFlash = () => {
+    void celebrationsAllowed().then((ok) => {
+      if (!ok) return;
+      flashV.setValue(0.7);
+      Animated.timing(flashV, { toValue: 0, duration: 260, useNativeDriver: true }).start();
+    });
+  };
   const insets = useSafeAreaInsets();
   const frame = cameraFramePadding(insets);
 
@@ -68,6 +78,7 @@ export default function ReportCaptureScreen() {
   async function takePhoto() {
     setBusy(true);
     setError(null);
+    shutterFlash();
     try {
       const photo = await cameraRef.current?.takePictureAsync({ quality: 0.4, base64: true });
       if (!photo) throw new Error("no-photo");
@@ -178,9 +189,28 @@ export default function ReportCaptureScreen() {
 
       <View style={styles.viewport}>
         <CameraView ref={cameraRef} style={StyleSheet.absoluteFill} facing="back" flash={flash} />
+        <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.flashOverlay, { opacity: flashV }]} />
       </View>
 
       <View style={[styles.cameraControls, { paddingBottom: frame.bottom }]}>
+        <View style={styles.camSteps} accessibilityLabel={`Photo ${stepIndex + 1} of ${total}`}>
+          {task.photos.map((_, i) => {
+            const done = i !== stepIndex && !!getDraft()?.photos.some((p) => p.stepIndex === i);
+            const current = i === stepIndex;
+            return (
+              <View key={i} style={styles.camStepWrap}>
+                <View style={[styles.camStep, done && styles.camStepDone, current && styles.camStepCurrent]}>
+                  {done ? (
+                    <Icon name="check" size={12} color={color.onPrimary} />
+                  ) : (
+                    <Text style={[styles.camStepText, current && styles.camStepTextCurrent]}>{i + 1}</Text>
+                  )}
+                </View>
+                {i < total - 1 ? <View style={[styles.camRail, done && styles.camRailDone]} /> : null}
+              </View>
+            );
+          })}
+        </View>
         <Text style={styles.stepLabelLight}>
           Photo {stepIndex + 1} of {total}
         </Text>
@@ -243,6 +273,24 @@ const styles = StyleSheet.create({
     gap: space.sm,
     backgroundColor: cameraColor.ground,
   },
+  flashOverlay: { backgroundColor: cameraColor.flash },
+  camSteps: { flexDirection: "row", alignItems: "center", marginBottom: space.xs },
+  camStepWrap: { flexDirection: "row", alignItems: "center" },
+  camStep: {
+    width: 26,
+    height: 26,
+    borderRadius: radius.pill,
+    borderWidth: 2,
+    borderColor: cameraColor.stepRing,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  camStepDone: { backgroundColor: color.success, borderColor: color.success },
+  camStepCurrent: { borderColor: color.primary, backgroundColor: color.primary },
+  camStepText: { ...type.meta, fontWeight: "700", color: cameraColor.hint },
+  camStepTextCurrent: { color: color.onPrimary },
+  camRail: { width: 22, height: 2, backgroundColor: cameraColor.stepRing, marginHorizontal: space.xs },
+  camRailDone: { backgroundColor: color.success },
   stepLabelLight: { ...type.meta, color: cameraColor.step, fontWeight: "700" },
   instructionLight: { ...type.subtitle, color: cameraColor.text },
   hintLight: { ...type.meta, color: cameraColor.hint },

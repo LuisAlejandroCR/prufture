@@ -3,13 +3,20 @@
 // nearest first, plus a way into the full catalog. Home and the old Tasks tab are one screen now.
 
 import { useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import { CellMap, type MapCell } from "../../src/components/CellMap";
 import { Icon, type IconName } from "../../src/components/icons/Icon";
-import { BrandMark, CategoryBadge, OfflinePill, Screen } from "../../src/components/ui";
+import { Appear, BrandMark, CategoryBadge, OfflinePill, Screen } from "../../src/components/ui";
 import { select } from "../../src/feedback";
-import { confirmedReportCount, greeting, missionPlace, missionQuestion, nearMePrompt } from "../../src/home";
+import {
+  confirmedReportCount,
+  greeting,
+  missionPlace,
+  missionQuestion,
+  nearMePrompt,
+  showReachError,
+} from "../../src/home";
 import { listProofs } from "../../src/queue";
 import type { LocalProof } from "../../src/queue-row";
 import {
@@ -20,11 +27,12 @@ import {
   restoreDraft,
   resumeTarget,
 } from "../../src/report-draft";
-import { distanceLabel, getTask, listTasks, sortByDistance, type TaskDef } from "../../src/tasks";
+import { EXAMPLE_ASSIGNMENTS, distanceLabel, getTask, listTasks, sortByDistance, type TaskDef } from "../../src/tasks";
 import { color, radius, shadow, space, target, type } from "../../src/theme";
 import { useApproxArea } from "../../src/useApproxArea";
 import { runPendingSync } from "../../src/useAutoSync";
 import { useOnline } from "../../src/useOnline";
+import { loadMissionsView, saveMissionsView } from "../../src/view-pref";
 
 type View_ = "list" | "map";
 
@@ -34,38 +42,72 @@ export default function MissionsScreen() {
   const { cell, centre, status, canAskAgain, requestArea } = useApproxArea();
   const [pending, setPending] = useState(0);
   const [confirmed, setConfirmed] = useState(0);
-  const [reachError, setReachError] = useState(false);
+  const [lastSync, setLastSync] = useState({ synced: 0, failed: 0 });
   const [view, setView] = useState<View_>("list");
+  const picked = useRef(false);
   const [unfinished, setUnfinished] = useState<{ taskId: string } | null>(null);
   const missions = useMemo(() => sortByDistance(listTasks(), cell), [cell]);
+
+  const count = useCallback((rows: LocalProof[]) => {
+    setPending(rows.filter((r) => r.status === "pending_sync").length);
+    setConfirmed(confirmedReportCount(rows));
+  }, []);
+
+  // Try to send whatever is waiting, then recount. Runs on focus and again when signal returns.
+  const syncWaiting = useCallback(() => {
+    listProofs()
+      .then((rows) => {
+        count(rows);
+        if (!rows.some((r) => r.status === "pending_sync")) return;
+        runPendingSync()
+          .then((s) => {
+            setLastSync({ synced: s.synced, failed: s.failed });
+            listProofs().then(count).catch(() => undefined);
+          })
+          .catch(() => undefined);
+      })
+      .catch(() => {
+        setPending(0);
+        setConfirmed(0);
+      });
+  }, [count]);
 
   useFocusEffect(
     useCallback(() => {
       hasPersistedDraft()
         .then((meta) => setUnfinished(meta && isResumable(meta) ? { taskId: meta.taskId } : null))
         .catch(() => setUnfinished(null));
-      const count = (rows: LocalProof[]) => {
-        setPending(rows.filter((r) => r.status === "pending_sync").length);
-        setConfirmed(confirmedReportCount(rows));
-      };
-      listProofs()
-        .then((rows) => {
-          count(rows);
-          if (rows.some((r) => r.status === "pending_sync")) {
-            runPendingSync()
-              .then((s) => {
-                setReachError(s.failed > 0 && s.synced === 0);
-                listProofs().then(count).catch(() => undefined);
-              })
-              .catch(() => undefined);
-          }
-        })
-        .catch(() => {
-          setPending(0);
-          setConfirmed(0);
-        });
-    }, []),
+      syncWaiting();
+    }, [syncWaiting]),
   );
+
+  useEffect(() => {
+    if (online) syncWaiting();
+  }, [online, syncWaiting]);
+
+  useEffect(() => {
+    // The stored view loads in the background; a choice the user already made wins over it.
+    loadMissionsView()
+      .then((v) => {
+        if (!picked.current) setView(v);
+      })
+      .catch(() => undefined);
+  }, []);
+  const chooseView = (v: View_) => {
+    picked.current = true;
+    if (v !== view) void select();
+    setView(v);
+    void saveMissionsView(v);
+  };
+
+  const [refreshing, setRefreshing] = useState(false);
+  const refresh = () => {
+    setRefreshing(true);
+    syncWaiting();
+    setTimeout(() => setRefreshing(false), 700);
+  };
+
+  const reachError = showReachError({ online, pending, ...lastSync });
 
   const open = (id: string) => router.push({ pathname: "/task/[id]", params: { id } });
 
@@ -92,7 +134,7 @@ export default function MissionsScreen() {
   ];
 
   return (
-    <Screen>
+    <Screen onRefresh={refresh} refreshing={refreshing}>
       <View style={styles.top}>
         <BrandMark />
         <OfflinePill online={online} />
@@ -170,12 +212,16 @@ export default function MissionsScreen() {
         </View>
       </View>
 
+      {EXAMPLE_ASSIGNMENTS ? (
+        <View style={styles.example} accessibilityRole="text">
+          <Icon name="info" size={14} color={color.information} />
+          <Text style={styles.exampleText}>Example missions for this pilot. Your programme team will add real ones.</Text>
+        </View>
+      ) : null}
+
       <View style={styles.toggle} accessibilityRole="tablist">
         {(["list", "map"] as const).map((v) => (
-          <ToggleItem key={v} value={v} active={view === v} onPress={() => {
-              if (view !== v) void select();
-              setView(v);
-            }} />
+          <ToggleItem key={v} value={v} active={view === v} onPress={() => chooseView(v)} />
         ))}
       </View>
 
@@ -192,8 +238,10 @@ export default function MissionsScreen() {
       )}
 
       <View style={{ gap: space.sm }}>
-        {missions.map((t) => (
-          <MissionRow key={t.id} task={t} place={missionPlace(t, distanceLabel(cell, t))} onPress={() => open(t.id)} />
+        {missions.map((t, i) => (
+          <Appear key={t.id} index={i}>
+            <MissionRow task={t} place={missionPlace(t, distanceLabel(cell, t))} onPress={() => open(t.id)} />
+          </Appear>
         ))}
       </View>
 
@@ -356,6 +404,16 @@ const styles = StyleSheet.create({
   smallTextPrimary: { color: color.onPrimary, fontWeight: "700" },
   sectionHead: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: space.sm },
   section: { ...type.title, color: color.text },
+  example: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.xs,
+    paddingVertical: space.xs,
+    paddingHorizontal: space.sm,
+    borderRadius: radius.sm,
+    backgroundColor: color.informationSoft,
+  },
+  exampleText: { ...type.meta, color: color.text, flex: 1 },
   approx: { flexDirection: "row", alignItems: "center", gap: space.xs },
   approxText: { ...type.meta, color: color.muted },
   toggle: { flexDirection: "row", padding: space.xs, gap: space.xs, borderRadius: radius.md, backgroundColor: color.surfaceSoft },

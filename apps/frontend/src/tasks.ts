@@ -55,6 +55,12 @@ interface Assignment {
   highAssurance?: boolean;
 }
 
+/**
+ * True while the assignments below are bundled examples rather than a programme feed. Missions shows
+ * an "Example missions" label whenever this is true, so demo data is never presented as live work.
+ */
+export const EXAMPLE_ASSIGNMENTS = true;
+
 // Example programme assignments. In a pilot these come from the programme team; ids are stable
 // because reports already saved on phones reference them.
 const ASSIGNMENTS: Assignment[] = [

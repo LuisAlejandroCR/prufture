@@ -16,6 +16,7 @@ import {
 } from "../../src/feedback";
 import { personhoodProvider } from "../../src/flags";
 import { confirmedReportCount } from "../../src/home";
+import { openInApp, siteUrl } from "../../src/links";
 import { getCommitment } from "../../src/personhood-device";
 import { listProofs } from "../../src/queue";
 import { color, radius, space, target, type } from "../../src/theme";
@@ -159,6 +160,8 @@ export default function MeScreen() {
         <SectionLabel>Support</SectionLabel>
         <Row icon="help" title="Help" subtitle="How the app works" onPress={() => router.push("/help")} />
         <Row icon="info" title="About Prufture" subtitle="Version" onPress={() => router.push("/about")} />
+        <Row icon="privacy" title="Privacy policy" subtitle="Opens inside the app" onPress={() => void openInApp(siteUrl("privacy"))} />
+        <Row icon="community" title="Contact support" subtitle="Opens inside the app" onPress={() => void openInApp(siteUrl("support"))} />
       </View>
 
       <Text style={styles.about}>
@@ -229,7 +232,7 @@ const styles = StyleSheet.create({
   toggleIcon: {
     width: 40,
     height: 40,
-    borderRadius: radius.sm,
+    borderRadius: radius.pill,
     backgroundColor: color.surfaceSoft,
     alignItems: "center",
     justifyContent: "center",
