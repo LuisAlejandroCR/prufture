@@ -61,8 +61,8 @@ export function syncResult(s: SyncCounts, requested: boolean): Announcement | nu
   }
   const parts: string[] = [];
   if (s.synced > 0) parts.push("Your saved reports were sent.");
-  if (s.attested === 1) parts.push("A report was confirmed.");
-  else if (s.attested > 1) parts.push(`${s.attested} reports were confirmed.`);
+  if (s.attested === 1) parts.push("A report was recorded publicly.");
+  else if (s.attested > 1) parts.push(`${s.attested} reports were recorded publicly.`);
   if (parts.length === 0) return requested ? say("Checked. No new updates.") : null;
   return say(parts.join(" "), requested ? "default" : "low");
 }

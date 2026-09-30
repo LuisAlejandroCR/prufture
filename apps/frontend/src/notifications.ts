@@ -1,5 +1,5 @@
 // notifications.ts: anonymous report-status push — registers an Expo token with a random device id
-// (never an account, identity or proof reference) plus a local "confirmed" fallback. expo-notifications
+// (never an account, identity or proof reference) plus a local "recorded publicly" fallback. expo-notifications
 // is lazy-imported and skipped in Expo Go, where importing it crashes on PushNotificationIOS at boot.
 
 import Constants from "expo-constants";
@@ -113,11 +113,11 @@ export async function notifyReportConfirmed(count = 1): Promise<void> {
     if (!Notifications) return; // Expo Go / unsupported: silently skip.
     await Notifications.scheduleNotificationAsync({
       content: {
-        title: "Your report was confirmed",
+        title: "Your report was recorded publicly",
         body:
           count > 1
-            ? `${count} of your reports were confirmed by the programme team.`
-            : "A report you filed was confirmed by the programme team.",
+            ? `${count} of your reports now have a public, tamper-proof record.`
+            : "A report you filed now has a public, tamper-proof record.",
       },
       trigger: null,
     });

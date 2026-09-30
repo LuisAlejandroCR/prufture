@@ -1,4 +1,4 @@
-// home.ts: pure helpers for the Missions home — greeting, the confirmed-report count shown in the
+// home.ts: pure helpers for the Missions home — greeting, the recorded-report count shown in the
 // contribution strip, and the text of each mission row. No react-native import, so node --test
 // covers it; the screen passes in the hour, the queue rows and the distance label.
 
@@ -12,10 +12,10 @@ export function greeting(hour: number): string {
 }
 
 /**
- * Reports (not photos) that are confirmed: every row of the report is attested or has at least
- * one community confirmation. Rows without a reportId are one report each.
+ * Reports (not photos) that are recorded publicly: every row of the report is attested on-chain.
+ * This is the public record, not a community confirmation. Rows without a reportId are one report each.
  */
-export function confirmedReportCount(rows: LocalProof[]): number {
+export function recordedReportCount(rows: LocalProof[]): number {
   const byReport = new Map<string, LocalProof[]>();
   for (const r of rows) {
     const key = r.reportId || `row:${r.id}`;

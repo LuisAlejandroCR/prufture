@@ -1,4 +1,4 @@
-// (tabs)/updates.tsx: "My reports" — a private contribution card (confirmed reports, no ranking),
+// (tabs)/updates.tsx: "My reports" — a private contribution card (recorded reports, no ranking),
 // then what happened after each report was sent — one card per report (per-photo
 // proofs grouped by the local reportId), friendly status and relative time, plus a manual
 // "check now". No hashes, no error traces.
@@ -8,7 +8,7 @@ import { useCallback, useRef, useState } from "react";
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Icon } from "../../src/components/icons/Icon";
 import { Illustration } from "../../src/components/Illustration";
-import { confirmedReportCount } from "../../src/home";
+import { recordedReportCount } from "../../src/home";
 import { Appear, CategoryBadge, Notice, Screen, ScreenTitle, StatusPill } from "../../src/components/ui";
 import { listProofs } from "../../src/queue";
 import type { LocalProof } from "../../src/queue-row";
@@ -68,20 +68,20 @@ export default function UpdatesScreen() {
   const groups = groupReports(rows);
   const counts = filterCounts(groups);
   const shown = filterReports(groups, filter);
-  const confirmed = confirmedReportCount(rows);
+  const recorded = recordedReportCount(rows);
 
   const contribution = (
     <View
       style={styles.contribution}
       accessible
-      accessibilityLabel={`Your contribution. ${confirmed} ${confirmed === 1 ? "report" : "reports"} confirmed. No ranking. Every useful report counts. Only you see this.`}
+      accessibilityLabel={`Your contribution. ${recorded} ${recorded === 1 ? "report" : "reports"} recorded. No ranking. Every useful report counts. Only you see this.`}
       accessibilityRole="summary"
     >
       <Illustration scene="growth" height={96} />
       <View style={styles.contributionBody}>
         <Text style={styles.contributionTitle}>Your contribution</Text>
         <Text style={styles.contributionCount}>
-          {confirmed} {confirmed === 1 ? "report" : "reports"} confirmed
+          {recorded} {recorded === 1 ? "report" : "reports"} recorded
         </Text>
         <Text style={styles.contributionNote}>No ranking. Every useful report counts. Only you see this.</Text>
       </View>
@@ -104,7 +104,7 @@ export default function UpdatesScreen() {
           <Icon name="review" size={32} color={color.faint} />
           <Text style={styles.emptyTitle}>No reports yet</Text>
           <Text style={styles.emptyBody}>
-            When you finish a report it appears here, and you can follow it from saved to confirmed.
+            When you finish a report it appears here, and you can follow it from saved to recorded publicly.
           </Text>
         </View>
       ) : (
@@ -120,7 +120,7 @@ export default function UpdatesScreen() {
               [
                 ["all", "All"],
                 ["progress", "In progress"],
-                ["confirmed", "Confirmed"],
+                ["confirmed", "Recorded"],
               ] as const
             ).map(([key, label]) => {
               const active = filter === key;
@@ -142,7 +142,7 @@ export default function UpdatesScreen() {
           </View>
           {shown.length === 0 ? (
             <Text style={styles.filterEmpty}>
-              {filter === "confirmed" ? "No confirmed reports yet." : "Nothing in progress. Every report is confirmed."}
+              {filter === "confirmed" ? "No recorded reports yet." : "Nothing in progress. Every report is recorded publicly."}
             </Text>
           ) : null}
           {shown.map((g, gi) => {

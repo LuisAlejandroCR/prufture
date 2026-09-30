@@ -54,8 +54,8 @@ test("syncResult: a background run speaks only good news and never errors", () =
   assert.equal(syncResult(summary({}), false), null);
   assert.equal(syncResult(summary({ attempted: 2, failed: 2 }), false), null);
   assert.equal(syncResult(summary({ attempted: 2, synced: 2 }), false)!.text, "Your saved reports were sent.");
-  assert.equal(syncResult(summary({ attested: 1 }), false)!.text, "A report was confirmed.");
-  assert.equal(syncResult(summary({ attested: 3 }), false)!.text, "3 reports were confirmed.");
+  assert.equal(syncResult(summary({ attested: 1 }), false)!.text, "A report was recorded publicly.");
+  assert.equal(syncResult(summary({ attested: 3 }), false)!.text, "3 reports were recorded publicly.");
 });
 
 test("syncResult: a check the reporter asked for always gets an answer", () => {
@@ -63,7 +63,7 @@ test("syncResult: a check the reporter asked for always gets an answer", () => {
   const unreachable = syncResult(summary({ attempted: 2, failed: 2 }), true)!;
   assert.match(unreachable.text, /Could not reach the programme\. Your reports are safe on this phone/);
   assert.equal(unreachable.priority, "high");
-  assert.equal(syncResult(summary({ attempted: 1, synced: 1, attested: 1 }), true)!.text, "Your saved reports were sent. A report was confirmed.");
+  assert.equal(syncResult(summary({ attempted: 1, synced: 1, attested: 1 }), true)!.text, "Your saved reports were sent. A report was recorded publicly.");
 });
 
 test("stageSpoken states what colour alone showed: done, current or not yet", () => {
