@@ -1,0 +1,77 @@
+# aws-liveness.yaml: least-privilege AWS resources for the optional Face Liveness check (release 1.2).
+# An IAM user for the api (create + read sessions only) and a guest-only Cognito identity pool whose
+# role can only start a liveness stream. No access key is created here; make it in the console.
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Prufture Face Liveness - api IAM user and guest Cognito identity pool, least privilege
+
+Resources:
+  LivenessApiUser:
+    Type: AWS::IAM::User
+    Properties:
+      UserName: prufture-liveness-api
+      Policies:
+        - PolicyName: face-liveness-api
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - rekognition:CreateFaceLivenessSession
+                  - rekognition:GetFaceLivenessSessionResults
+                Resource: "*"
+      Tags:
+        - Key: project
+          Value: prufture
+
+  LivenessIdentityPool:
+    Type: AWS::Cognito::IdentityPool
+    Properties:
+      IdentityPoolName: prufture_liveness
+      AllowUnauthenticatedIdentities: true
+      AllowClassicFlow: false
+
+  LivenessGuestRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: prufture-liveness-guest
+      MaxSessionDuration: 3600
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: cognito-identity.amazonaws.com
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                cognito-identity.amazonaws.com:aud: !Ref LivenessIdentityPool
+              ForAnyValue:StringLike:
+                cognito-identity.amazonaws.com:amr: unauthenticated
+      Policies:
+        - PolicyName: face-liveness-stream
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: rekognition:StartFaceLivenessSession
+                Resource: "*"
+      Tags:
+        - Key: project
+          Value: prufture
+
+  LivenessPoolRoles:
+    Type: AWS::Cognito::IdentityPoolRoleAttachment
+    Properties:
+      IdentityPoolId: !Ref LivenessIdentityPool
+      Roles:
+        unauthenticated: !GetAtt LivenessGuestRole.Arn
+
+Outputs:
+  IdentityPoolId:
+    Description: EXPO_PUBLIC_LIVENESS_IDENTITY_POOL_ID
+    Value: !Ref LivenessIdentityPool
+  ApiUserName:
+    Description: IAM user for the api; create its access key in the console and paste it into Render
+    Value: !Ref LivenessApiUser
+  GuestRoleArn:
+    Value: !GetAtt LivenessGuestRole.Arn
