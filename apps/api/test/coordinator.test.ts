@@ -27,9 +27,10 @@ function payload(hash: string) {
 function revenuecat(mode: "entitled" | "denied" | "down"): void {
   process.env.REVENUECAT_SECRET_KEY = SECRET;
   process.env.REVENUECAT_PROJECT_ID = "proj1ab2c3d4";
+  process.env.REVENUECAT_COORDINATOR_ENTITLEMENT_ID = "entl0c00rd1n4";
   globalThis.fetch = (async () => {
     if (mode === "down") throw new Error("network down");
-    const items = mode === "entitled" ? [{ entitlement_id: "coordinator_pro" }] : [];
+    const items = mode === "entitled" ? [{ entitlement_id: "entl0c00rd1n4" }] : [];
     return new Response(JSON.stringify({ items }), { status: 200 });
   }) as typeof fetch;
 }
@@ -49,6 +50,7 @@ afterEach(() => {
   delete process.env.REVENUECAT_SECRET_KEY;
   delete process.env.REVENUECAT_API_BASE;
   delete process.env.REVENUECAT_PROJECT_ID;
+  delete process.env.REVENUECAT_COORDINATOR_ENTITLEMENT_ID;
 });
 
 test("gate: no app user id => 401 on every coordinator route", async () => {
@@ -226,11 +228,22 @@ test("gate: secret key set but REVENUECAT_PROJECT_ID missing => 503, never 402",
   assert.equal(res.status, 503, "a misconfigured server must not look like an unpaid customer");
 });
 
+test("gate: key and project set but REVENUECAT_COORDINATOR_ENTITLEMENT_ID missing => 503, never 402", async () => {
+  revenuecat("entitled");
+  delete process.env.REVENUECAT_COORDINATOR_ENTITLEMENT_ID;
+  const res = await get("/coordinator/reports", asCoordinator);
+  assert.equal(res.status, 503, "a misconfigured server must not look like an unpaid customer");
+});
+
 test("/health reports whether coordinator billing is configured, never the secret", async () => {
   revenuecat("entitled");
   const on = await (await get("/health")).text();
   assert.equal(JSON.parse(on).coordinatorBilling, true);
   assert.ok(!on.includes(SECRET));
+  delete process.env.REVENUECAT_COORDINATOR_ENTITLEMENT_ID;
+  const noEntl = (await (await get("/health")).json()) as { coordinatorBilling: boolean };
+  assert.equal(noEntl.coordinatorBilling, false, "without the entitlement id every coordinator gets 503");
+  revenuecat("entitled");
   process.env.REVENUECAT_SECRET_KEY = "";
   const off = (await (await get("/health")).json()) as { coordinatorBilling: boolean };
   assert.equal(off.coordinatorBilling, false);

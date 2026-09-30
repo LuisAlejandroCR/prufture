@@ -82,6 +82,11 @@ export const env = {
   get revenuecatProjectId(): string {
     return process.env.REVENUECAT_PROJECT_ID ?? "";
   },
+  // The coordinator_pro entitlement's internal id (entl...), which is what v2 active_entitlements
+  // returns. The lookup key "coordinator_pro" never appears there.
+  get revenuecatCoordinatorEntitlementId(): string {
+    return process.env.REVENUECAT_COORDINATOR_ENTITLEMENT_ID?.trim() ?? "";
+  },
 
   // Sealed evidence photos (opt-in or coordinator-requested, reporter-approved). The api only ever
   // holds opaque ciphertext. "none" (default) keeps every evidence route typed-unavailable.

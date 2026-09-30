@@ -80,6 +80,7 @@ function stubWorld(opts: { s3Status?: number } = {}) {
   process.env.EVIDENCE_S3_SECRET_ACCESS_KEY = S3_SECRET;
   process.env.REVENUECAT_SECRET_KEY = RC_SECRET;
   process.env.REVENUECAT_PROJECT_ID = "proj1";
+  process.env.REVENUECAT_COORDINATOR_ENTITLEMENT_ID = "entl0c00rd1n4";
   globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
     const url = String(input);
     const method = init?.method ?? "GET";
@@ -87,7 +88,7 @@ function stubWorld(opts: { s3Status?: number } = {}) {
     const body = init?.body ? new Uint8Array(init.body as Uint8Array) : null;
     calls.push({ method, url, headers, body });
     if (url.includes("revenuecat")) {
-      return new Response(JSON.stringify({ items: [{ entitlement_id: "coordinator_pro" }] }), { status: 200 });
+      return new Response(JSON.stringify({ items: [{ entitlement_id: "entl0c00rd1n4" }] }), { status: 200 });
     }
     if (opts.s3Status) return new Response("<Error><Message>echo " + S3_SECRET + "</Message></Error>", { status: opts.s3Status });
     const key = new URL(url).pathname;

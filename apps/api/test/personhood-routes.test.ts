@@ -23,6 +23,7 @@ afterEach(() => {
   delete process.env.PERSONHOOD_PROVIDER;
   delete process.env.REVENUECAT_SECRET_KEY;
   delete process.env.REVENUECAT_PROJECT_ID;
+  delete process.env.REVENUECAT_COORDINATOR_ENTITLEMENT_ID;
 });
 
 function freshStore(): string {
@@ -44,8 +45,9 @@ function seedGroup(): void {
 function coordinator(): Record<string, string> {
   process.env.REVENUECAT_SECRET_KEY = "sk_test_personhood";
   process.env.REVENUECAT_PROJECT_ID = "proj1ab2c3d4";
+  process.env.REVENUECAT_COORDINATOR_ENTITLEMENT_ID = "entl0c00rd1n4";
   globalThis.fetch = (async () =>
-    new Response(JSON.stringify({ items: [{ entitlement_id: "coordinator_pro" }] }), { status: 200 })) as typeof fetch;
+    new Response(JSON.stringify({ items: [{ entitlement_id: "entl0c00rd1n4" }] }), { status: 200 })) as typeof fetch;
   return { [APP_USER_HEADER]: "anon-coordinator-1" };
 }
 

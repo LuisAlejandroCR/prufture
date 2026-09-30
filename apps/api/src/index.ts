@@ -61,6 +61,7 @@ import {
   toCoordinatorRow,
   toCsv,
 } from "./coordinator.js";
+import { coordinatorEntitlementId } from "./entitlement.js";
 import { evidenceStorage } from "./evidence-storage.js";
 import {
   MAX_REQUEST_CHECK,
@@ -128,13 +129,13 @@ app.use("*", async (c, next) => {
   return bodyLimit({ maxSize: MAX_BODY_BYTES, onError: tooLarge })(c, next);
 });
 
-// `coordinatorBilling` says only whether the RevenueCat secret and project are set, so a deploy can
-// be checked before App Review opens the coordinator screen. It never echoes either value.
+// `coordinatorBilling` says only whether the RevenueCat secret, project and entitlement id are set,
+// so a deploy can be checked before App Review opens the coordinator screen. It never echoes them.
 app.get("/health", (c) =>
   c.json({
     ok: true,
     chainId: env.chainId,
-    coordinatorBilling: Boolean(env.revenuecatSecretKey && env.revenuecatProjectId),
+    coordinatorBilling: Boolean(env.revenuecatSecretKey && env.revenuecatProjectId && coordinatorEntitlementId()),
   }),
 );
 
