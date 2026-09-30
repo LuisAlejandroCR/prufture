@@ -11,7 +11,7 @@ import { BackLink, Card, Notice, PrimaryButton, Screen, ScreenTitle, SecondaryBu
 import { fetchCoordinatorReports, recordReview, type CoordinatorReport, type ReviewStatus } from "../src/coordinator-api";
 import { coordinatorSummary, summaryEmail, summaryMailto } from "../src/coordinator-summary";
 import { siteUrl } from "../src/links";
-import { getAppUserId, manageSubscriptionsUrl } from "../src/purchases";
+import { getAppUserId, showManageSubscriptions } from "../src/purchases";
 import { getTask } from "../src/tasks";
 import { API_URL } from "../src/useAutoSync";
 import { useEntitlement } from "../src/useEntitlement";
@@ -129,7 +129,7 @@ export default function CoordinatorScreen() {
 
       {status === "entitled" && !locked ? (
         <Pressable
-          onPress={() => Linking.openURL(manageSubscriptionsUrl(Platform.OS)).catch(() => undefined)}
+          onPress={() => void showManageSubscriptions(Platform.OS)}
           accessibilityRole="link"
           style={styles.manage}
         >

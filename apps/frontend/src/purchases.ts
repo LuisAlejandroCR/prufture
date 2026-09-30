@@ -195,6 +195,25 @@ export async function getAppUserId(): Promise<ExternalResult<string>> {
 /** Apple's standard EULA, which applies because the app ships no custom licence agreement. */
 export const TERMS_OF_USE_URL = "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/";
 
+/**
+ * Open the store's own manage-subscription screen without leaving the app (RevenueCat presents the
+ * native sheet on iOS). Falls back to the account URL in the system handler only if that fails.
+ * Never throws.
+ */
+export async function showManageSubscriptions(platform: string): Promise<void> {
+  try {
+    const RC = await loadPurchases();
+    await RC.showManageSubscriptions();
+  } catch {
+    try {
+      const { Linking } = await import("react-native");
+      await Linking.openURL(manageSubscriptionsUrl(platform));
+    } catch {
+      // Nothing else to do; the plan itself is unaffected.
+    }
+  }
+}
+
 /** Where a subscriber manages or cancels the plan; the app never cancels on their behalf. */
 export function manageSubscriptionsUrl(platform: string): string {
   return platform === "android"

@@ -5,7 +5,7 @@
 import Constants from "expo-constants";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Linking, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import type { PurchasesPackage } from "react-native-purchases";
 import { BackLink, Card, Notice, PrimaryButton, Screen, ScreenTitle } from "../src/components/ui";
 import {
@@ -17,6 +17,7 @@ import {
   type Offering,
 } from "../src/purchases";
 import { color, radius, space, target, type } from "../src/theme";
+import { openInApp } from "../src/links";
 
 const PRIVACY_URL =
   (Constants.expoConfig?.extra?.privacyPolicyUrl as string | undefined) || "https://prufture.vercel.app/privacy";
@@ -190,7 +191,7 @@ export default function PaywallScreen() {
 function LegalLink({ label, url }: { label: string; url: string }) {
   return (
     <Pressable
-      onPress={() => Linking.openURL(url).catch(() => undefined)}
+      onPress={() => void openInApp(url)}
       accessibilityRole="link"
       accessibilityLabel={label}
       hitSlop={8}
