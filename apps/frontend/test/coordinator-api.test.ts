@@ -98,7 +98,7 @@ test("paywall only promises what the coordinator screen actually does", () => {
   assert.doesNotMatch(paywall, /dashboards|task assignment|cross-team/);
   assert.match(coordinator, /fetchCoordinatorReports/);
   assert.match(coordinator, /recordReview/);
-  assert.match(coordinator, /fetchCoordinatorCsv/);
+  assert.match(coordinator, /coordinatorSummary\(/);
 });
 
 test("the paywall is reached from the coordinator screen, and that screen from Me", () => {
