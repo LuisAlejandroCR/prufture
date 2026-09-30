@@ -1,5 +1,6 @@
 // page.tsx: public /support — the support URL for App Store Connect and Google Play, answering what
-// reporters and coordinators actually ask. The contact comes from NEXT_PUBLIC_SUPPORT_EMAIL; if unset
+// reporters and coordinators actually ask. The contact comes from NEXT_PUBLIC_SUPPORT_EMAIL and
+// NEXT_PUBLIC_SUPPORT_WHATSAPP; if both are unset
 // the page says so rather than printing a fake address (a dead support link fails app review).
 
 import Link from "next/link";
@@ -11,9 +12,12 @@ export const metadata = {
 };
 
 const SUPPORT_EMAIL = process.env.NEXT_PUBLIC_SUPPORT_EMAIL ?? "";
+// International number, e.g. +57 301 393 5156; wa.me wants digits only.
+const SUPPORT_WHATSAPP = process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP ?? "";
+const WHATSAPP_DIGITS = SUPPORT_WHATSAPP.replace(/D/g, "");
 
 function Contact() {
-  if (!SUPPORT_EMAIL) {
+  if (!SUPPORT_EMAIL && !WHATSAPP_DIGITS) {
     return (
       <p className="muted">
         A support address is being set up for this release. Until it is live, please reach the
@@ -23,8 +27,21 @@ function Contact() {
   }
   return (
     <p>
-      Email <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>. Please say which screen you were
-      on and what you expected to happen. Do not include personal details of anyone in a report.
+      {WHATSAPP_DIGITS ? (
+        <>
+          WhatsApp <a href={`https://wa.me/${WHATSAPP_DIGITS}`}>{SUPPORT_WHATSAPP}</a>
+          {SUPPORT_EMAIL ? " or e" : "."}
+        </>
+      ) : (
+        "E"
+      )}
+      {SUPPORT_EMAIL ? (
+        <>
+          mail <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.
+        </>
+      ) : null}{" "}
+      Please say which screen you were on and what you expected to happen. Do not include personal
+      details of anyone in a report.
     </p>
   );
 }

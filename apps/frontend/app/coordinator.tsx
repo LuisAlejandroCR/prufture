@@ -4,7 +4,7 @@
 
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
-import { ActivityIndicator, Linking, Platform, Pressable, Share, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Platform, Pressable, Share, StyleSheet, Text, View } from "react-native";
 import { BackLink, Card, Notice, PrimaryButton, Screen, ScreenTitle, SecondaryButton, SectionLabel } from "../src/components/ui";
 import {
   fetchCoordinatorCsv,
@@ -14,7 +14,7 @@ import {
   type CoordinatorReport,
   type ReviewStatus,
 } from "../src/coordinator-api";
-import { getAppUserId, manageSubscriptionsUrl } from "../src/purchases";
+import { getAppUserId, showManageSubscriptions } from "../src/purchases";
 import { getTask } from "../src/tasks";
 import { API_URL } from "../src/useAutoSync";
 import { useEntitlement } from "../src/useEntitlement";
@@ -141,7 +141,7 @@ export default function CoordinatorScreen() {
 
       {status === "entitled" && !locked ? (
         <Pressable
-          onPress={() => Linking.openURL(manageSubscriptionsUrl(Platform.OS)).catch(() => undefined)}
+          onPress={() => void showManageSubscriptions(Platform.OS)}
           accessibilityRole="link"
           style={styles.manage}
         >
