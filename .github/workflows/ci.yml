@@ -1,4 +1,4 @@
-# ci.yml: typecheck and test every workspace on each push and pull request.
+# ci.yml: typecheck and test every workspace on each push and pull request, and build the web app.
 #
 # The repo is an npm workspaces monorepo (packages/core, apps/api, apps/backend, apps/frontend).
 # The root `typecheck` and `test` scripts fan out with `--workspaces --if-present`, so this
@@ -58,3 +58,10 @@ jobs:
 
       - name: Test
         run: npm test
+
+      # `next build` catches what typecheck and unit tests do not: route and metadata exports,
+      # server/client boundaries, and the @proof/core transpile in next.config.mjs. It runs on one
+      # Node major only, to keep the matrix fast.
+      - name: Build web
+        if: matrix.node == '22'
+        run: npm run build:web
