@@ -15,7 +15,7 @@ export function publicRecordUrl(proofHash: string, base = VERIFY_BASE): string {
 
 /** A page on the public site, on the same origin as the verify base. A base that is not an absolute
  *  URL (e.g. no scheme) falls back to the default site rather than throwing in a tap handler. */
-export function siteUrl(path: "" | "privacy" | "support", base = VERIFY_BASE): string {
+export function siteUrl(path: "" | "privacy" | "support" | "dashboard", base = VERIFY_BASE): string {
   try {
     return new URL(`/${path}`, base).toString();
   } catch {

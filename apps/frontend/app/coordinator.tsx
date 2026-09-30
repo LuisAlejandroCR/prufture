@@ -1,19 +1,16 @@
 // coordinator.tsx: the paid review tool for programme coordinators, opened from Me. Without a plan it
 // explains what the plan does and links to the paywall; with one it lists reports from the api's
-// /coordinator/* routes (server-checked entitlement), records accept/reject and shares a CSV export.
+// /coordinator/* routes (server-checked entitlement) under a short summary, records accept/reject, and
+// drafts an email of the summary in the coordinator's own mail app. The full list and the CSV export
+// live on the web dashboard.
 
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
-import { ActivityIndicator, Linking, Platform, Pressable, Share, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Linking, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { BackLink, Card, Notice, PrimaryButton, Screen, ScreenTitle, SecondaryButton, SectionLabel } from "../src/components/ui";
-import {
-  fetchCoordinatorCsv,
-  fetchCoordinatorReports,
-  recordReview,
-  reviewCounts,
-  type CoordinatorReport,
-  type ReviewStatus,
-} from "../src/coordinator-api";
+import { fetchCoordinatorReports, recordReview, type CoordinatorReport, type ReviewStatus } from "../src/coordinator-api";
+import { coordinatorSummary, summaryEmail, summaryMailto } from "../src/coordinator-summary";
+import { siteUrl } from "../src/links";
 import { getAppUserId, manageSubscriptionsUrl } from "../src/purchases";
 import { getTask } from "../src/tasks";
 import { API_URL } from "../src/useAutoSync";
@@ -31,7 +28,6 @@ export default function CoordinatorScreen() {
   const { status, refresh } = useEntitlement();
   const [list, setList] = useState<ListState>({ kind: "loading" });
   const [busyHash, setBusyHash] = useState<string | null>(null);
-  const [exporting, setExporting] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
   const loadReports = useCallback(async () => {
@@ -81,17 +77,10 @@ export default function CoordinatorScreen() {
     setNotice("Couldn't save the review. Check your connection and try again.");
   };
 
-  const exportCsv = async () => {
-    setExporting(true);
+  const emailSummary = (rows: CoordinatorReport[]) => {
     setNotice(null);
-    const id = await getAppUserId();
-    const result = id.available ? await fetchCoordinatorCsv(API_URL, id.data) : { kind: "unavailable" as const };
-    setExporting(false);
-    if (result.kind === "ok") {
-      await Share.share({ message: result.data, title: "prufture-reports.csv" }).catch(() => undefined);
-      return;
-    }
-    setNotice(result.kind === "locked" ? "Your plan is not active." : "Couldn't prepare the export. Try again shortly.");
+    const mail = summaryEmail(coordinatorSummary(rows), siteUrl("dashboard"));
+    Linking.openURL(summaryMailto(mail)).catch(() => setNotice("No mail app is set up on this phone."));
   };
 
   const locked = status === "free" || list.kind === "locked";
@@ -122,7 +111,7 @@ export default function CoordinatorScreen() {
             <Text style={styles.cardTitle}>What the coordinator plan includes</Text>
             <Text style={styles.cardBody}>
               See every report your programme received, mark each one accepted or rejected, and
-              export the list as a spreadsheet. Reports show the task, a coarse area and the time.
+              email yourself a summary. Reports show the task, a coarse area and the time.
               They never show who sent them.
             </Text>
           </Card>
@@ -132,10 +121,9 @@ export default function CoordinatorScreen() {
         <ReportList
           list={list}
           busyHash={busyHash}
-          exporting={exporting}
           onReview={review}
           onRetry={loadReports}
-          onExport={exportCsv}
+          onEmail={emailSummary}
         />
       )}
 
@@ -155,17 +143,15 @@ export default function CoordinatorScreen() {
 function ReportList({
   list,
   busyHash,
-  exporting,
   onReview,
   onRetry,
-  onExport,
+  onEmail,
 }: {
   list: ListState;
   busyHash: string | null;
-  exporting: boolean;
   onReview: (row: CoordinatorReport, next: ReviewStatus) => void;
   onRetry: () => void;
-  onExport: () => void;
+  onEmail: (rows: CoordinatorReport[]) => void;
 }) {
   if (list.kind === "loading" || list.kind === "locked") {
     return (
@@ -182,13 +168,23 @@ function ReportList({
       </View>
     );
   }
-  const counts = reviewCounts(list.rows);
+  const s = coordinatorSummary(list.rows);
   return (
     <View style={{ gap: space.md }}>
-      <Text style={styles.summary}>
-        {counts.pending} to review · {counts.accepted} accepted · {counts.rejected} rejected
-      </Text>
-      <SecondaryButton label={exporting ? "Preparing export..." : "Export as CSV"} icon="download" onPress={onExport} disabled={exporting} />
+      <Card>
+        <View style={styles.stats}>
+          <Stat value={s.counts.pending} label="To review" />
+          <Stat value={s.counts.accepted} label="Accepted" />
+          <Stat value={s.counts.rejected} label="Rejected" />
+        </View>
+        {s.topActivities.length > 0 ? (
+          <Text style={styles.cardBody}>
+            Most reported: {s.topActivities.map((a) => `${a.title} (${a.count})`).join(", ")}
+          </Text>
+        ) : null}
+      </Card>
+      <SecondaryButton label="Email summary" icon="report" onPress={() => onEmail(list.rows)} disabled={list.rows.length === 0} />
+      <Text style={styles.hint}>The full list and the CSV export are on the web dashboard.</Text>
       <SectionLabel>Reports</SectionLabel>
       {list.rows.length === 0 ? (
         <Notice tone="info">No reports have reached the programme yet.</Notice>
@@ -197,6 +193,15 @@ function ReportList({
           <ReviewRow key={row.proofHash} row={row} busy={busyHash === row.proofHash} onReview={onReview} />
         ))
       )}
+    </View>
+  );
+}
+
+function Stat({ value, label }: { value: number; label: string }) {
+  return (
+    <View style={styles.stat} accessible accessibilityLabel={`${value} ${label.toLowerCase()}`}>
+      <Text style={styles.statValue}>{value}</Text>
+      <Text style={styles.rowMeta}>{label}</Text>
     </View>
   );
 }
@@ -260,7 +265,10 @@ const styles = StyleSheet.create({
   center: { paddingVertical: space.xxl, alignItems: "center" },
   cardTitle: { ...type.subtitle, color: color.text, marginBottom: space.xs },
   cardBody: { ...type.body, color: color.muted },
-  summary: { ...type.body, color: color.text, fontWeight: "600" },
+  stats: { flexDirection: "row", marginBottom: space.sm },
+  stat: { flex: 1, gap: 2 },
+  statValue: { ...type.title, color: color.text },
+  hint: { ...type.meta, color: color.muted },
   rowTitle: { ...type.subtitle, color: color.text },
   rowMeta: { ...type.meta, color: color.muted },
   rowStatus: { ...type.meta, color: color.muted, fontWeight: "700" },
