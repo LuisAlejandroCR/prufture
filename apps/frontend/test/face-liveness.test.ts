@@ -24,6 +24,7 @@ import { __pendingLiveness, __resetPendingLiveness } from "../src/liveness.js";
 import { __setCaptureProofForTest, addPhoto, clearDraft, saveDraft, setLiveness, startDraft } from "../src/report-draft.js";
 import { __setDraftStoreBackend, type DraftStoreBackend } from "../src/draft-store.js";
 import { __setNotesBackend } from "../src/report-note.js";
+import { __setEvidenceSecretSource, deriveEvidenceToken } from "../src/evidence-token.js";
 
 const API = "https://api.example.test/";
 const SESSION = "0f8fad5b-d9cb-469f-a165-70867728950e";
@@ -252,15 +253,21 @@ function memDraftStore(): DraftStoreBackend {
 
 const realFetch = globalThis.fetch;
 let mem = memStore();
+const SECRET = "7".repeat(64);
+
 beforeEach(() => {
   mem = memStore();
   __setLivenessPassStore(mem.store);
   __setNotesBackend({ read: async () => null, write: async () => {} });
   __setDraftStoreBackend(memDraftStore());
   __resetPendingLiveness();
+  // The attach carries this device's evidence token; a fixed secret keeps it deterministic and off
+  // the native secure store.
+  __setEvidenceSecretSource(async () => SECRET);
   clearDraft();
 });
 afterEach(() => {
+  __setEvidenceSecretSource(null);
   globalThis.fetch = realFetch;
   __setLivenessPassStore(null);
   __setCaptureProofForTest(null);
@@ -310,7 +317,11 @@ test("saved report: with the flag on, the stored pass is attached to the report'
   await settle();
   const attach = calls.filter((c) => c.url === "https://api.example.test/liveness-result");
   assert.equal(attach.length, 1);
-  assert.deepEqual(JSON.parse(attach[0]!.body), { proofHash: "a".repeat(64), ticket: PASS });
+  assert.deepEqual(JSON.parse(attach[0]!.body), {
+    proofHash: "a".repeat(64),
+    ticket: PASS,
+    evidenceToken: deriveEvidenceToken(SECRET, "a".repeat(64)),
+  });
   assert.deepEqual(__pendingLiveness(), []);
 });
 

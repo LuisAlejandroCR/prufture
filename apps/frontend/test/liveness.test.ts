@@ -13,6 +13,7 @@ import {
   runLiveness,
   submitLiveness,
 } from "../src/liveness.js";
+import { __setEvidenceSecretSource, deriveEvidenceToken } from "../src/evidence-token.js";
 
 const okJson = (body: unknown) =>
   new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } });
@@ -98,8 +99,26 @@ test("attachLiveness without a ticket sends nothing and buffers nothing", async 
   assert.equal(__pendingLiveness().length, 0);
 });
 
-test("a refused ticket (400) or an already-recorded verdict (409) is not retried forever", async () => {
-  for (const status of [400, 409]) {
+test("attachLiveness proves the proof is this device's with its evidence token", async () => {
+  // The api refuses a verdict for a public proofHash from anyone but the device that synced it.
+  __resetPendingLiveness();
+  const secret = "5".repeat(64);
+  const hash = "a".repeat(64);
+  __setEvidenceSecretSource(async () => secret);
+  try {
+    let sent: unknown;
+    await attachLiveness("http://api.test", hash, "v1.t.s", async (_u: unknown, init?: RequestInit) => {
+      sent = JSON.parse(String(init?.body));
+      return okJson({ status: "recorded" });
+    });
+    assert.deepEqual(sent, { proofHash: hash, ticket: "v1.t.s", evidenceToken: deriveEvidenceToken(secret, hash) });
+  } finally {
+    __setEvidenceSecretSource(null);
+  }
+});
+
+test("a refused ticket (400), a refused owner (403) or an already-recorded verdict (409) is not retried forever", async () => {
+  for (const status of [400, 403, 409]) {
     __resetPendingLiveness();
     await attachLiveness("http://api.test", "hash4", "v1.t.s", async () => new Response("", { status }));
     assert.equal(__pendingLiveness().length, 0, `status ${status} left the item pending`);

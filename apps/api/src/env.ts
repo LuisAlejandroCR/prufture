@@ -71,6 +71,12 @@ export const env = {
     return process.env.PROGRAMME_TELEGRAM_CHAT_ID ?? "";
   },
 
+  // /liveness-result and /precise-location refuse a write without the proof's evidence token. Off
+  // until every build in the field sends the token; a wrong token is refused either way.
+  get requireEvidenceToken(): boolean {
+    return process.env.REQUIRE_EVIDENCE_TOKEN === "true";
+  },
+
   // RevenueCat entitlement check: the secret key never reaches the client.
   get revenuecatSecretKey(): string {
     return process.env.REVENUECAT_SECRET_KEY ?? "";
