@@ -142,16 +142,16 @@ export type FriendlyStatus =
   | "ready" // pending_sync
   | "sending" // in-flight
   | "sent" // synced
-  | "waiting" // synced, awaiting a second report
-  | "confirmed" // attested
+  | "waiting" // synced, public record not written yet
+  | "confirmed" // attested: the public record, not a community confirmation
   | "attention"; // recoverable error
 
 export const statusStyle: Record<FriendlyStatus, { label: string; tint: string; hue: string }> = {
   ready: { label: "Ready to send", tint: color.warningSoft, hue: color.warning },
   sending: { label: "Sending", tint: color.informationSoft, hue: color.information },
   sent: { label: "Sent", tint: color.informationSoft, hue: color.information },
-  waiting: { label: "Waiting for another community report", tint: color.warningSoft, hue: color.warning },
-  confirmed: { label: "Confirmed", tint: color.successSoft, hue: color.success },
+  waiting: { label: "Being recorded", tint: color.warningSoft, hue: color.warning },
+  confirmed: { label: "Recorded publicly", tint: color.successSoft, hue: color.success },
   attention: { label: "Needs your attention", tint: color.attentionSoft, hue: color.attention },
 };
 

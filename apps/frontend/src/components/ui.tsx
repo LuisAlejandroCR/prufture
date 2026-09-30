@@ -205,10 +205,11 @@ export function SecondaryButton({
   );
 }
 
-export function StatusPill({ status, count }: { status: FriendlyStatus; count?: number }) {
+// `count` is accepted but not shown: an attestation count is not people, and community progress
+// has its own stepper on the report screen.
+export function StatusPill({ status }: { status: FriendlyStatus; count?: number }) {
   const st = statusStyle[status];
-  const label =
-    status === "confirmed" && count && count > 1 ? `Confirmed by ${count} people` : st.label;
+  const label = st.label;
   return (
     <View style={[s.pill, { backgroundColor: st.tint }]} accessibilityRole="text">
       <View style={[s.pillDot, { backgroundColor: st.hue }]} />

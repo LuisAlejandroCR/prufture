@@ -11,7 +11,7 @@ import { Icon, type IconName } from "../../src/components/icons/Icon";
 import { Appear, BrandMark, CategoryBadge, OfflinePill, Screen } from "../../src/components/ui";
 import { select } from "../../src/feedback";
 import {
-  confirmedReportCount,
+  recordedReportCount,
   greeting,
   missionPlace,
   missionQuestion,
@@ -50,7 +50,7 @@ export default function MissionsScreen() {
   const online = useOnline();
   const { cell, centre, status, canAskAgain, requestArea } = useApproxArea();
   const [pending, setPending] = useState(0);
-  const [confirmed, setConfirmed] = useState(0);
+  const [recorded, setRecorded] = useState(0);
   const [lastSync, setLastSync] = useState({ synced: 0, failed: 0 });
   const [view, setView] = useState<View_>("list");
   const picked = useRef(false);
@@ -59,7 +59,7 @@ export default function MissionsScreen() {
 
   const count = useCallback((rows: LocalProof[]) => {
     setPending(rows.filter((r) => r.status === "pending_sync").length);
-    setConfirmed(confirmedReportCount(rows));
+    setRecorded(recordedReportCount(rows));
   }, []);
 
   // Try to send whatever is waiting, then recount. Runs on focus and again when signal returns.
@@ -77,7 +77,7 @@ export default function MissionsScreen() {
       })
       .catch(() => {
         setPending(0);
-        setConfirmed(0);
+        setRecorded(0);
       });
   }, [count]);
 
@@ -159,15 +159,15 @@ export default function MissionsScreen() {
       <Pressable
         onPress={() => router.push("/updates")}
         accessibilityRole="button"
-        accessibilityLabel={`${confirmed} ${confirmed === 1 ? "report" : "reports"} confirmed. Open my reports.`}
+        accessibilityLabel={`${recorded} ${recorded === 1 ? "report" : "reports"} recorded. Open my reports.`}
         style={({ pressed }) => [styles.strip, pressed && styles.pressed]}
       >
         <Icon name="sprout" size={26} filled color={color.success} />
         <View style={styles.flex}>
           <Text style={styles.stripTitle}>
-            {confirmed === 0
+            {recorded === 0
               ? "Your first report starts here"
-              : `${confirmed} ${confirmed === 1 ? "report" : "reports"} confirmed`}
+              : `${recorded} ${recorded === 1 ? "report" : "reports"} recorded`}
           </Text>
           <Text style={styles.stripBody}>Small actions make a real difference.</Text>
         </View>

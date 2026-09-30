@@ -1,11 +1,11 @@
-// home.test.ts: the Missions home helpers — time-of-day greeting, the honest confirmed-report count
-// (a report counts once, and only when every one of its photos is confirmed), mission row subtitles
+// home.test.ts: the Missions home helpers — time-of-day greeting, the honest recorded-report count
+// (a report counts once, and only when every one of its photos is recorded), mission row subtitles
 // and the location line, which never claims more precision than "Nearby" or a rounded distance.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { LocalProof } from "../src/queue-row.js";
-import { confirmedReportCount, greeting, missionPlace, missionQuestion, nearMePrompt, showReachError } from "../src/home.js";
+import { recordedReportCount, greeting, missionPlace, missionQuestion, nearMePrompt, showReachError } from "../src/home.js";
 import { categoryIcon, getTask, itemTaskId, listTasks } from "../src/tasks.js";
 import { CATEGORIES } from "../src/items.js";
 
@@ -36,7 +36,7 @@ test("greeting follows the local hour", () => {
   assert.equal(greeting(2), "Good evening");
 });
 
-test("a multi-photo report counts once, and only when every photo is confirmed", () => {
+test("a multi-photo report counts once, and only when every photo is recorded", () => {
   const rows = [
     row({ id: "a1", reportId: "A", status: "attested" }),
     row({ id: "a2", reportId: "A", status: "synced", attestationCount: 1 }),
@@ -45,8 +45,8 @@ test("a multi-photo report counts once, and only when every photo is confirmed",
     row({ id: "c1", reportId: "C", status: "pending_sync" }),
     row({ id: "legacy", reportId: "", status: "attested" }),
   ];
-  assert.equal(confirmedReportCount(rows), 2);
-  assert.equal(confirmedReportCount([]), 0);
+  assert.equal(recordedReportCount(rows), 2);
+  assert.equal(recordedReportCount([]), 0);
 });
 
 test("mission subtitle is the first closed question, falling back to the purpose", () => {

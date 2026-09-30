@@ -9,7 +9,7 @@ import { StyleSheet, Text, View } from "react-native";
 import { BrandMark, Row, Screen, ScreenTitle, SectionLabel } from "../../src/components/ui";
 import { loadLivenessPass, passUntilLabel } from "../../src/face-liveness";
 import { livenessProvider, personhoodProvider } from "../../src/flags";
-import { confirmedReportCount } from "../../src/home";
+import { recordedReportCount } from "../../src/home";
 import { openInApp, siteUrl } from "../../src/links";
 import { getEnrolment } from "../../src/personhood-device";
 import type { Enrolment } from "../../src/personhood-proof";
@@ -20,7 +20,7 @@ import { color, radius, space, type } from "../../src/theme";
 export default function MeScreen() {
   const router = useRouter();
   const [pending, setPending] = useState(0);
-  const [confirmed, setConfirmed] = useState(0);
+  const [recorded, setRecorded] = useState(0);
   const [activities, setActivities] = useState(0);
   const passOn = personhoodProvider() === "semaphore";
   const [enrolment, setEnrolment] = useState<Enrolment>("unknown");
@@ -38,12 +38,12 @@ export default function MeScreen() {
       listProofs()
         .then((rows) => {
           setPending(rows.filter((r) => r.status === "pending_sync").length);
-          setConfirmed(confirmedReportCount(rows));
+          setRecorded(recordedReportCount(rows));
           setActivities(new Set(rows.map((r) => r.taskId)).size);
         })
         .catch(() => {
           setPending(0);
-          setConfirmed(0);
+          setRecorded(0);
           setActivities(0);
         });
     }, [passOn, faceCheckOn]),
@@ -56,7 +56,7 @@ export default function MeScreen() {
 
       <View style={styles.contribution} accessible>
         <Text style={styles.contributionText}>
-          {confirmed} {confirmed === 1 ? "report" : "reports"} confirmed · {activities}{" "}
+          {recorded} {recorded === 1 ? "report" : "reports"} recorded · {activities}{" "}
           {activities === 1 ? "activity" : "activities"} supported
         </Text>
         <Text style={styles.contributionNote}>No ranking. Only you see this.</Text>
