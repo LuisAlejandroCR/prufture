@@ -141,6 +141,21 @@ export async function restorePurchases(): Promise<ExternalResult<{ entitled: boo
   }
 }
 
+/**
+ * iOS only: open Apple's offer-code sheet so a subscription offer code (e.g. one handed to a reviewer
+ * or judge) can be redeemed inside the app. Apple does not report the outcome here; the entitlement
+ * arrives through RevenueCat afterwards, so callers re-check it (or the user taps Restore).
+ */
+export async function presentOfferCodeSheet(): Promise<ExternalResult<null>> {
+  try {
+    const RC = await loadPurchases();
+    await RC.presentCodeRedemptionSheet();
+    return ok(SOURCE, null);
+  } catch (e) {
+    return unavailable(SOURCE, e);
+  }
+}
+
 export interface Entitlement {
   entitled: boolean;
   willRenew: boolean;

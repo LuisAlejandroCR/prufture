@@ -13,6 +13,7 @@ import {
   getOfferings,
   purchasePackage,
   restorePurchases,
+  presentOfferCodeSheet,
   type Offering,
 } from "../src/purchases";
 import { color, radius, space, target, type } from "../src/theme";
@@ -82,6 +83,18 @@ export default function PaywallScreen() {
     setNotice("No active subscription was found for this account.");
   };
 
+  // iOS offer codes (e.g. for reviewers and judges): Apple's sheet redeems them; RevenueCat then
+  // reflects the entitlement, which Restore picks up.
+  const handleRedeem = async () => {
+    setNotice(null);
+    const result = await presentOfferCodeSheet();
+    setNotice(
+      result.available
+        ? "After you redeem the code, tap Restore purchases to unlock Coordinator review."
+        : "Couldn't open code redemption right now. Please try again later.",
+    );
+  };
+
   return (
     <Screen
       footer={
@@ -109,6 +122,17 @@ export default function PaywallScreen() {
             >
               <Text style={styles.restoreText}>Restore purchases</Text>
             </Pressable>
+            {Platform.OS === "ios" ? (
+              <Pressable
+                onPress={handleRedeem}
+                disabled={busy}
+                accessibilityRole="button"
+                accessibilityLabel="Redeem an offer code"
+                style={styles.restore}
+              >
+                <Text style={styles.restoreText}>Redeem offer code</Text>
+              </Pressable>
+            ) : null}
           </View>
         ) : undefined
       }

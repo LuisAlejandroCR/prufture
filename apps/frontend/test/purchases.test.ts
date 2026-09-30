@@ -17,6 +17,7 @@ import {
   getOfferings,
   purchasePackage,
   restorePurchases,
+  presentOfferCodeSheet,
   getAppUserId,
   manageSubscriptionsUrl,
 } from "../src/purchases";
@@ -135,6 +136,19 @@ test("restorePurchases: store error maps to available:false", async () => {
   });
   const result = await restorePurchases();
   assert.equal(result.available, false);
+});
+
+test("presentOfferCodeSheet: opens Apple's sheet; an SDK error maps to available:false", async () => {
+  let opened = 0;
+  install({ presentCodeRedemptionSheet: async () => void opened++ } as Partial<typeof Purchases>);
+  assert.equal((await presentOfferCodeSheet()).available, true);
+  assert.equal(opened, 1);
+  install({
+    presentCodeRedemptionSheet: async () => {
+      throw new Error("not configured");
+    },
+  } as Partial<typeof Purchases>);
+  assert.equal((await presentOfferCodeSheet()).available, false);
 });
 
 test("getEntitlement: reads coordinator_pro when active", async () => {
