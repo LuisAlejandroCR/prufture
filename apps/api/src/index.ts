@@ -1,6 +1,8 @@
 // index.ts: the api's HTTP surface — public, unauthenticated proof routes (/sync, /attest, /notify,
-// assurance, /proof, /proof/:hash/confirmations) plus the PAID /coordinator/* routes gated by a server-side RevenueCat check.
-// Every public route is zero-PII, and no request body can choose the status code or the recipient.
+// assurance, /proof, /proof/:hash/confirmations, sealed /evidence) plus the PAID /coordinator/* routes
+// gated by a server-side RevenueCat check. Every public route is zero-PII, and no request body can
+// choose the status code or the recipient. Evidence photos are opaque ciphertext here and never leave
+// via a public route.
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
@@ -58,6 +60,20 @@ import {
   toCoordinatorRow,
   toCsv,
 } from "./coordinator.js";
+import { evidenceStorage } from "./evidence-storage.js";
+import {
+  MAX_REQUEST_CHECK,
+  decodeSealedBlob,
+  evidenceKey,
+  evidenceState,
+  isEvidenceToken,
+  isProofHash,
+  keepToken,
+  maxBase64Len,
+  purgeExpiredEvidence,
+  tokenMatches,
+} from "./evidence.js";
+import { getEvidenceRecord, putEvidenceRecord } from "./store.js";
 
 const VERIFY_BASE = process.env.VERIFY_BASE_URL ?? "http://localhost:3000";
 const CHANNELS: Channel[] = ["whatsapp", "email", "telegram"];
@@ -103,6 +119,11 @@ const tooLarge = (c: { json: (b: unknown, s: 413) => Response }) => c.json({ err
 app.use("/verify-identity", bodyLimit({ maxSize: MAX_LIVENESS_BODY_BYTES, onError: tooLarge }));
 app.use("*", async (c, next) => {
   if (c.req.path === "/verify-identity") return next();
+  // One sealed photo, base64, plus a few bytes of JSON. EVIDENCE_MAX_BYTES caps the decoded blob.
+  if (c.req.path === "/evidence") {
+    const maxSize = maxBase64Len(env.evidenceMaxBytes) + 1024;
+    return bodyLimit({ maxSize, onError: tooLarge })(c, next);
+  }
   return bodyLimit({ maxSize: MAX_BODY_BYTES, onError: tooLarge })(c, next);
 });
 
@@ -113,7 +134,7 @@ app.post("/sync", async (c) => {
   // the 1..N photos of one field report so the programme team gets ONE notification per report.
   const raw = await readJsonObject(c);
   if (!raw) return c.json({ error: "invalid json" }, 400);
-  const body = raw as unknown as SignedProof & { reportId?: string };
+  const body = raw as unknown as SignedProof & { reportId?: string; evidenceTokenHash?: unknown };
   if (!verifyProof(body)) return c.json({ error: "invalid signature" }, 400);
 
   // Trust boundary for location precision. The geohash is inside the signed payload, so the
@@ -137,7 +158,14 @@ app.post("/sync", async (c) => {
     typeof body.reportId === "string" && body.reportId && body.reportId.length <= MAX_REPORT_ID_LEN
       ? body.reportId
       : undefined;
+  const firstSync = !getProof(payload.proofHash);
   upsertProof(payload, reportId);
+  // Evidence token, FIRST sync only: until the device syncs, the proofHash exists nowhere else, so
+  // the first registration is the device's. A later /sync of the now-public proof (anyone can replay
+  // it) can never set or change the token hash.
+  if (firstSync && isEvidenceToken(body.evidenceTokenHash)) {
+    putEvidenceRecord(payload.proofHash, { ...getEvidenceRecord(payload.proofHash), tokenHash: body.evidenceTokenHash });
+  }
 
   // On-chain attestation is best-effort. A degraded relayer must not fail the sync:
   // the proof is safely queued server-side and returns 200 with status "synced".
@@ -332,6 +360,68 @@ app.post("/precise-location", async (c) => {
   return c.json({ status: "stored" }, 200);
 });
 
+// Sealed evidence photos. The app sends one only when the reporter opted in for that report or
+// approved a coordinator's request; it is sealed on the device to the programme key, so this route
+// receives opaque ciphertext. It is never shown on /proof, /verify, on-chain or in a notification.
+app.post("/evidence", async (c) => {
+  const body = await readJsonObject(c);
+  if (!body) return c.json({ error: "invalid json" }, 400);
+  const proofHash = body.proofHash;
+  if (!isProofHash(proofHash)) return c.json({ error: "invalid proofHash" }, 400);
+  if (!getProof(proofHash)) return c.json({ error: "unknown proofHash" }, 404);
+  // Proof hashes are public; only the device that first synced this proof holds its token.
+  if (!tokenMatches(getEvidenceRecord(proofHash), body.token)) {
+    return c.json({ error: "evidence token required" }, 403);
+  }
+
+  const decoded = decodeSealedBlob(body.cipher);
+  if (!decoded.ok) {
+    return c.json({ error: decoded.error, maxBytes: env.evidenceMaxBytes }, decoded.status);
+  }
+
+  // Write-once, like /precise-location: the route is unauthenticated, so a stored photo cannot be
+  // replaced. The identical blob again (an app retry) is accepted.
+  const rec = getEvidenceRecord(proofHash);
+  if (rec?.purgedAt) return c.json({ error: "retention period ended for this proof" }, 410);
+  if (rec?.storedAt) {
+    if (rec.cipherSha256 === decoded.sha256) return c.json({ status: "stored", duplicate: true }, 200);
+    return c.json({ error: "evidence is already stored for this proof" }, 409);
+  }
+
+  const result = await evidenceStorage().put(evidenceKey(proofHash), decoded.bytes);
+  if (!result.available) return c.json({ stored: false, result }, 503);
+  putEvidenceRecord(proofHash, {
+    ...(rec?.requestedAt ? { requestedAt: rec.requestedAt } : {}),
+    ...keepToken(rec),
+    storedAt: new Date().toISOString(),
+    bytes: decoded.bytes.length,
+    cipherSha256: decoded.sha256,
+  });
+  return c.json({ status: "stored", duplicate: false }, 200);
+});
+
+// The app asks which of ITS proofs a coordinator has requested photos for. Body, not URL, so the
+// list of hashes stays out of access logs. Returns hashes only; the reporter decides in the app.
+app.post("/evidence-requests", async (c) => {
+  const body = await readJsonObject(c);
+  if (!body) return c.json({ error: "invalid json" }, 400);
+  if (!Array.isArray(body.proofs)) return c.json({ error: "proofs must be an array" }, 400);
+  if (body.proofs.length > MAX_REQUEST_CHECK) {
+    return c.json({ error: "too many proofs", max: MAX_REQUEST_CHECK }, 413);
+  }
+  // Each hash must come with its evidence token: a request is only revealed to the reporter's device,
+  // never to someone probing public proof hashes for which reports are under review.
+  const requested = (body.proofs as unknown[])
+    .map((p) => (p && typeof p === "object" ? (p as { proofHash?: unknown; token?: unknown }) : {}))
+    .filter((p): p is { proofHash: string; token: unknown } => isProofHash(p.proofHash))
+    .filter((p) => {
+      const rec = getEvidenceRecord(p.proofHash);
+      return tokenMatches(rec, p.token) && evidenceState(rec) === "requested";
+    })
+    .map((p) => p.proofHash);
+  return c.json({ requested: [...new Set(requested)] }, 200);
+});
+
 app.post("/register-push", async (c) => {
   const body = await readJsonObject(c);
   if (!body) return c.json({ error: "invalid json" }, 400);
@@ -520,9 +610,68 @@ app.get("/coordinator/export.csv", (c) => {
   });
 });
 
+// Ask the reporter's app for one proof's photo. Nothing is uploaded until the reporter approves it
+// in the app; a request nobody answers is dropped by the retention purge.
+app.post("/coordinator/evidence-request", async (c) => {
+  const body = await readJsonObject(c);
+  if (!body) return c.json({ error: "invalid json" }, 400);
+  const proofHash = body.proofHash;
+  if (!isProofHash(proofHash)) return c.json({ error: "invalid proofHash" }, 400);
+  if (!getProof(proofHash)) return c.json({ error: "unknown proofHash" }, 404);
+  // A request the programme could never receive would only prompt the reporter for nothing.
+  const storage = evidenceStorage();
+  if (storage.kind === "none") {
+    return c.json({ state: "unavailable", result: unavailable("evidence-storage", "evidence storage not configured") }, 503);
+  }
+  const rec = getEvidenceRecord(proofHash);
+  const state = evidenceState(rec);
+  if (state === "available") return c.json({ state }, 200);
+  if (state !== "requested") {
+    putEvidenceRecord(proofHash, { requestedAt: new Date().toISOString(), ...keepToken(rec) });
+  }
+  return c.json({ state: "requested" }, 200);
+});
+
+// The sealed blob, byte for byte. The coordinator opens it offline with the programme private key;
+// this process has no key and cannot.
+app.get("/coordinator/evidence/:proofHash", async (c) => {
+  const proofHash = c.req.param("proofHash");
+  if (!isProofHash(proofHash)) return c.json({ error: "invalid proofHash" }, 400);
+  if (!getProof(proofHash)) return c.json({ error: "unknown proofHash" }, 404);
+  const state = evidenceState(getEvidenceRecord(proofHash));
+  if (state !== "available") return c.json({ error: "no evidence stored", state }, 404);
+  const result = await evidenceStorage().get(evidenceKey(proofHash));
+  if (!result.available) return c.json({ result }, 503);
+  if (!result.data) return c.json({ error: "no evidence stored", state: "missing" }, 404);
+  return new Response(result.data as unknown as ConstructorParameters<typeof Response>[0], {
+    status: 200,
+    headers: {
+      "content-type": "application/octet-stream",
+      "cache-control": "no-store",
+      "x-evidence-seal": "x25519-hkdf-sha256-xchacha20poly1305-v1",
+      "content-disposition": `attachment; filename="${proofHash}.sealed"`,
+    },
+  });
+});
+
+/** One retention pass. Exported for ops scripts; the server runs it on a timer. */
+export function runEvidencePurge() {
+  return purgeExpiredEvidence(evidenceStorage());
+}
+
+export const EVIDENCE_PURGE_INTERVAL_MS = 6 * 60 * 60 * 1000;
+
 // Skip binding a socket under `node --test` so the HTTP surface can be exercised via app.request.
 if (!process.env.NODE_TEST_CONTEXT) {
   serve({ fetch: app.fetch, port: env.port }, (i) => console.log(`api on :${i.port}`));
+  const purge = () =>
+    runEvidencePurge()
+      .then((s) => {
+        if (s.purged || s.failed || s.expiredRequests) console.log("evidence purge", s);
+      })
+      .catch(() => undefined);
+  void purge();
+  setInterval(purge, EVIDENCE_PURGE_INTERVAL_MS).unref();
 }
 
 export { app };

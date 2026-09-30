@@ -42,6 +42,22 @@ export interface SyncDeps {
    * never awaited, so it can never slow, fail or change a sync.
    */
   onSynced?: (row: QueuedProof) => unknown;
+  /**
+   * Optional: sha256 of this proof's evidence token (src/evidence-token.ts), sent alongside the
+   * proof. The api keeps it from the FIRST sync only; it gates /evidence and /evidence-requests.
+   */
+  evidenceTokenHash?: (proofHash: string) => Promise<string | null>;
+}
+
+/** The token hash for a row, or null. A failure only means evidence can't be shared later. */
+async function tokenHashFor(deps: SyncDeps, proofHash: string): Promise<string | null> {
+  if (!deps.evidenceTokenHash) return null;
+  try {
+    const h = await deps.evidenceTokenHash(proofHash);
+    return typeof h === "string" && /^[0-9a-f]{64}$/.test(h) ? h : null;
+  } catch {
+    return null;
+  }
 }
 
 function errMsg(e: unknown): string {
@@ -103,10 +119,12 @@ export async function syncPending(deps: SyncDeps): Promise<SyncSummary> {
       // reportId rides ALONGSIDE it (not inside, never signed) so the api can send
       // one delivery per field report instead of one per photo. Omitted when absent.
       const reportId = (row as { reportId?: unknown }).reportId;
-      const body =
-        typeof reportId === "string" && reportId
-          ? { ...toSignedProof(row), reportId }
-          : toSignedProof(row);
+      const evidenceTokenHash = await tokenHashFor(deps, row.proofHash);
+      const body = {
+        ...toSignedProof(row),
+        ...(typeof reportId === "string" && reportId ? { reportId } : {}),
+        ...(evidenceTokenHash ? { evidenceTokenHash } : {}),
+      };
       const res = await deps.fetchImpl(`${base}/sync`, {
         method: "POST",
         headers: { "content-type": "application/json" },
