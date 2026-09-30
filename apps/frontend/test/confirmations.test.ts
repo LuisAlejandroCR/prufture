@@ -20,7 +20,7 @@ const solar = getTask("solar-panel-install"); // cell kzdwb, need 3, standard as
 const fridge = getTask("cold-chain-bogota"); // cell d2g38, need 3, high assurance
 
 function rep(p: Partial<ConfirmationReport> = {}): ConfirmationReport {
-  return { own: false, geohashRegion: "kzdwb", verifiedPerson: null, verifiedPersonDegraded: null, ...p };
+  return { own: false, geohashRegion: "kzdwb", verifiedPerson: null, verifiedPersonDegraded: null, membershipVerified: true, ...p };
 }
 
 test("a second nearby reporter's report makes it 2 of 3 on a standard task", () => {
@@ -30,6 +30,18 @@ test("a second nearby reporter's report makes it 2 of 3 on a standard task", () 
   assert.equal(p.ownCounts, true);
   assert.equal(confirmationsLabel(p), "2 of 3 confirmations");
   assert.equal(confirmationsNote(p), null);
+});
+
+test("regression: nearby reports without a programme pass never count (one tester, one phone)", () => {
+  const noPass = [rep({ own: true, membershipVerified: false }), ...Array.from({ length: 5 }, () => rep({ membershipVerified: false }))];
+  const p = liveConfirmations(solar, noPass, false)!;
+  assert.equal(p.have, 0);
+  assert.equal(p.notConfirmed, 6);
+  assert.equal(p.ownCounts, false);
+  assert.equal(confirmationsLabel(p), "0 of 3 confirmations");
+  assert.equal(confirmationsNote(p), "6 nearby reports have no programme pass, so they do not count.");
+  // A face check alone is not a programme pass.
+  assert.equal(countsAsConfirmation(solar, rep({ membershipVerified: false, verifiedPerson: true }), false), false);
 });
 
 test("a report far from the assignment or with an unreadable region never counts", () => {
@@ -77,8 +89,8 @@ test("self-started reports and assignments without a target have no community pr
 });
 
 test("invite only shows to a reporter near an assignment that asks for confirmations", () => {
-  assert.match(confirmationInvite(solar, "kzdwb")!, /counts as a community confirmation\.$/);
-  assert.match(confirmationInvite(fridge, "d2g38")!, /once it is participant-confirmed/);
+  assert.match(confirmationInvite(solar, "kzdwb")!, /once it carries your programme pass\.$/);
+  assert.match(confirmationInvite(fridge, "d2g38")!, /programme pass and is participant-confirmed/);
   assert.equal(confirmationInvite(solar, "sb8v1"), null);
   assert.equal(confirmationInvite(solar, null), null);
   assert.equal(confirmationInvite(getTask("latrine-construction"), "kzujq"), null);
@@ -89,12 +101,17 @@ test("parseConfirmations drops malformed rows and rejects malformed bodies", () 
   assert.equal(parseConfirmations({ reports: "x" }), null);
   const rows = parseConfirmations({
     reports: [
-      { own: true, geohashRegion: "kzdwb", verifiedPerson: null, verifiedPersonDegraded: null, extra: "dropped" },
+      { own: true, geohashRegion: "kzdwb", verifiedPerson: null, verifiedPersonDegraded: null, membershipVerified: true, extra: "dropped" },
+      { own: false, geohashRegion: "kzdwb", verifiedPerson: null, verifiedPersonDegraded: null },
       { own: "yes", geohashRegion: "kzdwb", verifiedPerson: null, verifiedPersonDegraded: null },
       { own: false, geohashRegion: "kzdwb", verifiedPerson: "true", verifiedPersonDegraded: null },
     ],
   });
-  assert.deepEqual(rows, [{ own: true, geohashRegion: "kzdwb", verifiedPerson: null, verifiedPersonDegraded: null }]);
+  assert.deepEqual(rows, [
+    { own: true, geohashRegion: "kzdwb", verifiedPerson: null, verifiedPersonDegraded: null, membershipVerified: true },
+    // An older api without the field: reads as no pass, never as a confirmation.
+    { own: false, geohashRegion: "kzdwb", verifiedPerson: null, verifiedPersonDegraded: null, membershipVerified: false },
+  ]);
 });
 
 test("fetchConfirmations calls the exact endpoint and degrades to null", async () => {

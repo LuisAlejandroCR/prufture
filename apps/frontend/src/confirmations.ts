@@ -1,6 +1,7 @@
 // confirmations.ts: live community confirmations for a programme assignment. Decides which independent
-// reports (from the api's GET /proof/:hash/confirmations) count: near the assignment's cell and, for a
-// high-assurance task, participant-confirmed per src/assurance.ts. Pure and injectable, no react-native.
+// reports (from the api's GET /proof/:hash/confirmations) count: near the assignment's cell, carrying a
+// verified programme pass (one per member per task and epoch, so two passes are two members) and, for a
+// high-assurance task, also participant-confirmed per src/assurance.ts. Pure and injectable, no react-native.
 
 import { assuranceFromProof, countsAsParticipantConfirmed } from "./assurance";
 import { cellDistanceKm, type TaskDef } from "./tasks";
@@ -11,6 +12,8 @@ export interface ConfirmationReport {
   geohashRegion: string;
   verifiedPerson: boolean | null;
   verifiedPersonDegraded: boolean | null;
+  /** Verified programme pass. Missing from an older api reads as false, so it never counts. */
+  membershipVerified: boolean;
 }
 
 /** A report counts only from within this distance of the assignment cell (same as "Nearby"). */
@@ -40,6 +43,7 @@ export function isNearAssignment(task: TaskDef, region: string): boolean {
 /** Whether one report counts as a community confirmation for this task. */
 export function countsAsConfirmation(task: TaskDef, r: ConfirmationReport, identityStepEnabled: boolean): boolean {
   if (!isNearAssignment(task, r.geohashRegion)) return false;
+  if (!r.membershipVerified) return false;
   if (!task.highAssurance) return true;
   return countsAsParticipantConfirmed(assuranceFromProof(r, identityStepEnabled));
 }
@@ -79,6 +83,12 @@ export function confirmationsNote(p: LiveConfirmations): string | null {
       n === 1 ? "it does" : "they do"
     } not count for this task.`;
   }
+  if (p.notConfirmed > 0) {
+    const n = p.notConfirmed;
+    return `${n} nearby ${n === 1 ? "report has" : "reports have"} no programme pass, so ${
+      n === 1 ? "it does" : "they do"
+    } not count.`;
+  }
   if (p.highAssurance) return "Only participant-confirmed reports count for this task.";
   return null;
 }
@@ -88,8 +98,8 @@ export function confirmationInvite(task: TaskDef, myCell: string | null): string
   if (task.selfStarted || !task.confirmations || !myCell) return null;
   if (!isNearAssignment(task, myCell)) return null;
   return task.highAssurance
-    ? "You are near this activity. Your report counts as a community confirmation once it is participant-confirmed."
-    : "You are near this activity. Your report counts as a community confirmation.";
+    ? "You are near this activity. Your report counts as a community confirmation once it carries your programme pass and is participant-confirmed."
+    : "You are near this activity. Your report counts as a community confirmation once it carries your programme pass.";
 }
 
 function isReport(v: unknown): v is ConfirmationReport {
@@ -114,6 +124,7 @@ export function parseConfirmations(body: unknown): ConfirmationReport[] | null {
     geohashRegion: r.geohashRegion,
     verifiedPerson: r.verifiedPerson,
     verifiedPersonDegraded: r.verifiedPersonDegraded,
+    membershipVerified: (r as unknown as { membershipVerified?: unknown }).membershipVerified === true,
   }));
 }
 

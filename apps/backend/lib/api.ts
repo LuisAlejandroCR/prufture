@@ -2,6 +2,8 @@
 // (degraded) apart from "proof not indexed" (404) so /verify is honest in each case. The geohash is
 // coarsened here, so only a region prefix ever reaches the browser bundle.
 
+import { parseConfirmations, type ConfirmationReport } from "./confirmations";
+
 const BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8787";
 
 /** How coarse the public region is: geohash chars kept. 5 ≈ ~5 km cell, never exact GPS. */
@@ -25,6 +27,8 @@ export interface ProofView {
   verifiedPerson: boolean | null;
   /** True when the verdict above reflects a degraded provider, not an actual failed check. */
   verifiedPersonDegraded: boolean | null;
+  /** Programme pass (Semaphore group membership). "verified" once accepted, else null. */
+  membership: "verified" | null;
 }
 
 export interface ProofSummary {
@@ -51,6 +55,7 @@ interface RawProof {
   attestations: AttestationView[];
   verifiedPerson?: unknown;
   verifiedPersonDegraded?: unknown;
+  membership?: unknown;
 }
 
 export function toRegion(geohash: string | undefined): string {
@@ -80,10 +85,22 @@ export async function fetchProof(hash: string): Promise<ProofResult> {
         verifiedPerson: typeof raw.verifiedPerson === "boolean" ? raw.verifiedPerson : null,
         verifiedPersonDegraded:
           typeof raw.verifiedPersonDegraded === "boolean" ? raw.verifiedPersonDegraded : null,
+        membership: raw.membership === "verified" ? "verified" : null,
       },
     };
   } catch {
     return { state: "unreachable" };
+  }
+}
+
+/** Independent reports for the same task as `hash`. null when unreachable or malformed. Never throws. */
+export async function fetchConfirmations(hash: string): Promise<ConfirmationReport[] | null> {
+  try {
+    const r = await fetch(`${BASE}/proof/${encodeURIComponent(hash)}/confirmations`, { cache: "no-store" });
+    if (!r.ok) return null;
+    return parseConfirmations(await r.json());
+  } catch {
+    return null;
   }
 }
 

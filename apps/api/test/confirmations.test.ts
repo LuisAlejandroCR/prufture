@@ -31,8 +31,8 @@ test("taskReports: one row per report, own flagged, other tasks ignored, unknown
   );
   assert.ok(rows);
   assert.equal(rows.length, 2);
-  assert.deepEqual(rows.find((r) => r.own), { own: true, geohashRegion: "kzdwb", verifiedPerson: null, verifiedPersonDegraded: null });
-  assert.deepEqual(rows.find((r) => !r.own), { own: false, geohashRegion: "kzdwb", verifiedPerson: true, verifiedPersonDegraded: false });
+  assert.deepEqual(rows.find((r) => r.own), { own: true, geohashRegion: "kzdwb", verifiedPerson: null, verifiedPersonDegraded: null, membershipVerified: false });
+  assert.deepEqual(rows.find((r) => !r.own), { own: false, geohashRegion: "kzdwb", verifiedPerson: true, verifiedPersonDegraded: false, membershipVerified: false });
   assert.equal(taskReports([entry("a1")], "zz", 5), null);
 });
 
@@ -82,4 +82,21 @@ test("route: counts a second reporter's report and exposes no identifiers", asyn
   assert.equal(after.reports.length, 1);
 
   assert.equal((await app.request(`/proof/${"9".repeat(64)}/confirmations`)).status, 404);
+});
+
+test("taskReports: membershipVerified is true when any photo of the report carries a verified pass", () => {
+  const rows = taskReports(
+    [
+      entry("m1", { reportId: "pass", membership: "verified" }),
+      entry("m2", { reportId: "pass" }),
+      entry("n1", { reportId: "no-pass" }),
+      entry("n2", { reportId: "no-pass", verifiedPerson: true }),
+    ],
+    "m2",
+    5,
+  )!;
+  assert.equal(rows.length, 2);
+  assert.equal(rows.find((r) => r.own)!.membershipVerified, true);
+  // A liveness verdict alone is not a programme pass.
+  assert.equal(rows.find((r) => !r.own)!.membershipVerified, false);
 });

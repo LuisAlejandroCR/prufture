@@ -1,6 +1,7 @@
 // confirmations.ts: groups the stored proofs of one task into independent field reports for the
 // public GET /proof/:hash/confirmations route. Pure over Entry[]. Each report carries only a coarse
-// region, the liveness verdict and whether it is the caller's own report — never a reportId,
+// region, the liveness verdict, whether it carries a verified programme pass and whether it is the
+// caller's own report — never a reportId,
 // proofHash, key, review note or precise location. Coordinator-rejected reports are left out.
 
 import { reportKeyFor, type Entry } from "./store.js";
@@ -14,6 +15,12 @@ export interface ConfirmationReport {
   verifiedPerson: boolean | null;
   /** For a false verdict: true only when every false verdict was recorded while degraded. */
   verifiedPersonDegraded: boolean | null;
+  /**
+   * True if any photo of the report carries a verified programme pass. The pass nullifier is
+   * consumed once per (programme, task, epoch), so within an epoch two such rows are two different
+   * enrolled members. Boolean only: no nullifier, commitment or programme id leaves this route.
+   */
+  membershipVerified: boolean;
 }
 
 /** Every non-rejected report for the task of `ownHash`, one row per report. null for an unknown hash. */
@@ -43,6 +50,7 @@ export function taskReports(entries: Entry[], ownHash: string, regionLen: number
       verifiedPerson: anyTrue ? true : falses.length > 0 ? false : null,
       verifiedPersonDegraded:
         anyTrue ? false : falses.length > 0 ? falses.every((e) => e.verifiedPersonDegraded === true) : null,
+      membershipVerified: group.some((e) => e.membership === "verified"),
     });
   }
   return out;
