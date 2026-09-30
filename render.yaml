@@ -83,9 +83,10 @@ services:
       # /precise-location.
       - key: REQUIRE_EVIDENCE_TOKEN
         sync: false
-      # Programme pass: "semaphore" turns it on.
+      # Programme pass on, matching the production app build (EXPO_PUBLIC_PERSONHOOD_PROVIDER). Not a
+      # secret. Off, no report carries a pass and no community confirmation can be reached.
       - key: PERSONHOOD_PROVIDER
-        sync: false
+        value: semaphore
       # Who may enrol members and start rounds: the dashboard's COORDINATOR_APP_USER_ID (comma
       # separated). Empty closes enrolment.
       - key: PERSONHOOD_ADMIN_APP_USER_IDS
