@@ -83,9 +83,13 @@ test("privacy page discloses that on-chain records cannot be deleted", () => {
   }
 });
 
-test("privacy page states the photo and the private key never leave the device", () => {
-  const lower = PRIVACY.toLowerCase();
-  assert.ok(lower.includes("never uploaded"), "the photo must be stated as not uploaded");
+test("privacy page states the photo leaves only by the reporter's choice, and the key never leaves", () => {
+  const lower = PRIVACY.toLowerCase().replace(/<[^>]+>/g, "").replace(/\s+/g, " ");
+  // The production build offers opt-in photo sharing (PR #87), so "never uploaded" would be false.
+  assert.ok(!lower.includes("never uploaded"), "the photo can be shared by choice; never is false");
+  assert.ok(lower.includes("not uploaded unless you choose"), "sharing must be stated as opt-in");
+  assert.ok(lower.includes("deleted after 90 days"), "the retention period must be stated");
+  assert.ok(lower.includes("never shown on the public"), "a shared photo is never public");
   assert.ok(lower.includes("never leaves the device"), "the signing key must be stated as on-device");
 });
 
@@ -96,11 +100,13 @@ test("privacy page describes the selfie step as off by default and non-biometric
   assert.ok(lower.includes("biometric"), "the page must address biometric data explicitly");
 });
 
-test("privacy page discloses the AWS face check: off, processed by AWS, no image stored, yes/no only", () => {
+test("privacy page discloses the AWS face check: optional, processed by AWS, no image stored, yes/no only", () => {
   // As read: tags dropped and JSX line wrapping collapsed.
   const lower = PRIVACY.toLowerCase().replace(/<[^>]+>/g, "").replace(/\s+/g, " ");
   assert.ok(lower.includes("amazon web services") && lower.includes("amazon rekognition face liveness"), "the processor must be named");
-  assert.ok(lower.includes("switched off in the current app"), "the check must be stated as off in this app");
+  // The production build turns the check on (PR #97); calling it off would be false.
+  assert.ok(!lower.includes("switched off in the current app"), "the check is on in the store build");
+  assert.ok(lower.includes("optional"), "the check must be stated as optional");
   assert.ok(lower.includes("no face image is stored"));
   assert.ok(lower.includes("one pass/fail value"), "only a pass/fail value is kept");
   assert.ok(lower.includes("never required to send a report"), "the check must never gate reporting");
@@ -109,6 +115,14 @@ test("privacy page discloses the AWS face check: off, processed by AWS, no image
   for (const claim of ["proves you are unique", "guarantees a unique", "identity verified", "verifies your identity"]) {
     assert.ok(!lower.includes(claim), `privacy page claims "${claim}"`);
   }
+});
+
+test("privacy page discloses the programme pass: code kept on the phone, only a list check sent", () => {
+  const lower = PRIVACY.toLowerCase().replace(/<[^>]+>/g, "").replace(/\s+/g, " ");
+  assert.ok(lower.includes("programme pass"));
+  assert.ok(lower.includes("in person"), "enrolment must be stated as in person");
+  assert.ok(lower.includes("does not send the code"), "the code itself must be stated as not sent");
+  assert.ok(lower.includes("does not reveal which"), "the check must not identify the member");
 });
 
 test("both pages state that reporting is free", () => {

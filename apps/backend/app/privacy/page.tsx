@@ -29,7 +29,10 @@ export default function PrivacyPage() {
         <h2>In short</h2>
         <ul>
           <li>You do not create an account. We never ask for your name, email, phone number or ID.</li>
-          <li>Your photo stays on your phone. We upload a fingerprint of it, not the picture.</li>
+          <li>
+            Your photo stays on your phone. We upload a fingerprint of it, not the picture, unless you
+            choose to share it with the programme team.
+          </li>
           <li>Only an approximate area is published — never your exact position.</li>
           <li>
             A small, fixed set of non-personal fields is written to a public blockchain, where it is{" "}
@@ -42,8 +45,9 @@ export default function PrivacyPage() {
         <dl className="fields">
           <dt>Photo fingerprint</dt>
           <dd>
-            A SHA-256 hash of the photo — a one-way fingerprint. The image itself is never uploaded by
-            the app. The fingerprint cannot be turned back into the picture.
+            A SHA-256 hash of the photo — a one-way fingerprint. The image itself is not uploaded unless
+            you choose to share it (see “Sharing a photo” below). The fingerprint cannot be turned back
+            into the picture.
           </dd>
           <dt>Activity</dt>
           <dd>Which field activity you are reporting on. Not linked to a person.</dd>
@@ -64,7 +68,7 @@ export default function PrivacyPage() {
 
         <h2>What stays on your phone</h2>
         <ul>
-          <li>The photo itself.</li>
+          <li>The photo itself, unless you choose to share it.</li>
           <li>The private signing key.</li>
           <li>Your queue of reports, including any not yet sent.</li>
         </ul>
@@ -72,6 +76,22 @@ export default function PrivacyPage() {
           Deleting the app removes all of these from your device. Reports already sent cannot be
           recalled — see “What is permanent”.
         </p>
+
+        <h2>Sharing a photo</h2>
+        <p>
+          A photo is not uploaded unless you choose to share it. That happens only in two ways: you turn
+          on “Share photos with the programme team” for a report (it starts off), or the programme team
+          asks to see the photos of a report and you say yes in the app. You can say no; the report
+          still counts.
+        </p>
+        <ul>
+          <li>
+            A shared photo is encrypted on your phone to the programme team’s key before it is sent.
+            The servers that store it cannot open it.
+          </li>
+          <li>It is deleted after 90 days.</li>
+          <li>It is never shown on the public report page and never written to the blockchain.</li>
+        </ul>
 
         <h2>Location</h2>
         <p>
@@ -112,9 +132,9 @@ export default function PrivacyPage() {
 
         <h2>Face check</h2>
         <p>
-          Prufture has an optional live-person face check, which is <strong>switched off</strong> in the
-          current app and is never required to send a report. Nothing in this section happens unless a
-          programme switches it on and you choose to take the check.
+          Prufture has an optional live-person face check on iPhone (Me → Face check). It is{" "}
+          <strong>never required to send a report</strong>. Nothing in this section happens unless you
+          choose to take the check.
         </p>
         <p>
           It asks only one question: was a live person in front of the camera? It does not identify
@@ -150,6 +170,25 @@ export default function PrivacyPage() {
           reporting flow. Where it is switched on, a few camera frames are sent once to our server to
           produce the same yes/no answer and are not stored.
         </p>
+
+        <h2>Programme pass</h2>
+        <p>
+          The app makes a pass code on your phone and keeps it there (Me → Programme pass). If you take
+          part in a programme, you show the code to your coordinator once, in person, and they add it to
+          the programme list.
+        </p>
+        <ul>
+          <li>
+            After a report is sent, the phone attaches a check that says only that the report came from
+            someone on the programme list. It does not reveal which person, and it does not send the
+            code, your name, phone number or location.
+          </li>
+          <li>
+            The result (confirmed or not) is stored with the report on our server. Nothing from the pass
+            is written to the blockchain.
+          </li>
+          <li>The pass is optional. Reports send whether or not you are on a list.</li>
+        </ul>
 
         <h2>Notifications</h2>
         <p>

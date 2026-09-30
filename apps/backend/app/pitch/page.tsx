@@ -18,15 +18,15 @@ const EASSCAN_TX = `https://base-sepolia.easscan.org/attestation/view/${ATTESTAT
 
 // Deploy-time wiring. DASHBOARD_URL / VERIFY_URL resolve from NEXT_PUBLIC_VERIFY_BASE_URL
 // (the same env var the /verify route reads) when Vercel sets it; until then each renders
-// as a labelled QR placeholder. REPO_URL is a constant. APP_URL stays null — the demo runs
-// in Expo Go and the exp:// link is pasted by the human at demo time.
+// as a labelled QR placeholder. REPO_URL is a constant. APP_URL is the public App Store
+// listing, set as NEXT_PUBLIC_APP_STORE_URL only once the app is live.
 const DEPLOY_BASE: string | null =
   process.env.NEXT_PUBLIC_VERIFY_BASE_URL?.replace(/\/+$/, "") || null;
 // Sample proof for /verify — hashBytes("seed: solar panel installation|solar-panel-install"),
 // the first row apps/api/scripts/seed.ts writes to a fresh deploy.
 const SAMPLE_HASH = "992f8d6232210e99a6ed60a9c23dc22b3a304cd0c0d13bbdecf16f3c573d5d75";
 
-const APP_URL: string | null = null; // Expo Go project link (exp://) — the demo runs in Expo Go
+const APP_URL: string | null = process.env.NEXT_PUBLIC_APP_STORE_URL || null;
 const DASHBOARD_URL: string | null = DEPLOY_BASE ? `${DEPLOY_BASE}/dashboard` : null;
 const VERIFY_URL: string | null = DEPLOY_BASE ? `${DEPLOY_BASE}/verify/${SAMPLE_HASH}` : null;
 const REPO_URL: string | null = "https://github.com/LuisAlejandroCR/unicef-firstblockathon";
@@ -110,9 +110,9 @@ const slideBodies: React.ReactNode[] = [
   // 4 — try the app
   <>
     <p className="pitch-kicker">Demo &mdash; the app</p>
-    <h2>Open it in Expo Go.</h2>
+    <h2>Get the iPhone app.</h2>
     <div className="pitch-qr-row">
-      <QrCard url={APP_URL} label="Scan with Expo Go" caption="Expo Go project link (exp://)" />
+      <QrCard url={APP_URL} label="App Store" caption="App Store link (in App Review)" />
       <ul>
         <li>Permissions &mdash; camera and approximate area, each with its reason.</li>
         <li>In airplane mode: take the photo, answer two short questions.</li>
@@ -153,17 +153,17 @@ const slideBodies: React.ReactNode[] = [
         <h3 className="accent">Runs today</h3>
         <ul>
           <li>Offline capture, hash, sign, queue</li>
-          <li>Client sync + real on-chain attestation ({TX_HASH.slice(0, 10)}&hellip;)</li>
-          <li>Public /verify and /dashboard, WhatsApp delivery (Kapso)</li>
-          <li>Honest degradation on every external call</li>
+          <li>Sync + real attestation ({TX_HASH.slice(0, 10)}&hellip;)</li>
+          <li>/verify, /dashboard, WhatsApp (Kapso)</li>
+          <li>iOS app, in App Store review</li>
+          <li>Programme pass + optional face check</li>
         </ul>
       </div>
       <div>
         <h3>Next steps &mdash; not built</h3>
         <ul>
-          <li>Signed personhood + precise-location commitment on-chain (schema v2)</li>
-          <li>Selfie-liveness boolean (in integration); a real liveness vendor</li>
-          <li>A ZK unlinkability layer; email channel; EAS store build</li>
+          <li>Personhood + precise-location commitment on-chain (schema v2)</li>
+          <li>Hardware attestation / TEE signing; Play Store release</li>
         </ul>
       </div>
     </div>
@@ -171,13 +171,14 @@ const slideBodies: React.ReactNode[] = [
       <QrCard url={REPO_URL} label="Source" caption="repo URL" />
       <ul>
         <li>
-          No zero-knowledge, no TEE, no hardware attestation, no &ldquo;deepfake-proof&rdquo; claim.
+          Every external call degrades honestly. No TEE, no hardware attestation, no
+          &ldquo;deepfake-proof&rdquo; claim; the face check is liveness, not identity.
         </li>
         {/* HUMAN: confirm Go/Pivot/Stop */}
         <li>
           <b>Go</b> &mdash; the offline capture &rarr; on-device sign &rarr; queue &rarr; sync
-          &rarr; real EAS attestation path runs end to end today on Base Sepolia, 157 tests
-          green, zero PII in the on-chain decode; what remains is integration and pilot
+          &rarr; real EAS attestation path runs end to end today on Base Sepolia, over 800
+          automated tests, zero PII in the on-chain decode; what remains is integration and pilot
           pre-conditions, not unproven core mechanics.
         </li>
       </ul>
