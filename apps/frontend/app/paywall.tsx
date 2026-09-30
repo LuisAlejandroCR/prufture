@@ -98,16 +98,22 @@ export default function PaywallScreen() {
   return (
     <Screen
       footer={
-        state.kind === "ready" ? (
+        // Restore and Redeem stay reachable even when plans fail to load: an existing subscriber, or a
+        // reviewer with an offer code, must never be stuck behind "Plans aren't available".
+        state.kind !== "loading" ? (
           <View style={{ gap: space.sm }}>
-            <PrimaryButton label="Continue" onPress={handlePurchase} busy={busy} />
-            <Text style={styles.legal}>
-              Payment is charged to your {Platform.OS === "android" ? "Google Play" : "Apple ID"} account at
-              confirmation. The subscription renews{" "}
-              {selected === "monthly" ? "every month" : "every year"} at the same price unless you
-              cancel at least 24 hours before the period ends. Manage or cancel it in your account
-              settings.
-            </Text>
+            {state.kind === "ready" ? (
+              <>
+                <PrimaryButton label="Continue" onPress={handlePurchase} busy={busy} />
+                <Text style={styles.legal}>
+                  Payment is charged to your {Platform.OS === "android" ? "Google Play" : "Apple ID"} account at
+                  confirmation. The subscription renews{" "}
+                  {selected === "monthly" ? "every month" : "every year"} at the same price unless you
+                  cancel at least 24 hours before the period ends. Manage or cancel it in your account
+                  settings.
+                </Text>
+              </>
+            ) : null}
             <View style={styles.links}>
               <LegalLink label="Terms of Use" url={TERMS_OF_USE_URL} />
               <Text style={styles.legal}>·</Text>
