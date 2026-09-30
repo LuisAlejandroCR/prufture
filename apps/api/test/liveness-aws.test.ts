@@ -25,6 +25,7 @@ import {
   rememberLivenessSession,
   resetLivenessSessionsForTests,
 } from "../src/liveness-sessions.js";
+import { resetLivenessRateLimitForTests } from "../src/liveness-rate-limit.js";
 
 const SESSION = "0f8fad5b-d9cb-469f-a165-70867728950e";
 const CONFIGURED = { AWS_REGION: "eu-west-1", AWS_ACCESS_KEY_ID: "AKIATEST", AWS_SECRET_ACCESS_KEY: "test-secret" };
@@ -62,6 +63,7 @@ const port = (client: FaceLivenessClient, env: NodeJS.ProcessEnv = CONFIGURED) =
 
 afterEach(() => {
   overrideLivenessSessionPortForTests(undefined);
+  resetLivenessRateLimitForTests();
   delete process.env.LIVENESS_PROVIDER;
 });
 

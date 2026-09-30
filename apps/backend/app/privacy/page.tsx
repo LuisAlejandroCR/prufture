@@ -10,7 +10,7 @@ export const metadata = {
   description: "What Prufture collects, what leaves your phone, and what is permanent.",
 };
 
-const UPDATED = "21 September 2026";
+const UPDATED = "30 September 2026";
 
 export default function PrivacyPage() {
   return (
@@ -110,12 +110,45 @@ export default function PrivacyPage() {
           </li>
         </ul>
 
-        <h2>Selfie check</h2>
+        <h2>Face check</h2>
         <p>
-          Prufture includes an optional selfie step, which is <strong>switched off by default</strong>{" "}
-          and is not part of the standard reporting flow. Where it is switched on, the camera frames are
-          used only to produce a single true/false result and are not stored. No face image, face
-          template or biometric identifier is kept, published, or written to the blockchain.
+          Prufture has an optional live-person face check, which is <strong>switched off</strong> in the
+          current app and is never required to send a report. Nothing in this section happens unless a
+          programme switches it on and you choose to take the check.
+        </p>
+        <p>
+          It asks only one question: was a live person in front of the camera? It does not identify
+          you, match your face against anyone, or prove that you are a unique person.
+        </p>
+        <ul>
+          <li>
+            <strong>Processed by Amazon Web Services.</strong> During the check, a short video of your
+            face is streamed from the app to AWS (Amazon Rekognition Face Liveness), which analyses it
+            on our behalf and returns a result to our server.
+          </li>
+          <li>
+            <strong>No face image is stored.</strong> We set up the check so AWS writes no images to
+            storage and returns no audit images. AWS’s answer can still include a single still frame;
+            our server reads only the pass/fail result and the confidence score from that answer and
+            discards the rest in memory, without storing, logging or forwarding any image. No image of
+            your face ever reaches the app, our database, the public verification page or the
+            blockchain.
+          </li>
+          <li>
+            <strong>Only a yes/no is kept.</strong> From the check, Prufture keeps one pass/fail value.
+            If you pass, your phone keeps a signed receipt (a pass/fail value and a time, no image) for
+            up to 30 days, and each report you send in that time is marked “verified person: yes”. A
+            failed or unfinished check keeps nothing.
+          </li>
+          <li>
+            No face template or other biometric identifier is created or kept by Prufture, and nothing
+            from the check is written to the blockchain.
+          </li>
+        </ul>
+        <p>
+          An older selfie step is also switched off by default and is not part of the standard
+          reporting flow. Where it is switched on, a few camera frames are sent once to our server to
+          produce the same yes/no answer and are not stored.
         </p>
 
         <h2>Notifications</h2>

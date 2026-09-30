@@ -87,6 +87,7 @@ export default function RootLayout() {
           <Stack.Screen name="status/[id]" />
           <Stack.Screen name="help" />
           <Stack.Screen name="data-privacy" />
+          <Stack.Screen name="face-check" />
           <Stack.Screen name="about" />
           <Stack.Screen name="coordinator" />
           <Stack.Screen name="paywall" />

@@ -75,6 +75,8 @@ test("production store build carries the same public config as preview, and no p
   assert.match(env.EXPO_PUBLIC_VERIFY_URL!, /^https:\/\/.+\/verify$/);
   assert.match(env.EXPO_PUBLIC_PROGRAMME_PUBKEY!, /^[0-9a-f]{64}$/);
   assert.equal(env.EXPO_PUBLIC_IDENTITY_STEP, "off");
+  // The AWS face check ships dormant: no store profile turns it on until its release is ready.
+  assert.notEqual(env.EXPO_PUBLIC_LIVENESS_PROVIDER, "aws", "the face check must stay off in store builds");
   for (const [key, value] of Object.entries(env)) {
     assert.ok(!/<<|>>|human fills/i.test(value), `${key} still holds a placeholder`);
   }

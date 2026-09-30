@@ -96,6 +96,21 @@ test("privacy page describes the selfie step as off by default and non-biometric
   assert.ok(lower.includes("biometric"), "the page must address biometric data explicitly");
 });
 
+test("privacy page discloses the AWS face check: off, processed by AWS, no image stored, yes/no only", () => {
+  // As read: tags dropped and JSX line wrapping collapsed.
+  const lower = PRIVACY.toLowerCase().replace(/<[^>]+>/g, "").replace(/\s+/g, " ");
+  assert.ok(lower.includes("amazon web services") && lower.includes("amazon rekognition face liveness"), "the processor must be named");
+  assert.ok(lower.includes("switched off in the current app"), "the check must be stated as off in this app");
+  assert.ok(lower.includes("no face image is stored"));
+  assert.ok(lower.includes("one pass/fail value"), "only a pass/fail value is kept");
+  assert.ok(lower.includes("never required to send a report"), "the check must never gate reporting");
+  // A liveness verdict is not identification or uniqueness; the page must not imply either.
+  assert.ok(lower.includes("does not identify"));
+  for (const claim of ["proves you are unique", "guarantees a unique", "identity verified", "verifies your identity"]) {
+    assert.ok(!lower.includes(claim), `privacy page claims "${claim}"`);
+  }
+});
+
 test("both pages state that reporting is free", () => {
   assert.ok(PRIVACY.toLowerCase().includes("reporting is free"));
   assert.ok(SUPPORT.toLowerCase().includes("free"));

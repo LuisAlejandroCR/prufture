@@ -6,7 +6,7 @@ import { useRouter } from "expo-router";
 import { StyleSheet, Text, View } from "react-native";
 import { Icon, type IconName } from "../src/components/icons/Icon";
 import { BackLink, Notice, Screen, ScreenTitle } from "../src/components/ui";
-import { personhoodProvider } from "../src/flags";
+import { livenessProvider, personhoodProvider } from "../src/flags";
 import { color, radius, space, type } from "../src/theme";
 
 const ITEMS: { icon: IconName; title: string; detail: string }[] = [
@@ -23,9 +23,21 @@ const PASS_ITEM = {
   detail: "Your pass code is made and kept on this phone. You show it to your coordinator once, in person. The check sent with each report says only that it came from someone on the programme list; it does not send the code, your name, phone number or location. When the check passes, the report is marked as coming from an enrolled programme member.",
 };
 
+// Listed only in builds where the one-time face check exists; a build without it says nothing about it.
+const FACE_CHECK = {
+  icon: "shield" as IconName,
+  title: "Face check, only if you choose",
+  detail:
+    "The optional live-person check is processed by Amazon Web Services (AWS). A short video of your face goes from this phone to AWS, which checks whether a live person was there. No image of your face is stored by Prufture or returned to this phone, and Prufture keeps only a pass or fail. It does not identify you, and reporting never depends on it.",
+};
+
 export default function DataPrivacyScreen() {
   const router = useRouter();
-  const items = personhoodProvider() === "semaphore" ? [...ITEMS, PASS_ITEM] : ITEMS;
+  const items = [
+    ...ITEMS,
+    ...(personhoodProvider() === "semaphore" ? [PASS_ITEM] : []),
+    ...(livenessProvider() === "aws" ? [FACE_CHECK] : []),
+  ];
   return (
     <Screen>
       <BackLink label="Me" onPress={() => router.back()} />
