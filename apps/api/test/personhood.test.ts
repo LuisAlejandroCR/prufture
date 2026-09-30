@@ -67,6 +67,14 @@ test("a real member proof bound to its report verifies", async () => {
   assert.deepEqual(r, { state: "verified", reason: "ok" });
 });
 
+test("regression: the bare hex hash /sync stores binds the same proof as its 0x form", async () => {
+  // packages/core hashBytes() makes proof hashes without 0x, and that is how the store keys them.
+  // Only 0x was accepted here, so every real report came back invalid.
+  const bare = (fx.hashes.one as string).slice(2);
+  const r = await verifyMembership({ proof: fx.first, proofHash: bare, scope: SCOPE_A, acceptedRoots: ROOTS }, on());
+  assert.deepEqual(r, { state: "verified", reason: "ok" });
+});
+
 test("result carries only state + reason, never proof material", async () => {
   const r = await verifyMembership(
     { proof: fx.first, proofHash: fx.hashes.one, scope: SCOPE_A, acceptedRoots: ROOTS },
