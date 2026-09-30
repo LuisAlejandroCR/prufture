@@ -7,7 +7,7 @@ import { assuranceFromProof, assuranceLabel, isNeutralAssurance } from "../../..
 import { fetchProof } from "../../../lib/api";
 import { activityLabel, programmeName } from "../../../lib/dashboard";
 import { Icon, SiteFooter, SiteHeader, type IconName } from "../../_components/brand";
-import { qrPath } from "../../pitch/qr";
+import { qrPath } from "../../../lib/qr";
 import { ShareLink } from "./ShareLink";
 
 const VERIFY_BASE = process.env.NEXT_PUBLIC_VERIFY_BASE_URL ?? "http://localhost:3000";
