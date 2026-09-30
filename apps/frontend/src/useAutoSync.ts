@@ -1,11 +1,12 @@
 // useAutoSync.ts: binds the pure syncPending() to real deps and drains the queue on reconnect and
-// app-foreground, then runs the sealed-evidence pass (src/evidence-share.ts). runPendingSync() shares
-// one in-flight promise, so runs never overlap; src/sync.ts stays pure and native-free for unit tests.
+// app-foreground, then runs the sealed-evidence pass (src/evidence-share.ts) and retries programme-pass
+// checks that could not finish. runPendingSync() shares one in-flight promise, so runs never overlap;
+// src/sync.ts stays pure and native-free for unit tests.
 
 import { useEffect, useRef } from "react";
 import { AppState, type AppStateStatus } from "react-native";
 import NetInfo from "@react-native-community/netinfo";
-import { attachPersonhoodAfterSync } from "./personhood-device";
+import { attachPersonhoodAfterSync, retryPersonhood } from "./personhood-device";
 import { listProofs, markAttested, markSynced } from "./queue";
 import { syncEvidence } from "./evidence-share";
 import { evidenceTokenHashFor } from "./evidence-token";
@@ -49,6 +50,9 @@ export function runPendingSync(): Promise<SyncSummary> {
       const rows = await listProofs().catch(() => []);
       const onApi = rows.filter((r) => r.status !== PENDING_STATUS).map((r) => r.proofHash);
       await syncEvidence(API_URL, fetchImpl, onApi);
+      // Programme pass: queue another try for checks recorded "unavailable". Fire-and-forget, a
+      // no-op while the pass is off; the proofs run one at a time after this sync returns.
+      void retryPersonhood(API_URL, rows);
       return summary;
     })
     .finally(() => {

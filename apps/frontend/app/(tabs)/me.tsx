@@ -1,6 +1,6 @@
 // (tabs)/me.tsx: essential settings only, not a social profile — storage line, then language,
-// accessibility, data and privacy, offline storage, coordinator review, help and about. No wallet,
-// no account address.
+// accessibility, data and privacy, offline storage, the programme pass (how to join in person, and
+// whether this phone is on the list), coordinator review, help and about. No wallet, no account address.
 
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
@@ -18,8 +18,10 @@ import {
 import { personhoodProvider } from "../../src/flags";
 import { confirmedReportCount } from "../../src/home";
 import { openInApp, siteUrl } from "../../src/links";
-import { getCommitment } from "../../src/personhood-device";
+import { getCommitment, getEnrolment } from "../../src/personhood-device";
+import type { Enrolment } from "../../src/personhood-proof";
 import { listProofs } from "../../src/queue";
+import { API_URL } from "../../src/useAutoSync";
 import { color, radius, space, target, type } from "../../src/theme";
 
 export default function MeScreen() {
@@ -32,6 +34,7 @@ export default function MeScreen() {
   const passOn = personhoodProvider() === "semaphore";
   const [passCode, setPassCode] = useState<string | null>(null);
   const [passError, setPassError] = useState(false);
+  const [enrolment, setEnrolment] = useState<Enrolment>("unknown");
 
   useFocusEffect(
     useCallback(() => {
@@ -42,6 +45,9 @@ export default function MeScreen() {
             setPassError(false);
           })
           .catch(() => setPassError(true));
+        getEnrolment(API_URL)
+          .then(setEnrolment)
+          .catch(() => setEnrolment("unknown"));
       }
       void hydrateFeedbackSettings().then(() => {
         setHaptics(isHapticsEnabled());
@@ -114,9 +120,16 @@ export default function MeScreen() {
             <View style={styles.toggleIcon}><Icon name="programme" size={20} color={color.text} /></View>
             <View style={{ flex: 1, gap: space.xs }}>
               <Text style={styles.toggleTitle}>Programme pass</Text>
+              <Text style={styles.toggleSub}>{ENROLMENT_LINE[enrolment]}</Text>
               <Text style={styles.toggleSub}>
-                Show this code to your coordinator once to join the programme. It does not include
-                your name, your phone or your location.
+                To join, meet your programme coordinator in person and show them the code below.
+                They add it to the programme list. You only do this once on this phone. A new phone
+                or a reinstall gives a new code, so show that one too.
+              </Text>
+              <Text style={styles.toggleSub}>
+                After that, each report you send includes a check that it came from someone on the
+                list. The check does not send this code, your name, your phone number or your
+                location. Your coordinator knows this code is yours.
               </Text>
               <Text
                 style={styles.passCode}
@@ -182,6 +195,12 @@ export default function MeScreen() {
     </Screen>
   );
 }
+
+const ENROLMENT_LINE: Record<Enrolment, string> = {
+  enrolled: "This phone is on the programme list.",
+  not_enrolled: "This phone is not on the programme list yet.",
+  unknown: "Could not check the programme list right now.",
+};
 
 function ToggleRow({
   icon,

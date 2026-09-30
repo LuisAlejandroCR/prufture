@@ -2,7 +2,8 @@
 // descriptions over all its per-photo proofs (src/progress.ts; id may be a reportId, row id or
 // proofHash), marking a stage done only when every proof reached it. For an assignment it shows live
 // community confirmations from independent nearby reports (src/confirmations.ts). The reporter's
-// private note (local only) shows under the timeline. Proof references sit under Technical details.
+// private note (local only) shows under the timeline. When the programme pass is on, one line says
+// whether its check was accepted (src/personhood-outcome.ts). Proof references sit under Technical details.
 // A coordinator's request for the photos shows as a yes/no prompt; nothing is sent without a yes, and
 // a yes sends sealed photos only (src/evidence-share.ts). No PII, exact location or secrets.
 
@@ -35,6 +36,8 @@ import {
   type ConfirmationReport,
 } from "../../src/confirmations";
 import { identityStepEnabled } from "../../src/flags";
+import { getOutcomes, personhoodOn } from "../../src/personhood-device";
+import { reportPass, reportPassCopy, type ReportPass } from "../../src/personhood-outcome";
 import { listProofs } from "../../src/queue";
 import type { LocalProof } from "../../src/queue-row";
 import { openInApp, publicRecordUrl } from "../../src/links";
@@ -59,6 +62,8 @@ export default function ReportStatusScreen() {
   const copy = shareCopy();
   // null = not checked (offline, unsent or api unreachable): no count is shown rather than a guess.
   const [reports, setReports] = useState<ConfirmationReport[] | null>(null);
+  // null = no programme-pass check was attempted for this report (or the pass is off): no line.
+  const [pass, setPass] = useState<ReportPass | null>(null);
 
   const load = useCallback(() => {
     listProofs()
@@ -68,6 +73,13 @@ export default function ReportStatusScreen() {
         const reportId = report[0]?.reportId ?? "";
         getLocalNote(reportId).then(setNote).catch(() => setNote(null));
         const mine = new Set(report.map((r) => r.proofHash));
+        if (personhoodOn()) {
+          getOutcomes([...mine])
+            .then((records) => setPass(reportPass(records, Date.now())))
+            .catch(() => setPass(null));
+        } else {
+          setPass(null);
+        }
         pendingEvidenceRequests()
           .then((all) => setRequested(all.filter((h) => mine.has(h))))
           .catch(() => setRequested([]));
@@ -149,6 +161,7 @@ export default function ReportStatusScreen() {
   const photos = group.length;
   const live = reports ? liveConfirmations(task, reports, identityStepEnabled()) : null;
   const liveNote = live ? confirmationsNote(live) : null;
+  const passCopy = pass ? reportPassCopy(pass) : null;
 
   return (
     <Screen>
@@ -237,6 +250,20 @@ export default function ReportStatusScreen() {
               : "Not checked yet. The count appears once your report is sent and the phone is online."}
           </Text>
           {liveNote ? <Text style={styles.stageDetail}>{liveNote}</Text> : null}
+        </View>
+      ) : null}
+
+      {pass && passCopy ? (
+        <View style={styles.community} accessible accessibilityLabel={`${passCopy.title}. ${passCopy.body}`}>
+          <View style={styles.communityHead}>
+            <Icon
+              name={pass.outcome === "verified" ? "check" : "programme"}
+              size={22}
+              color={pass.outcome === "verified" ? color.success : color.muted}
+            />
+            <Text style={styles.sectionTitle}>{passCopy.title}</Text>
+          </View>
+          <Text style={styles.stageDetail}>{passCopy.body}</Text>
         </View>
       ) : null}
 
