@@ -3,8 +3,8 @@
 // proofs grouped by the local reportId), friendly status and relative time, plus a manual
 // "check now". No hashes, no error traces.
 
-import { useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useState } from "react";
+import { useFocusEffect, useRouter, useScrollToTop } from "expo-router";
+import { useCallback, useRef, useState } from "react";
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Icon } from "../../src/components/icons/Icon";
 import { Illustration } from "../../src/components/Illustration";
@@ -21,6 +21,7 @@ import {
   groupReports,
   type ReportFilter,
 } from "../../src/report-groups";
+import { announce, syncResult } from "../../src/announce";
 import { color, radius, space, target, type } from "../../src/theme";
 
 function relativeTime(iso: string): string {
@@ -38,6 +39,9 @@ export default function UpdatesScreen() {
   const router = useRouter();
   const [rows, setRows] = useState<LocalProof[]>([]);
   const [checking, setChecking] = useState(false);
+  // Tapping My reports again while on it scrolls the list back to the top.
+  const listRef = useRef<ScrollView>(null);
+  useScrollToTop(listRef);
   const [reachError, setReachError] = useState(false);
 
   const refresh = useCallback(() => {
@@ -54,6 +58,7 @@ export default function UpdatesScreen() {
       .then((s) => {
         setReachError(s.failed > 0 && s.synced === 0);
         refresh();
+        void announce(syncResult(s, true));
       })
       .catch(() => undefined)
       .finally(() => setChecking(false));
@@ -66,7 +71,12 @@ export default function UpdatesScreen() {
   const confirmed = confirmedReportCount(rows);
 
   const contribution = (
-    <View style={styles.contribution} accessibilityRole="summary">
+    <View
+      style={styles.contribution}
+      accessible
+      accessibilityLabel={`Your contribution. ${confirmed} ${confirmed === 1 ? "report" : "reports"} confirmed. No ranking. Every useful report counts. Only you see this.`}
+      accessibilityRole="summary"
+    >
       <Illustration scene="growth" height={96} />
       <View style={styles.contributionBody}>
         <Text style={styles.contributionTitle}>Your contribution</Text>
@@ -99,6 +109,7 @@ export default function UpdatesScreen() {
         </View>
       ) : (
         <ScrollView
+          ref={listRef}
           style={styles.flex}
           contentContainerStyle={{ gap: space.sm, paddingBottom: space.xl }}
           refreshControl={<RefreshControl refreshing={checking} onRefresh={checkNow} tintColor={color.primary} />}

@@ -1,20 +1,31 @@
 // status/[id].tsx: the lifecycle of one report in plain language — a four-stage timeline with short
 // descriptions over all its per-photo proofs (src/progress.ts; id may be a reportId, row id or
-// proofHash), marking a stage done only when every proof reached it. The reporter's private note (local only) shows under the timeline. Proof references sit under
-// Technical details. No PII, exact location or secrets.
+// proofHash), marking a stage done only when every proof reached it. For an assignment it shows live
+// community confirmations from independent nearby reports (src/confirmations.ts). The reporter's
+// private note (local only) shows under the timeline. Proof references sit under Technical details.
+// No PII, exact location or secrets.
 
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import { LayoutAnimation, Pressable, StyleSheet, Text, View } from "react-native";
 import { Icon } from "../../src/components/icons/Icon";
 import { BackLink, Notice, Screen, SecondaryButton, StatusPill, TaskHeader } from "../../src/components/ui";
+import { announce, stageSpoken, syncResult } from "../../src/announce";
+import {
+  confirmationsLabel,
+  confirmationsNote,
+  fetchConfirmations,
+  liveConfirmations,
+  type ConfirmationReport,
+} from "../../src/confirmations";
+import { identityStepEnabled } from "../../src/flags";
 import { listProofs } from "../../src/queue";
 import type { LocalProof } from "../../src/queue-row";
 import { openInApp, publicRecordUrl } from "../../src/links";
 import { findReport, reportStages } from "../../src/progress";
 import { getLocalNote } from "../../src/report-note";
 import { getTask } from "../../src/tasks";
-import { runPendingSync } from "../../src/useAutoSync";
+import { API_URL, runPendingSync } from "../../src/useAutoSync";
 import { color, friendlyStatus, radius, space, type } from "../../src/theme";
 
 
@@ -25,6 +36,8 @@ export default function ReportStatusScreen() {
   const [showTech, setShowTech] = useState(false);
   const [checking, setChecking] = useState(false);
   const [note, setNote] = useState<string | null>(null);
+  // null = not checked (offline, unsent or api unreachable): no count is shown rather than a guess.
+  const [reports, setReports] = useState<ConfirmationReport[] | null>(null);
 
   const load = useCallback(() => {
     listProofs()
@@ -33,6 +46,12 @@ export default function ReportStatusScreen() {
         setGroup(report);
         const reportId = report[0]?.reportId ?? "";
         getLocalNote(reportId).then(setNote).catch(() => setNote(null));
+        const sent = report.find((r) => r.status !== "pending_sync");
+        if (sent && getTask(sent.taskId).confirmations) {
+          fetchConfirmations(API_URL, sent.proofHash).then(setReports).catch(() => setReports(null));
+        } else {
+          setReports(null);
+        }
       })
       .catch(() => setGroup([]));
   }, [id]);
@@ -42,7 +61,10 @@ export default function ReportStatusScreen() {
   const checkNow = () => {
     setChecking(true);
     runPendingSync()
-      .then(() => load())
+      .then((s) => {
+        load();
+        void announce(syncResult(s, true));
+      })
       .catch(() => undefined)
       .finally(() => setChecking(false));
   };
@@ -69,16 +91,25 @@ export default function ReportStatusScreen() {
       );
   const stages = reportStages(group);
   const photos = group.length;
+  const live = reports ? liveConfirmations(task, reports, identityStepEnabled()) : null;
+  const liveNote = live ? confirmationsNote(live) : null;
 
   return (
     <Screen>
       <BackLink label="My reports" onPress={() => router.back()} />
-      <TaskHeader category={task.category} title={task.title} />
-      <View style={styles.metaRow}>
-        <Icon name="location" size={15} color={color.faint} />
-        <Text style={styles.meta}>{task.area}</Text>
+      <TaskHeader category={task.category} title={task.title} subtitle={task.purpose} />
+
+      <View style={styles.summary}>
+        <View style={styles.summaryTop}>
+          <Text style={styles.sectionLabel}>Report summary</Text>
+          <StatusPill status={status} count={minCount} />
+        </View>
+        <View style={styles.facts}>
+          <Fact icon="photo" label={photos === 1 ? "1 photo" : `${photos} photos`} />
+          <Fact icon="location" label={task.area} />
+          <Fact icon="clock" label={new Date(newest.capturedAt).toLocaleDateString()} />
+        </View>
       </View>
-      <StatusPill status={status} count={minCount} />
 
       {anyPending ? (
         <Notice tone="info" icon="offline">
@@ -86,26 +117,61 @@ export default function ReportStatusScreen() {
         </Notice>
       ) : null}
 
-      <View style={styles.timeline}>
-        {stages.map((s, i, arr) => (
-          <View key={s.label} style={styles.stageRow}>
-            <View style={styles.stageMarker}>
-              <View style={[styles.node, s.done && styles.nodeDone, s.current && styles.nodeCurrent]}>
-                {s.done ? <Icon name="check" size={12} color={color.onPrimary} /> : null}
+      <View style={styles.progressCard}>
+        <Text style={styles.sectionTitle} accessibilityRole="header">Report progress</Text>
+        <View style={styles.timeline}>
+          {stages.map((s, i, arr) => (
+            <View key={s.label} style={styles.stageRow} accessible accessibilityLabel={stageSpoken(s)}>
+              <View style={styles.stageMarker}>
+                <View style={[styles.node, s.done && styles.nodeDone, s.current && styles.nodeCurrent]}>
+                  {s.done ? <Icon name="check" size={12} color={color.onPrimary} /> : null}
+                </View>
+                {i < arr.length - 1 ? (
+                  <View style={[styles.connector, s.done && styles.connectorDone]} />
+                ) : null}
               </View>
-              {i < arr.length - 1 ? (
-                <View style={[styles.connector, s.done && styles.connectorDone]} />
-              ) : null}
+              <View style={styles.stageText}>
+                <Text style={[styles.stageLabel, !s.done && !s.current && styles.stageUpcoming]}>
+                  {s.label}
+                </Text>
+                <Text style={styles.stageDetail}>{s.detail}</Text>
+              </View>
             </View>
-            <View style={styles.stageText}>
-              <Text style={[styles.stageLabel, !s.done && !s.current && styles.stageUpcoming]}>
-                {s.label}
-              </Text>
-              <Text style={styles.stageDetail}>{s.detail}</Text>
-            </View>
-          </View>
-        ))}
+          ))}
+        </View>
       </View>
+
+      {task.confirmations ? (
+        <View
+          style={styles.community}
+          accessible
+          accessibilityLabel={
+            live
+              ? `Community confirmations. ${confirmationsLabel(live)}.${liveNote ? ` ${liveNote}` : ""}`
+              : "Community confirmations not checked yet."
+          }
+        >
+          <View style={styles.communityHead}>
+            <Icon name="community" size={22} color={color.success} />
+            <Text style={styles.sectionTitle}>
+              {live ? confirmationsLabel(live) : "Community confirmations"}
+            </Text>
+          </View>
+          {live ? (
+            <View style={styles.segments}>
+              {Array.from({ length: live.need }, (_, i) => (
+                <View key={i} style={[styles.segment, i < live.have && styles.segmentOn]} />
+              ))}
+            </View>
+          ) : null}
+          <Text style={styles.stageDetail}>
+            {live
+              ? "Independent reports from people near this activity. Each one adds a confirmation."
+              : "Not checked yet. The count appears once your report is sent and the phone is online."}
+          </Text>
+          {liveNote ? <Text style={styles.stageDetail}>{liveNote}</Text> : null}
+        </View>
+      ) : null}
 
       {note ? (
         <View style={styles.note}>
@@ -152,7 +218,7 @@ export default function ReportStatusScreen() {
             value={newest.geohash ? newest.geohash.slice(0, 5) : "not added"}
             mono
           />
-          <TechRow label="Confirmations" value={String(minCount)} />
+          <TechRow label="On-chain attestations" value={String(minCount)} />
 
           <Text style={styles.refLabel}>References</Text>
           {group.map((r) => (
@@ -182,12 +248,26 @@ function TechRow({ label, value, mono }: { label: string; value: string; mono?: 
   );
 }
 
+function Fact({ icon, label }: { icon: "photo" | "location" | "clock"; label: string }) {
+  return (
+    <View style={styles.fact}>
+      <Icon name={icon} size={15} color={color.primary} />
+      <Text style={styles.factText} numberOfLines={1}>{label}</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  title: { ...type.display, color: color.text },
-  metaRow: { flexDirection: "row", alignItems: "center", gap: space.xs },
-  meta: { ...type.meta, color: color.muted },
   body: { ...type.body, color: color.muted },
   pressed: { opacity: 0.7 },
+  summary: { gap: space.md, padding: space.md, borderRadius: radius.md, backgroundColor: color.surface, borderWidth: 1, borderColor: color.border },
+  summaryTop: { gap: space.sm, alignItems: "flex-start" },
+  sectionLabel: { ...type.meta, color: color.muted, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5 },
+  facts: { gap: space.sm },
+  fact: { flexDirection: "row", alignItems: "center", gap: space.sm },
+  factText: { ...type.meta, color: color.text, flex: 1 },
+  progressCard: { gap: space.md, padding: space.md, borderRadius: radius.md, backgroundColor: color.surface, borderWidth: 1, borderColor: color.border },
+  sectionTitle: { ...type.subtitle, color: color.text },
   timeline: { gap: 0, paddingVertical: space.sm },
   stageRow: { flexDirection: "row", gap: space.md, alignItems: "flex-start" },
   stageMarker: { alignItems: "center", width: 22, alignSelf: "stretch" },
@@ -209,6 +289,11 @@ const styles = StyleSheet.create({
   stageLabel: { ...type.subtitle, color: color.text },
   stageDetail: { ...type.meta, color: color.muted },
   stageUpcoming: { color: color.faint },
+  community: { gap: space.sm, padding: space.md, borderRadius: radius.md, backgroundColor: color.surface, borderWidth: 1, borderColor: color.border },
+  communityHead: { flexDirection: "row", alignItems: "center", gap: space.sm },
+  segments: { flexDirection: "row", gap: space.xs },
+  segment: { flex: 1, height: 8, borderRadius: radius.pill, backgroundColor: color.border },
+  segmentOn: { backgroundColor: color.success },
   note: { gap: space.xs, padding: space.md, borderRadius: radius.md, backgroundColor: color.surfaceSoft },
   noteLabel: { ...type.meta, color: color.muted, fontWeight: "700" },
   noteText: { ...type.body, color: color.text },

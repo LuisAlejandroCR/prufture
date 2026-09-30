@@ -60,24 +60,40 @@ export async function sendVerifyUrl(
   }
 }
 
-// Kapso is used as a thin wrapper over the WhatsApp Cloud API. Text message, URL only.
+// Kapso proxies the WhatsApp Cloud API (Meta format). Business-initiated messages outside the 24h
+// window must be an approved template, so this sends `report_ready` (one body variable = the URL).
+export const KAPSO_DEFAULT_BASE = "https://api.kapso.ai/meta/whatsapp/v24.0";
+export const KAPSO_DEFAULT_TEMPLATE = "report_ready";
+export const KAPSO_DEFAULT_TEMPLATE_LANG = "en";
+
 async function sendWhatsApp(to: string, url: string): Promise<ExternalResult<ChannelSendResult>> {
   const key = env("KAPSO_API_KEY");
   const phoneId = env("KAPSO_PHONE_NUMBER_ID");
   if (!key) return unconfigured("whatsapp", "KAPSO_API_KEY");
   if (!phoneId) return unconfigured("whatsapp", "KAPSO_PHONE_NUMBER_ID");
-  const base = env("KAPSO_API_BASE") || "https://app.kapso.ai/api/v1";
+  const base = env("KAPSO_API_BASE") || KAPSO_DEFAULT_BASE;
+  const template = env("KAPSO_TEMPLATE_NAME") || KAPSO_DEFAULT_TEMPLATE;
+  const lang = env("KAPSO_TEMPLATE_LANG") || KAPSO_DEFAULT_TEMPLATE_LANG;
 
   return guard("channel/whatsapp", async () => {
     const init = {
       method: "POST",
       headers: { "content-type": "application/json", "X-API-Key": key },
-      body: JSON.stringify({ to, type: "text", text: { body: url } }),
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        to,
+        type: "template",
+        template: {
+          name: template,
+          language: { code: lang },
+          components: [{ type: "body", parameters: [{ type: "text", text: url }] }],
+        },
+      }),
     };
-    return timedFetch(`${base}/whatsapp/phone_numbers/${phoneId}/messages`, init, async (res) => {
-      const body = (await res.json().catch(() => ({}))) as { id?: string; message?: { id?: string }; error?: unknown };
-      if (!res.ok) throw new Error(`kapso ${res.status}: ${JSON.stringify(body)}`);
-      return { channel: "whatsapp" as const, providerId: body.id ?? body.message?.id ?? "" };
+    return timedFetch(`${base}/${encodeURIComponent(phoneId)}/messages`, init, async (res) => {
+      const body = (await res.json().catch(() => ({}))) as { messages?: { id?: string }[]; error?: unknown };
+      if (!res.ok) throw new Error(`kapso ${res.status}: ${JSON.stringify(body.error ?? body)}`);
+      return { channel: "whatsapp" as const, providerId: body.messages?.[0]?.id ?? "" };
     });
   });
 }

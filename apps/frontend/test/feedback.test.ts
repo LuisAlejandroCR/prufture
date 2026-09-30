@@ -13,6 +13,7 @@ import {
   thud,
   success,
   warn,
+  select,
   celebrationsAllowed,
   setHapticsEnabled,
   setCelebrationsEnabled,
@@ -94,4 +95,33 @@ test("celebrationsAllowed() is false under reduce-motion OR toggle-off, true oth
   assert.equal(await celebrationsAllowed(), false);
 
   __resetFeedbackForTest();
+});
+
+test("select() fires the iOS selection tick and honours the haptics toggle", async () => {
+  __resetFeedbackForTest();
+  let selections = 0;
+  __setHapticsForTest({
+    selectionAsync: async () => {
+      selections += 1;
+    },
+  });
+  await select();
+  assert.equal(selections, 1);
+  await setHapticsEnabled(false);
+  await select();
+  assert.equal(selections, 1);
+  await setHapticsEnabled(true);
+  __setHapticsForTest(null);
+});
+
+test("select() never throws without a haptic engine", async () => {
+  __resetFeedbackForTest();
+  __setHapticsForTest({
+    selectionAsync: async () => {
+      throw new Error("no haptic engine");
+    },
+  });
+  await assert.doesNotReject(select());
+  __setHapticsForTest(null);
+  await assert.doesNotReject(select());
 });

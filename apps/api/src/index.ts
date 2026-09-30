@@ -1,5 +1,5 @@
 // index.ts: the api's HTTP surface — public, unauthenticated proof routes (/sync, /attest, /notify,
-// assurance, /proof) plus the PAID /coordinator/* routes gated by a server-side RevenueCat check.
+// assurance, /proof, /proof/:hash/confirmations) plus the PAID /coordinator/* routes gated by a server-side RevenueCat check.
 // Every public route is zero-PII, and no request body can choose the status code or the recipient.
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
@@ -16,8 +16,13 @@ import {
 import { env } from "./env.js";
 import {
   addAttestation,
+  addNullifier,
   allProofs,
+  getPersonhoodGroup,
   getProof,
+  hasNullifier,
+  putPersonhoodGroup,
+  setMembershipVerified,
   setReview,
   setPreciseLocationCipher,
   setVerifiedPerson,
@@ -25,7 +30,17 @@ import {
 } from "./store.js";
 import { pushRegistrationCount, registerPushToken } from "./push-store.js";
 import { attestOnce } from "./relayer.js";
+import { taskReports } from "./confirmations.js";
 import { checkLivenessVerdict } from "./assurance.js";
+import {
+  POLICY_VERSION,
+  enrolCommitment,
+  expectedScope,
+  isCommitment,
+  isProgrammeId,
+  storeNullifiers,
+  verifyMembership,
+} from "./personhood.js";
 import { sendVerifyUrl, type Channel } from "./channels.js";
 import { issueTicket, readTicket } from "./liveness-ticket.js";
 import { maybeNotify } from "./notify.js";
@@ -285,6 +300,68 @@ app.post("/register-push", async (c) => {
 // defence in depth for entries stored before that check existed.
 const REGION_PREFIX_LEN = COARSE_GEOHASH_LEN;
 
+// Personhood (Semaphore v4 group membership). Off unless PERSONHOOD_PROVIDER=semaphore.
+// The group's commitments are public by design (the device needs them to build its Merkle path);
+// nullifiers are never returned by any route.
+
+app.get("/personhood/group/:programmeId", (c) => {
+  const programmeId = c.req.param("programmeId");
+  if (!isProgrammeId(programmeId)) return c.json({ error: "invalid programmeId" }, 400);
+  const group = getPersonhoodGroup(programmeId);
+  if (!group) return c.json({ error: "unknown programme" }, 404);
+  return c.json({
+    programmeId,
+    epoch: group.epoch,
+    commitments: group.commitments,
+    root: group.roots.at(-1) ?? null,
+  });
+});
+
+// The scope a device must bind its proof to. Computed here, from the stored report's taskId and the
+// group's current epoch, so the app never guesses epoch or policyVersion. Scope and epoch only:
+// no nullifier, commitment or report field leaves this route.
+app.get("/personhood/scope", (c) => {
+  const programmeId = c.req.query("programmeId");
+  if (!isProgrammeId(programmeId)) return c.json({ error: "invalid programmeId" }, 400);
+  const entry = getProof(c.req.query("proofHash") ?? "");
+  if (!entry) return c.json({ error: "unknown proofHash" }, 404);
+  const group = getPersonhoodGroup(programmeId);
+  if (!group) return c.json({ error: "unknown programme" }, 404);
+  const scope = expectedScope({
+    programmeId,
+    taskId: entry.payload.taskId,
+    epoch: BigInt(group.epoch),
+    policyVersion: POLICY_VERSION,
+  });
+  return c.json({ scope: scope.toString(), epoch: group.epoch }, 200);
+});
+
+app.post("/personhood/proof", async (c) => {
+  const body = await readJsonObject(c);
+  if (!body) return c.json({ error: "invalid json" }, 400);
+  const proofHash = typeof body.proofHash === "string" ? body.proofHash : "";
+  if (!isProgrammeId(body.programmeId)) return c.json({ error: "invalid programmeId" }, 400);
+  const entry = getProof(proofHash);
+  if (!entry) return c.json({ error: "unknown proofHash" }, 404);
+  const group = getPersonhoodGroup(body.programmeId);
+  if (!group) return c.json({ error: "unknown programme" }, 404);
+
+  // taskId comes from the stored signed payload and epoch from the server, never from the body:
+  // a caller-chosen scope would mint a fresh nullifier and defeat "once per task".
+  const scope = expectedScope({
+    programmeId: body.programmeId,
+    taskId: entry.payload.taskId,
+    epoch: BigInt(group.epoch),
+    policyVersion: POLICY_VERSION,
+  });
+  const result = await verifyMembership(
+    { proof: body.proof, proofHash, scope, acceptedRoots: group.roots },
+    { nullifiers: storeNullifiers({ hasNullifier, addNullifier }) },
+  );
+  if (result.state === "verified") setMembershipVerified(proofHash);
+  return c.json({ state: result.state }, 200);
+});
+
 app.get("/proof/:hash", (c) => {
   const entry = getProof(c.req.param("hash"));
   if (!entry) return c.json({ error: "not found" }, 404);
@@ -301,7 +378,17 @@ app.get("/proof/:hash", (c) => {
     // Additive, nullable: absent/null when no verdict was ever attached.
     verifiedPersonDegraded:
       typeof entry.verifiedPerson === "boolean" ? entry.verifiedPersonDegraded === true : null,
+    // Additive: "verified" once a group-membership proof was accepted for this report, else null.
+    membership: entry.membership ?? null,
   });
+});
+
+// Independent reports for the same task as :hash, so the reporter's phone can show honest community
+// progress. Counts are decided on the phone (apps/frontend/src/confirmations.ts); this only groups.
+app.get("/proof/:hash/confirmations", (c) => {
+  const reports = taskReports(allProofs(), c.req.param("hash"), REGION_PREFIX_LEN);
+  if (!reports) return c.json({ error: "not found" }, 404);
+  return c.json({ reports });
 });
 
 app.get("/proofs", (c) =>
@@ -321,6 +408,29 @@ app.get("/proofs", (c) =>
 // precise location, a signature or a public key.
 
 app.use("/coordinator/*", requireCoordinator);
+
+// Enrolment, coordinator-run: the coordinator adds a commitment the reporter shows them in person.
+// The coordinator therefore knows whose commitment it is; the proofs are unlinkable to the api only.
+app.post("/coordinator/personhood/enrol", async (c) => {
+  const body = await readJsonObject(c);
+  if (!body) return c.json({ error: "invalid json" }, 400);
+  if (!isProgrammeId(body.programmeId)) return c.json({ error: "invalid programmeId" }, 400);
+  if (!isCommitment(body.commitment)) return c.json({ error: "invalid commitment" }, 400);
+  const { group, added } = enrolCommitment(getPersonhoodGroup(body.programmeId), body.commitment);
+  if (added) putPersonhoodGroup(body.programmeId, group);
+  return c.json({ added, size: group.commitments.length, epoch: group.epoch }, 200);
+});
+
+// Opens a new round: every enrolled member can prove once more per task.
+app.post("/coordinator/personhood/epoch", async (c) => {
+  const body = await readJsonObject(c);
+  if (!body) return c.json({ error: "invalid json" }, 400);
+  if (!isProgrammeId(body.programmeId)) return c.json({ error: "invalid programmeId" }, 400);
+  const group = getPersonhoodGroup(body.programmeId);
+  if (!group) return c.json({ error: "unknown programme" }, 404);
+  putPersonhoodGroup(body.programmeId, { ...group, epoch: group.epoch + 1 });
+  return c.json({ epoch: group.epoch + 1 }, 200);
+});
 
 app.get("/coordinator/reports", (c) =>
   c.json(allProofs().map((e) => toCoordinatorRow(e, REGION_PREFIX_LEN))),

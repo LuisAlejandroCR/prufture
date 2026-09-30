@@ -1,7 +1,9 @@
 // report/questions.tsx: only the answers needed to understand the activity — one question per view,
 // large choices toned by meaning (works / problem / unsure, src/answer-tone.ts), no free text, no PII.
-// Choosing gives a light haptic and moves to the next question by itself; `q` + `from=review` opens
-// one question for a quick change. Answers live in the draft and survive going offline.
+// Choosing gives a light haptic and moves to the next question by itself. Answers live in the draft
+// and survive going offline. Each question is its own stack screen (`q` param, src/question-flow.ts),
+// so the iOS swipe back and the Back control both return to the previous question; `from=review`
+// edits one answer and pops back.
 
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
@@ -9,9 +11,9 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { answerTone } from "../../src/answer-tone";
 import { Icon } from "../../src/components/icons/Icon";
 import { BackLink, CategoryBadge, PrimaryButton, ReportProgress, Screen } from "../../src/components/ui";
-import { tap } from "../../src/feedback";
+import { select } from "../../src/feedback";
 import { identityStepEnabled } from "../../src/flags";
-import { questionIndex } from "../../src/report-check";
+import { afterQuestion, questionIndex } from "../../src/question-flow";
 import { ensureDraft, getDraft, setAnswer } from "../../src/report-draft";
 import { getTask } from "../../src/tasks";
 import { color, radius, space, target, type } from "../../src/theme";
@@ -23,9 +25,8 @@ export default function ReportQuestionsScreen() {
   ensureDraft(task.id);
 
   const questions = task.questions;
-  // From Review, "Change" opens one specific question and "Done" goes straight back.
-  const editing = from === "review";
-  const [index, setIndex] = useState(() => questionIndex(qParam, questions.length));
+  const index = questionIndex(qParam, questions.length);
+  const fromReview = from === "review";
   const q = questions[index];
   const [, force] = useState(0);
   const current = getDraft()?.answers[q?.id ?? ""] ?? null;
@@ -45,33 +46,34 @@ export default function ReportQuestionsScreen() {
 
   const advance = () => {
     if (autoNext.current) clearTimeout(autoNext.current);
-    if (editing) router.back();
-    else if (!isLast) setIndex(index + 1);
-    else router.replace({ pathname: "/report/location", params: { id: task.id } });
+    const next = afterQuestion({ index, total: questions.length, fromReview });
+    if (next.kind === "review") router.back();
+    else if (next.kind === "question") {
+      router.push({ pathname: "/report/questions", params: { id: task.id, q: String(next.index) } });
+    } else router.push({ pathname: "/report/location", params: { id: task.id } });
   };
 
   const choose = (value: string) => {
-    void tap();
+    if (value !== current) void select();
     setAnswer(q.id, value);
     force((n) => n + 1);
     // Move on by itself to the next question after a short beat; the last one waits for Continue.
-    if (!editing && !isLast) {
+    if (!fromReview && !isLast) {
       if (autoNext.current) clearTimeout(autoNext.current);
-      autoNext.current = setTimeout(() => setIndex((i) => i + 1), 380);
+      autoNext.current = setTimeout(advance, 380);
     }
   };
 
   const back = () => {
     if (autoNext.current) clearTimeout(autoNext.current);
-    if (editing || index === 0) router.back();
-    else setIndex(index - 1);
+    router.back();
   };
 
   return (
     <Screen
       footer={
         <PrimaryButton
-          label={editing ? "Done" : isLast ? "Continue" : "Next"}
+          label={fromReview ? "Done" : isLast ? "Continue" : "Next"}
           onPress={advance}
           disabled={q.required && !current}
           accessibilityHint={q.required && !current ? "Choose an answer to continue" : undefined}

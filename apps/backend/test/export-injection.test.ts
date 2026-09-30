@@ -49,12 +49,19 @@ for (const attack of ATTACKS) {
 test("an ordinary report exports unchanged and still has a header", () => {
   const out = csv([proof("solar-panel-install")]);
   const [head, row] = out.split("\n");
-  assert.equal(head, "activity,programme,approximate_region,captured_date,review_status,confirmations");
+  assert.equal(head, "activity,programme,approximate_region,area_name,captured_date,review_status,confirmations");
   assert.ok(row?.includes("Solar panels installed"), row);
   assert.ok(row?.includes("u4pru"), row);
   assert.ok(!row?.includes("'"), "nothing benign should be quote-prefixed");
 });
 
 test("no rows means header only", () => {
-  assert.equal(csv([]), "activity,programme,approximate_region,captured_date,review_status,confirmations");
+  assert.equal(csv([]), "activity,programme,approximate_region,area_name,captured_date,review_status,confirmations");
+});
+
+test("the area name column names a known city and stays empty otherwise", () => {
+  const named = csv([{ ...proof("solar-panel-install"), geohashRegion: "d2g62" }]).split("\n")[1];
+  assert.equal(named?.split(",")[3], "Near Bogotá");
+  const unnamed = csv([proof("solar-panel-install")]).split("\n")[1];
+  assert.equal(unnamed?.split(",")[3], "");
 });

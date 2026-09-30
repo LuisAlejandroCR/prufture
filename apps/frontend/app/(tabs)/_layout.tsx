@@ -6,7 +6,9 @@ import { Tabs, useRouter } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Icon, type IconName } from "../../src/components/icons/Icon";
-import { color, navSelectedTint, radius, space, target, type } from "../../src/theme";
+import { color, maxTextScale, navSelectedTint, radius, space, target, type } from "../../src/theme";
+import { select } from "../../src/feedback";
+import { tabPressAction } from "../../src/tab-press";
 
 const ITEMS: { name: string; label: string; icon: IconName }[] = [
   { name: "index", label: "Missions", icon: "home" },
@@ -16,7 +18,10 @@ const ITEMS: { name: string; label: string; icon: IconName }[] = [
 
 interface TabBarShape {
   state: { index: number; routes: { key: string; name: string }[] };
-  navigation: { navigate: (name: string) => void };
+  navigation: {
+    navigate: (name: string) => void;
+    emit: (e: { type: "tabPress"; target: string; canPreventDefault: true }) => { defaultPrevented: boolean };
+  };
 }
 
 function TabBar({ state, navigation }: TabBarShape) {
@@ -26,13 +31,26 @@ function TabBar({ state, navigation }: TabBarShape) {
 
   const renderItem = (item: { name: string; label: string; icon: IconName }) => {
     const focused = activeRoute === item.name;
+    const route = state.routes.find((r) => r.name === item.name);
     return (
       <Pressable
         key={item.name}
-        onPress={() => navigation.navigate(item.name)}
+        onPress={() => {
+          // Emit tabPress so useScrollToTop can scroll the current tab back to the top on a repeat tap.
+          const event = route
+            ? navigation.emit({ type: "tabPress", target: route.key, canPreventDefault: true })
+            : { defaultPrevented: false };
+          if (tabPressAction({ focused, defaultPrevented: event.defaultPrevented }) === "navigate") {
+            void select();
+            navigation.navigate(item.name);
+          }
+        }}
         accessibilityRole="tab"
         accessibilityState={{ selected: focused }}
         accessibilityLabel={item.label}
+        // Labels are capped under Larger Text, so a long press shows the iOS Large Content Viewer.
+        accessibilityShowsLargeContentViewer
+        accessibilityLargeContentTitle={item.label}
         style={styles.item}
       >
         <View style={[styles.iconWrap, focused && { backgroundColor: navSelectedTint }]}>
@@ -43,7 +61,9 @@ function TabBar({ state, navigation }: TabBarShape) {
             color={focused ? color.primary : color.faint}
           />
         </View>
-        <Text style={[styles.label, focused && styles.labelActive]}>{item.label}</Text>
+        <Text style={[styles.label, focused && styles.labelActive]} maxFontSizeMultiplier={maxTextScale.tabLabel}>
+          {item.label}
+        </Text>
       </Pressable>
     );
   };
@@ -58,15 +78,21 @@ function TabBar({ state, navigation }: TabBarShape) {
         onPress={() => router.push("/report/pick")}
         accessibilityRole="button"
         accessibilityLabel="Start a report"
+        accessibilityShowsLargeContentViewer
+        accessibilityLargeContentTitle="Report"
         accessibilityHint="Choose what you are reporting, then follow the guided steps"
         style={({ pressed }) => [styles.item, pressed && styles.reportPressed]}
       >
         <View style={styles.iconWrap}>
           <View style={styles.reportDot}>
-            <Text style={styles.plus}>+</Text>
+            <Text style={styles.plus} allowFontScaling={false}>
+              +
+            </Text>
           </View>
         </View>
-        <Text style={styles.label}>Report</Text>
+        <Text style={styles.label} maxFontSizeMultiplier={maxTextScale.tabLabel}>
+          Report
+        </Text>
       </Pressable>
 
       {rest.map(renderItem)}

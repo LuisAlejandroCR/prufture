@@ -1,9 +1,10 @@
 // useApproxArea.ts: the reporter's approximate 5-char cell, a human area name and the centre of their
-// city, for sorting tasks and centring maps. Never prompts for permission (the report flow does that)
-// and names the cell centre, not the precise point. Offline or denied: values stay null and callers fall back.
+// city, for sorting tasks and centring maps. Prompts only through requestArea (Home's explicit button;
+// the report flow asks on its own) and names the cell centre, not the precise point. Offline or denied: values stay null and callers fall back.
 
 import * as Location from "expo-location";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { AreaStatus } from "./home";
 import { encodeGeohash } from "./geohash";
 import { cellCentre } from "./tasks";
 
@@ -53,36 +54,72 @@ export async function cityCentreForCell(cell: string): Promise<Point | null> {
   }
 }
 
-export function useApproxArea(): { cell: string | null; name: string | null; centre: Point | null } {
+export interface ApproxArea {
+  cell: string | null;
+  name: string | null;
+  centre: Point | null;
+  /** Permission / lookup state, for Home's "missions near me" card. */
+  status: AreaStatus;
+  /** False once iOS will no longer show the prompt (the reporter must use Settings). */
+  canAskAgain: boolean;
+  /** Asks for location (Home's explicit button only), then looks the area up. */
+  requestArea: () => Promise<void>;
+}
+
+export function useApproxArea(): ApproxArea {
   const [cell, setCell] = useState<string | null>(cachedCell);
   const [name, setName] = useState<string | null>(cachedCell ? nameCache.get(cachedCell) ?? null : null);
   const [centre, setCentre] = useState<Point | null>(cachedCell ? centreCache.get(cachedCell) ?? null : null);
+  const [status, setStatus] = useState<AreaStatus>(cachedCell ? "granted" : "checking");
+  const [canAskAgain, setCanAskAgain] = useState(true);
+  const alive = useRef(true);
 
-  useEffect(() => {
-    let alive = true;
-    (async () => {
-      try {
-        const perm = await Location.getForegroundPermissionsAsync();
-        if (!perm.granted) return;
-        const pos =
-          (await Location.getLastKnownPositionAsync()) ??
-          (await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Low }));
-        if (!pos || !alive) return;
-        const next = encodeGeohash(pos.coords.latitude, pos.coords.longitude, 5);
-        cachedCell = next;
-        setCell(next);
-        const label = await areaNameForCell(next);
-        if (alive && label) setName(label);
-        const city = await cityCentreForCell(next);
-        if (alive && city) setCentre(city);
-      } catch {
-        // Location unavailable: callers keep the unsorted list and plain labels.
-      }
-    })();
-    return () => {
-      alive = false;
-    };
+  const lookUp = useCallback(async () => {
+    const pos =
+      (await Location.getLastKnownPositionAsync()) ??
+      (await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Low }));
+    if (!pos || !alive.current) return;
+    const next = encodeGeohash(pos.coords.latitude, pos.coords.longitude, 5);
+    cachedCell = next;
+    setCell(next);
+    const label = await areaNameForCell(next);
+    if (alive.current && label) setName(label);
+    const city = await cityCentreForCell(next);
+    if (alive.current && city) setCentre(city);
   }, []);
 
-  return { cell, name, centre };
+  const apply = useCallback(
+    async (perm: Location.LocationPermissionResponse) => {
+      if (!alive.current) return;
+      setCanAskAgain(perm.canAskAgain !== false);
+      setStatus(perm.granted ? "granted" : perm.status === "denied" ? "denied" : "undetermined");
+      if (perm.granted) await lookUp();
+    },
+    [lookUp],
+  );
+
+  useEffect(() => {
+    alive.current = true;
+    // Never prompts here: only reads the current permission.
+    Location.getForegroundPermissionsAsync()
+      .then(apply)
+      .catch(() => {
+        // Location unavailable: callers keep the unsorted list and plain labels.
+        if (alive.current) setStatus("undetermined");
+      });
+    return () => {
+      alive.current = false;
+    };
+  }, [apply]);
+
+  const requestArea = useCallback(async () => {
+    try {
+      const perm = await Location.getForegroundPermissionsAsync();
+      await apply(perm.granted || perm.canAskAgain === false ? perm : await Location.requestForegroundPermissionsAsync());
+    } catch {
+      // Lookup failed (offline or no fix): the card keeps offering a retry.
+    }
+  }, [apply]);
+
+  return { cell, name, centre, status, canAskAgain, requestArea };
 }

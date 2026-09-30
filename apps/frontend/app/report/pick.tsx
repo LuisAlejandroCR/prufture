@@ -7,7 +7,7 @@ import { useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { Icon } from "../../src/components/icons/Icon";
 import { BackLink, CategoryBadge, Screen, ScreenTitle, SectionLabel } from "../../src/components/ui";
-import { tap } from "../../src/feedback";
+import { select } from "../../src/feedback";
 import { CATEGORIES, itemsByCategory, searchItems, type Category } from "../../src/items";
 import { distanceLabel, itemTaskId, listTasks, sortByDistance } from "../../src/tasks";
 import { color, radius, shadow, space, target, type } from "../../src/theme";
@@ -66,7 +66,7 @@ export default function PickItemScreen() {
               <Pressable
                 key={c}
                 onPress={() => {
-                  void tap();
+                  void select();
                   setCategory(active ? null : c);
                 }}
                 accessibilityRole="button"

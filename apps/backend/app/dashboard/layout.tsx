@@ -8,7 +8,7 @@ import { isStaffAuthConfigured } from "../../lib/staff-auth";
 import { Sidebar } from "./Sidebar";
 
 export const metadata = {
-  title: "Prufture dashboard",
+  title: { template: "%s · Prufture dashboard", default: "Overview · Prufture dashboard" },
   description: "Programme coverage and report review. Region level only, no personal data.",
 };
 
@@ -16,17 +16,20 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const staffAuth = isStaffAuthConfigured();
   const shell = (
     <div className="dash">
+      <a className="skip-link" href="#dash-content">
+        Skip to content
+      </a>
       <Sidebar staffAuth={staffAuth} />
-      <main className="dash-main">
+      <main className="dash-main" id="dash-content" tabIndex={-1}>
         {staffAuth ? null : (
           <p className="dash-auth-banner" role="status">
-            Staff sign-in is not configured on this deployment, so this dashboard is open to anyone
-            with the link. It shows region-level data only, never personal data.
+            <strong>Open preview.</strong> Staff sign-in is not configured on this deployment, so this
+            dashboard is open to anyone with the link. It shows region-level data only, never personal
+            data.
           </p>
         )}
         <p className="dash-narrow-note">
-          This dashboard is built for a desktop screen. The full report table scrolls sideways on a
-          small screen.
+          This dashboard is built for a desktop screen. Wide tables scroll sideways on a small screen.
         </p>
         {children}
       </main>

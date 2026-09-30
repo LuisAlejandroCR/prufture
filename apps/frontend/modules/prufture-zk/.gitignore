@@ -1,0 +1,9 @@
+# Produced by scripts/build-ios.sh on the builder.
+ios/PruftureZkFFI.xcframework/
+ios/generated/
+ios/assets/
+# Produced by scripts/build-android.sh on the builder.
+android/src/main/jniLibs/
+android/src/main/assets/
+android/build/
+android/.cxx/

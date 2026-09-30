@@ -3,7 +3,7 @@
 
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
-import { Alert, StyleSheet, Switch, Text, View } from "react-native";
+import { StyleSheet, Switch, Text, View } from "react-native";
 import { Icon, type IconName } from "../../src/components/icons/Icon";
 import { Illustration } from "../../src/components/Illustration";
 import { BrandMark, Row, Screen, ScreenTitle, SectionLabel } from "../../src/components/ui";
@@ -76,17 +76,18 @@ export default function MeScreen() {
 
       <View style={{ gap: space.sm }}>
         <SectionLabel>Settings</SectionLabel>
-        <Row
-          icon="language"
-          title="Language"
-          subtitle="English"
-          onPress={() => Alert.alert("Language", "Prufture is available in English for this pilot. More languages are planned.")}
-        />
+        <View style={styles.valueRow} accessible accessibilityLabel="Language. English">
+          <View style={styles.toggleIcon}><Icon name="language" size={20} color={color.text} /></View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.toggleTitle}>Language</Text>
+            <Text style={styles.toggleSub}>English</Text>
+          </View>
+        </View>
         <Row
           icon="privacy"
           title="Data and privacy"
           subtitle="What we ask for and why"
-          onPress={() => router.push("/help")}
+          onPress={() => router.push("/data-privacy")}
         />
         <Row
           icon="offline"
@@ -124,7 +125,7 @@ export default function MeScreen() {
       <View style={{ gap: space.sm }}>
         <SectionLabel>Support</SectionLabel>
         <Row icon="help" title="Help" subtitle="How the app works" onPress={() => router.push("/help")} />
-        <Row icon="info" title="About Prufture" subtitle="What Prufture is and who runs it" onPress={() => void openInApp(siteUrl(""))} />
+        <Row icon="info" title="About Prufture" subtitle="Version" onPress={() => router.push("/about")} />
         <Row icon="privacy" title="Privacy policy" subtitle="Opens inside the app" onPress={() => void openInApp(siteUrl("privacy"))} />
         <Row icon="community" title="Contact support" subtitle="Opens inside the app" onPress={() => void openInApp(siteUrl("support"))} />
       </View>
@@ -173,6 +174,17 @@ function ToggleRow({
 const styles = StyleSheet.create({
   groupNote: { ...type.meta, color: color.muted },
   toggleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.md,
+    padding: space.md,
+    borderRadius: radius.md,
+    backgroundColor: color.surface,
+    borderWidth: 1,
+    borderColor: color.border,
+    minHeight: target.min + 12,
+  },
+  valueRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: space.md,

@@ -6,8 +6,12 @@
 import { CameraView, useCameraPermissions } from "expo-camera";
 import * as FileSystem from "expo-file-system";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import { useRef, useState } from "react";
 import { Animated, Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { cameraFramePadding } from "../../src/camera-frame";
+import { announce, failure, photoTaken } from "../../src/announce";
 import { base64ToBytes } from "../../src/capture";
 import { Icon } from "../../src/components/icons/Icon";
 import {
@@ -23,7 +27,7 @@ import { celebrationsAllowed, tap } from "../../src/feedback";
 import { identityStepEnabled } from "../../src/flags";
 import { addPhoto, ensureDraft, getDraft } from "../../src/report-draft";
 import { getTask } from "../../src/tasks";
-import { color, radius, space, target, type } from "../../src/theme";
+import { cameraColor, color, radius, space, target, type } from "../../src/theme";
 
 type Shot = { uri: string; bytes: Uint8Array };
 
@@ -53,12 +57,14 @@ export default function ReportCaptureScreen() {
       Animated.timing(flashV, { toValue: 0, duration: 260, useNativeDriver: true }).start();
     });
   };
+  const insets = useSafeAreaInsets();
+  const frame = cameraFramePadding(insets);
 
   ensureDraft(task.id);
 
   const next = () => {
     if (retake === "1") {
-      // Pushed from Review: return to it rather than stacking a second Review.
+      // Pop back to the Review that opened this retake, never stack a second one.
       router.back();
     } else if (stepIndex + 1 < total) {
       router.replace({ pathname: "/report/capture", params: { id: task.id, step: String(stepIndex + 1) } });
@@ -80,8 +86,11 @@ export default function ReportCaptureScreen() {
         photo.base64 ??
         (await FileSystem.readAsStringAsync(photo.uri, { encoding: FileSystem.EncodingType.Base64 }));
       setShot({ uri: photo.uri, bytes: base64ToBytes(b64) });
+      void announce(photoTaken(stepIndex, total));
     } catch {
-      setError("The camera did not return a photo. Try again, or move to better light.");
+      const message = "The camera did not return a photo. Try again, or move to better light.";
+      setError(message);
+      void announce(failure(message));
     } finally {
       setBusy(false);
     }
@@ -111,7 +120,9 @@ export default function ReportCaptureScreen() {
         <BackLink label="Cancel" onPress={() => router.back()} />
         <View style={styles.gate}>
           <Icon name="camera" size={36} color={color.muted} />
-          <Text style={styles.gateTitle}>Camera access is needed</Text>
+          <Text style={styles.gateTitle} accessibilityRole="header">
+            Camera access is needed
+          </Text>
           <Text style={styles.gateBody}>
             Prufture uses the camera to photograph the work. Nothing is uploaded. The photo stays on
             this phone.
@@ -144,9 +155,16 @@ export default function ReportCaptureScreen() {
         <Text style={styles.stepLabel}>
           Photo {stepIndex + 1} of {total}
         </Text>
-        <Text style={styles.instruction}>{spec?.prompt}</Text>
+        <Text style={styles.instruction} accessibilityRole="header">
+          {spec?.prompt}
+        </Text>
         {spec?.hint ? <Text style={styles.hint}>{spec.hint}</Text> : null}
-        <Image source={{ uri: shot.uri }} style={styles.previewImage} accessibilityLabel="Photo you just took" />
+        <Image
+          source={{ uri: shot.uri }}
+          style={styles.previewImage}
+          accessibilityLabel="Photo you just took"
+          accessibilityIgnoresInvertColors
+        />
       </Screen>
     );
   }
@@ -154,8 +172,10 @@ export default function ReportCaptureScreen() {
   // Live camera.
   return (
     <View style={styles.cameraScreen}>
-      <View style={styles.topBar}>
-        <BackLink label="Cancel" onPress={() => router.back()} />
+      {/* The one dark screen: light status bar on iOS; the root dark style returns on unmount. */}
+      <StatusBar style="light" />
+      <View style={[styles.topBar, { paddingTop: frame.top }]}>
+        <BackLink label="Cancel" tone="onDark" onPress={() => router.back()} />
         <Pressable
           onPress={() => setFlash((f) => (f === "off" ? "on" : "off"))}
           accessibilityRole="button"
@@ -172,7 +192,7 @@ export default function ReportCaptureScreen() {
         <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.flashOverlay, { opacity: flashV }]} />
       </View>
 
-      <View style={styles.cameraControls}>
+      <View style={[styles.cameraControls, { paddingBottom: frame.bottom }]}>
         <View style={styles.camSteps} accessibilityLabel={`Photo ${stepIndex + 1} of ${total}`}>
           {task.photos.map((_, i) => {
             const done = i !== stepIndex && !!getDraft()?.photos.some((p) => p.stepIndex === i);
@@ -194,7 +214,9 @@ export default function ReportCaptureScreen() {
         <Text style={styles.stepLabelLight}>
           Photo {stepIndex + 1} of {total}
         </Text>
-        <Text style={styles.instructionLight}>{spec?.prompt}</Text>
+        <Text style={styles.instructionLight} accessibilityRole="header">
+          {spec?.prompt}
+        </Text>
         {spec?.hint ? <Text style={styles.hintLight}>{spec.hint}</Text> : null}
 
         {error ? <Notice tone="attention" icon="warning">{error}</Notice> : null}
@@ -228,13 +250,12 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     backgroundColor: color.surfaceSoft,
   },
-  cameraScreen: { flex: 1, backgroundColor: "#141210" },
+  cameraScreen: { flex: 1, backgroundColor: cameraColor.ground },
   topBar: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: space.lg,
-    paddingTop: space.xxl,
     paddingBottom: space.sm,
   },
   flashBtn: {
@@ -249,11 +270,10 @@ const styles = StyleSheet.create({
   viewport: { flex: 1, overflow: "hidden" },
   cameraControls: {
     padding: space.lg,
-    paddingBottom: space.xxl,
     gap: space.sm,
-    backgroundColor: "#141210",
+    backgroundColor: cameraColor.ground,
   },
-  flashOverlay: { backgroundColor: "#FFFFFF" },
+  flashOverlay: { backgroundColor: cameraColor.flash },
   camSteps: { flexDirection: "row", alignItems: "center", marginBottom: space.xs },
   camStepWrap: { flexDirection: "row", alignItems: "center" },
   camStep: {
@@ -261,26 +281,26 @@ const styles = StyleSheet.create({
     height: 26,
     borderRadius: radius.pill,
     borderWidth: 2,
-    borderColor: "#6B5E52",
+    borderColor: cameraColor.stepRing,
     alignItems: "center",
     justifyContent: "center",
   },
   camStepDone: { backgroundColor: color.success, borderColor: color.success },
   camStepCurrent: { borderColor: color.primary, backgroundColor: color.primary },
-  camStepText: { ...type.meta, fontWeight: "700", color: "#C9BEB2" },
+  camStepText: { ...type.meta, fontWeight: "700", color: cameraColor.hint },
   camStepTextCurrent: { color: color.onPrimary },
-  camRail: { width: 22, height: 2, backgroundColor: "#6B5E52", marginHorizontal: space.xs },
+  camRail: { width: 22, height: 2, backgroundColor: cameraColor.stepRing, marginHorizontal: space.xs },
   camRailDone: { backgroundColor: color.success },
-  stepLabelLight: { ...type.meta, color: "#F4C9BC", fontWeight: "700" },
-  instructionLight: { ...type.subtitle, color: "#FFFFFF" },
-  hintLight: { ...type.meta, color: "#C9BEB2" },
+  stepLabelLight: { ...type.meta, color: cameraColor.step, fontWeight: "700" },
+  instructionLight: { ...type.subtitle, color: cameraColor.text },
+  hintLight: { ...type.meta, color: cameraColor.hint },
   shutter: {
     alignSelf: "center",
     width: 72,
     height: 72,
     borderRadius: radius.pill,
     borderWidth: 4,
-    borderColor: "#FFFFFF",
+    borderColor: cameraColor.text,
     alignItems: "center",
     justifyContent: "center",
     marginTop: space.sm,

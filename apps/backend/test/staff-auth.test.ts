@@ -22,10 +22,10 @@ test("only /dashboard and its children are staff paths", () => {
     assert.equal(isStaffPath(p), false, p);
 });
 
-test("middleware matcher covers the dashboard and sign-in only", () => {
+test("middleware matcher covers the dashboard, sign-in and invite only", () => {
   const matcher = src("../middleware.ts").match(/matcher:\s*\[([^\]]*)\]/)?.[1] ?? "";
   const paths = [...matcher.matchAll(/"([^"]+)"/g)].map((m) => m[1]);
-  assert.deepEqual(paths, ["/dashboard", "/dashboard/:path*", "/sign-in", "/sign-in/:path*"]);
+  assert.deepEqual(paths, ["/dashboard", "/dashboard/:path*", "/sign-in", "/sign-in/:path*", "/invite", "/invite/:path*"]);
 });
 
 test("Clerk never loads on the root layout or the public verifier", () => {

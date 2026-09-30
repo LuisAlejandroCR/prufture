@@ -92,7 +92,7 @@ test("app.json: android.package + versionCode set, eas.projectId is a real UUID"
 });
 
 test("app.json: EAS Update wiring matches the projectId (needed for channel:preview builds)", () => {
-  assert.equal(app.expo.owner, "alejoo_oo");
+  assert.equal(app.expo.owner, "alejoooo-team");
   assert.equal(app.expo.runtimeVersion.policy, "appVersion");
   assert.equal(app.expo.updates.url, `https://u.expo.dev/${app.expo.extra.eas.projectId}`);
 });
@@ -189,7 +189,7 @@ test("app.json: plugins include the native modules we ship and nothing we do not
 });
 
 test("app.json: EAS projectId is untouched (eas init owns it)", () => {
-  assert.equal(app.expo.extra.eas.projectId, "ff9cdaeb-a7be-4a1c-a76f-7594b2b51aef");
+  assert.equal(app.expo.extra.eas.projectId, "dbb8e72c-5bed-4676-8d04-3805ecacc2e7");
   assert.equal(app.expo.updates.url, `https://u.expo.dev/${app.expo.extra.eas.projectId}`);
 });
 
@@ -204,6 +204,20 @@ test("store assets exist on disk", () => {
     const p = fileURLToPath(new URL(`../assets/${f}`, import.meta.url));
     assert.ok(existsSync(p), `missing asset ${f}`);
   }
+});
+
+// The App Store rejects an icon with an alpha channel; both stores expect 1024x1024. Read the PNG
+// IHDR directly (bytes 16-25) so no image dependency is needed.
+test("icon.png is a 1024x1024 PNG without an alpha channel", () => {
+  const buf = readFileSync(fileURLToPath(new URL("../assets/icon.png", import.meta.url)));
+  assert.deepEqual([...buf.subarray(0, 8)], [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a], "not a PNG");
+  assert.equal(buf.toString("ascii", 12, 16), "IHDR");
+  assert.equal(buf.readUInt32BE(16), 1024, "width");
+  assert.equal(buf.readUInt32BE(20), 1024, "height");
+  const colorType = buf[25];
+  // 4 = grayscale+alpha, 6 = RGBA; 3 = palette, which can carry alpha via a tRNS chunk
+  assert.ok(colorType === 0 || colorType === 2 || colorType === 3, `alpha color type ${colorType}`);
+  assert.equal(buf.includes(Buffer.from("tRNS")), false, "tRNS transparency chunk present");
 });
 
 test("eas.json: production profile targets the store on its own channel", () => {

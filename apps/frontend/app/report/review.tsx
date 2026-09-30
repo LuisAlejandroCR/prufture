@@ -18,8 +18,9 @@ import {
   Screen,
   TaskHeader,
 } from "../../src/components/ui";
+import { announce, failure } from "../../src/announce";
 import { captureProof } from "../../src/capture";
-import { bump } from "../../src/feedback";
+import { bump, warn } from "../../src/feedback";
 import { identityStepEnabled } from "../../src/flags";
 import { getDraft, saveDraft, setCaptureProof, setNote } from "../../src/report-draft";
 import { missingItems, type Missing } from "../../src/report-check";
@@ -40,7 +41,7 @@ export default function ReportReviewScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [note, setNoteText] = useState(draft?.note ?? "");
-  // Retake, Change and Location edit the draft on other screens; re-read it on return.
+  // Retake, Change and Location edit the draft on other screens and pop back here; re-read it then.
   const [, force] = useState(0);
   useFocusEffect(useCallback(() => force((n) => n + 1), []));
 
@@ -57,7 +58,10 @@ export default function ReportReviewScreen() {
     const result = await saveDraft();
     setBusy(false);
     if (result.saved === 0) {
-      setError("The report could not be saved on this phone. Please try again.");
+      const message = "The report could not be saved on this phone. Please try again.";
+      void warn();
+      setError(message);
+      void announce(failure(message));
       return;
     }
     router.replace({
@@ -130,7 +134,6 @@ export default function ReportReviewScreen() {
         <CellMap
           cells={[{ key: "report", cell: draft.geohash.slice(0, 5), tone: "self" }]}
           focusCell={draft.geohash.slice(0, 5)}
-          centreLabel="Your report's approximate area"
           height={170}
           caption="Showing an approximate area (not exact location)"
           offlineLabel={`${draft.areaLabel || "Approximate area"}. Only the approximate area is part of the report.`}
@@ -188,6 +191,8 @@ export default function ReportReviewScreen() {
           onEndEditing={() => setNote(note)}
           maxLength={NOTE_MAX}
           multiline
+          returnKeyType="done"
+          submitBehavior="blurAndSubmit"
           placeholder="Share any extra details (no names, please)..."
           placeholderTextColor={color.muted}
           style={styles.note}

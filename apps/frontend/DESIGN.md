@@ -32,6 +32,13 @@ same one warm palette used by `apps/backend/app/globals.css`.
   4.5:1 is ever used. `disabled` is decorative / disabled-state only.
 - Type scale: display 28 / title 20 / subtitle 17 / body 15 / meta 13 / label 11 / action 17.
 - Spacing: 4 / 8 / 12 / 16 / 24 / 40. Radius: 10 / 14 / 20 / pill.
+- Larger Text (iOS Dynamic Type) is honoured: body copy scales without a cap. Only text locked in
+  a fixed-size shape is capped through `maxTextScale` in `src/theme.ts`: tab bar labels 1.2x (iOS
+  barely grows its own tab labels) and the photo-slot step number 1.3x inside its 26px circle. The
+  Report "+" is a glyph, not copy, so it does not scale. Never set `allowFontScaling={false}` on copy.
+  Because tab labels are capped, each tab item (and Report) sets `accessibilityShowsLargeContentViewer`
+  with its label as `accessibilityLargeContentTitle`: at accessibility text sizes a long press shows
+  the iOS Large Content Viewer, as the system tab bar does.
 - Targets: 44px minimum, 56px for the primary and capture buttons.
 
 ## Product language
@@ -53,7 +60,9 @@ interface icons.
 
 `app/(tabs)/_layout.tsx` renders a custom bottom bar with four equal items: Missions, Report,
 My reports, Me. Report is an action, not a tab: a terracotta plus that opens the item picker
-(`/report/pick`), never a default task. The guided report flow (`app/report/*`) and the detail
+(`/report/pick`), never a default task. The bar emits React Navigation's `tabPress` event (`src/tab-press.ts`):
+tapping another tab navigates; tapping the tab you are on scrolls that page back to the top, the
+iOS convention, via `useScrollToTop` in `Screen` and on the My reports list. The guided report flow (`app/report/*`) and the detail
 screens (`app/task/[id]`, `app/status/[id]`, `app/help`) are plain stack screens with in-screen
 back controls.
 
@@ -144,9 +153,14 @@ sun-and-sprout scene and side-by-side View status / Done actions.
 
 `src/map-region.ts` decides where a `CellMap` opens: centred on the reporter's approximate cell at
 city zoom (`CITY_DELTA` about 20 km), never a world view; without a location it fits only cells
-within about 1 degree of the nearest one. The reporter's own area gets one small terracotta dot at
-the **centre of their city** (`cityCentreForCell`, geocoded; falls back to the cell centre offline).
-Task cells never get a dot (`showCentre={false}`), because a point there implies false precision.
+within about 1 degree of the nearest one. The city centre (`cityCentreForCell`, geocoded) only
+helps frame that view. No map draws a pin or dot, not even for the reporter's own area: a point at
+a cell centre implies a precision the data does not have (`test/cell-map-privacy.test.ts`). Cells
+stay tappable polygons.
+
+`Data and privacy` (from Me) is the one place that lists what a report keeps and shares, including
+the precise point sealed on-device to the programme key when one is configured
+(`src/location-seal.ts`); Help links there instead of repeating it. `About` shows the app version only.
 
 ## Report flow
 
@@ -159,6 +173,12 @@ The flow is presented as four steps via `ReportProgress` ("Step X of 4 · label"
 (`report/intro`), 2 Capture (`report/capture`), 3 Questions (`report/questions`), 4 Review
 (`report/location` area confirm, then `report/review`). Questions are large Yes / No / "I could
 not confirm" controls, one at a time, no free text, no PII.
+
+Each question is its own stack screen (`report/questions?q=N`, `src/question-flow.ts`), so the iOS
+edge swipe, Android back and the in-screen Back all return to the previous question instead of
+leaving the step. Resuming a draft opens the first unanswered required question. Edits from Review
+never stack a second Review: "Change" opens that exact question with `from=review` and its Next
+pops back, a retaken photo pops back too, and Review re-reads the draft when it regains focus.
 
 Review is the evidence sheet (Alternative C, screen 2): `CategoryBadge` + task title, the
 approximate area on a `CellMap` with the chip "Showing an approximate area (not exact location)",
@@ -183,10 +203,12 @@ description. Full model in `docs/pilot_engagement.md`.
 ## Feedback and celebration
 
 `src/feedback.ts` is the only module that touches `expo-haptics`. It exposes `tap` / `bump` /
-`thud` (impact) and `success` / `warn` (notification); every call checks the persisted
+`thud` (impact), `success` / `warn` (notification) and `select` (the iOS selection tick); every call checks the persisted
 `hapticsEnabled` flag and swallows any throw so a device with no haptic engine never breaks the
 flow. Micro-haptics are one call per action, never in a loop: photo accepted (`tap`), Finish
-report (`bump`).
+report (`bump`), a failed save on Review (`warn`). `select` follows the iOS rule of ticking only
+when a choice changes: a different answer in Questions, another bottom tab, the List / Map toggle
+and a category tile in the item picker. Re-tapping the current choice stays silent.
 
 Two guided moments, both on mount, both gated by `celebrationsAllowed()` (false when the reporter
 turned celebrations off OR the OS reduce-motion setting is on):
@@ -203,9 +225,49 @@ turned celebrations off OR the OS reduce-motion setting is on):
 
 The "Celebrations and motion" and "Haptics" toggles live on the Me screen under Accessibility.
 
+The live camera (`report/capture`) and the optional selfie check (`report/identity`) are the only
+dark screens. The selfie check's large gesture glyph is decorative: it does not scale with Larger
+Text and is hidden from VoiceOver, because the instruction below it says the same thing. Each
+draws its own chrome, so it sets `<StatusBar style="light" />` while mounted (the root dark style
+returns when it unmounts), pads its top bar and bottom controls with the real safe-area insets (`src/camera-frame.ts`, clearing the notch /
+Dynamic Island and the home indicator), and takes every colour from `cameraColor` in
+`src/theme.ts`, every text colour at least 4.5:1 on its ground (`track` is decorative only). `BackLink tone="onDark"` replaces `muted`, which
+is only 3.9:1 there.
+
 Reporters capture outdoors in daylight; the app commits to a single high-contrast light theme.
 `app.json` sets `userInterfaceStyle: "light"`, `_layout.tsx` sets `<StatusBar style="dark" />`,
 and `src/theme.ts` carries one light-only token set. Dark mode is a post-hackathon item.
+
+## VoiceOver
+
+Every screen works with VoiceOver, and `test/a11y-audit.test.ts` enforces it by parsing each screen
+and shared component with the TypeScript compiler:
+
+- Every `Pressable` has a role; one without visible text has a label. Every `TextInput` has a label.
+  Every `Image` has a label or is explicitly decorative. Every route screen has a heading, so the
+  rotor's Headings list works (the camera's instruction is the heading on the camera screens).
+- Compound items read as one element (`accessible` + one label): photo slots, the contribution
+  card, and each status timeline stage. A stage says in words what its dot shows in colour
+  ("Done", "Current step", "Not yet", `stageSpoken` in `src/announce.ts`).
+- Photos set `accessibilityIgnoresInvertColors`, so iOS Smart Invert never shows them as negatives.
+
+iOS ignores `accessibilityLiveRegion` (Android only), so changes that do not change the screen are
+spoken through `src/announce.ts` (`announceForAccessibilityWithOptions`): photo taken, each selfie
+movement prompt and the result, save and camera failures, going offline / back online, and sync
+results. Failures interrupt (high priority); progress queues behind current speech; background
+news (a report sent or confirmed by the auto-sync) is low priority and never interrupts. A
+background sync never speaks an error; a check the reporter asked for (pull to refresh, "Check for
+updates") always gets an answer. Sends are never counted aloud, because the queue counts photos,
+not reports. Nothing is spoken when no screen reader is running.
+
+## Keyboard
+
+`Screen` (`src/components/ui.tsx`) is keyboard aware through `src/keyboard.ts`. On iOS the keyboard
+is drawn over the window, so the frame is a `KeyboardAvoidingView` with `padding` (the footer action
+rises above the keyboard), the scroll view keeps the focused field in view
+(`automaticallyAdjustKeyboardInsets`) and a downward drag dismisses the keyboard. Android resizes the
+window itself, so it gets no extra padding and dismisses on drag. The Review note is multiline, so
+its return key is "Done" and blurs the field instead of inserting a new line.
 
 ## Rules
 

@@ -16,6 +16,7 @@ import { attachLiveness } from "./liveness";
 import { sanitizeNote, saveLocalNote } from "./report-note";
 import { attachPreciseLocation } from "./sync";
 import type { TaskDef } from "./tasks";
+import { firstOpenQuestion } from "./question-flow";
 
 // Re-exported so screens can drive the resume prompt through this one module.
 export { clearPersistedDraft, hasPersistedDraft } from "./draft-store";
@@ -192,8 +193,9 @@ export function resumeTarget(draft: ReportDraft, task: TaskDef): ResumeTarget {
   if (draft.photos.length < task.photos.length) {
     return { pathname: "/report/capture", params: { id, step: String(draft.photos.length) } };
   }
-  if (task.questions.some((q) => q.required && !draft.answers[q.id])) {
-    return { pathname: "/report/questions", params: { id } };
+  const open = firstOpenQuestion(task.questions, draft.answers);
+  if (open >= 0) {
+    return { pathname: "/report/questions", params: { id, q: String(open) } };
   }
   if (!draft.geohash) {
     return { pathname: "/report/location", params: { id } };

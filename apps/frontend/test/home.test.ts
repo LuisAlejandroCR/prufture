@@ -5,7 +5,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { LocalProof } from "../src/queue-row.js";
-import { confirmedReportCount, greeting, missionPlace, missionQuestion, showReachError } from "../src/home.js";
+import { confirmedReportCount, greeting, missionPlace, missionQuestion, nearMePrompt, showReachError } from "../src/home.js";
 import { categoryIcon, getTask, itemTaskId, listTasks } from "../src/tasks.js";
 import { CATEGORIES } from "../src/items.js";
 
@@ -76,4 +76,12 @@ test("server notice: only online, only while reports wait, only when every send 
   assert.equal(showReachError({ ...base, pending: 0 }), false, "nothing waiting: nothing to warn about");
   assert.equal(showReachError({ ...base, synced: 1 }), false, "partial success is not a reach error");
   assert.equal(showReachError({ ...base, failed: 0 }), false);
+});
+
+test("nearMePrompt: asks first, sends to Settings only when iOS will not ask again", () => {
+  assert.deepEqual(nearMePrompt("undetermined", true), { action: "ask", label: "Show missions near me" });
+  assert.deepEqual(nearMePrompt("denied", true), { action: "ask", label: "Show missions near me" });
+  assert.deepEqual(nearMePrompt("denied", false), { action: "settings", label: "Turn on location in Settings" });
+  assert.equal(nearMePrompt("granted", true).action, "retry");
+  assert.equal(nearMePrompt("checking", true).action, "none");
 });

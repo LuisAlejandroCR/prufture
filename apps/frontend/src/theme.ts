@@ -81,6 +81,22 @@ export const navSelectedTint = color.primarySoft;
 
 export const space = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 40 } as const;
 
+// The live camera is the app's one dark screen. Every text colour here passes AA (4.5:1) on `ground`
+// (test/camera-frame.test.ts); `control` replaces `muted`, which is only 3.9:1 on it.
+export const cameraColor = {
+  ground: "#141210",
+  text: "#FFFFFF",
+  step: "#F4C9BC",
+  hint: "#C9BEB2",
+  control: "#E9E1D6",
+  /** Decorative only (inactive progress segments), never text. */
+  track: "#3A342E",
+  /** Decorative only (outline of an upcoming photo step and its rail), never text. */
+  stepRing: "#6B5E52",
+  /** Shutter flash over the viewfinder. */
+  flash: "#FFFFFF",
+} as const;
+
 export const radius = { sm: 10, md: 14, lg: 20, pill: 999 } as const;
 
 export const shadow = {
@@ -111,6 +127,10 @@ export const type = {
   label: { fontSize: 11, fontWeight: "700" as const, letterSpacing: 0.6, lineHeight: 14 },
   action: { fontSize: 17, fontWeight: "700" as const, letterSpacing: 0.1 },
 } as const;
+
+// iOS Larger Text (Dynamic Type) scales text up to about 3x. Body copy scales freely; these caps
+// apply only to text locked inside a fixed-size shape. iOS itself barely grows tab bar labels.
+export const maxTextScale = { tabLabel: 1.2, badge: 1.3 } as const;
 
 // MOTION_INTENSITY 2: state transitions only. Callers gate these behind reduce-motion.
 export const motion = { fast: 140, base: 200 } as const;

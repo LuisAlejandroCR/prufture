@@ -1,31 +1,35 @@
-// reports/page.tsx: the full-width report workspace — same coarse data and filters as Overview.
-// Region level only, no personal data.
+// reports/page.tsx: the full-width report workspace — status tabs, filters, sorting and paging over
+// the same coarse data as Overview. Filters arrive in the URL, so alerts, metric tiles and programme
+// cards can deep-link to a pre-filtered view. Region level only, no personal data.
 
 import { fetchProofs } from "../../../lib/api";
+import { parseReportFilters } from "../../../lib/dashboard";
 import { DashboardTable } from "../DashboardTable";
+import { DegradedNotice, PageHeader } from "../ui";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "Reports" };
 
-export default async function ReportsPage() {
-  const { proofs, degraded } = await fetchProofs();
+type Search = Record<string, string | string[] | undefined>;
+
+export default async function ReportsPage({ searchParams }: { searchParams: Promise<Search> }) {
+  const [{ proofs, degraded }, sp] = await Promise.all([fetchProofs(), searchParams]);
+  const initial = parseReportFilters({
+    get: (k) => {
+      const v = sp[k];
+      return typeof v === "string" ? v : null;
+    },
+  });
 
   return (
     <section className="fade-in">
-      <header>
-        <h1>Reports</h1>
-        <p className="muted">
-          Every report received, filterable by programme, status, and date. No login, no personal
-          data.
-        </p>
-      </header>
-
-      {degraded ? (
-        <p className="pill wait" style={{ marginBottom: "var(--sp-4)" }}>
-          The report index is unreachable right now. The table shows what was last available.
-        </p>
-      ) : null}
-
-      <DashboardTable proofs={proofs} />
+      <PageHeader
+        eyebrow="Workspace"
+        title="Reports"
+        lede="Every report received. Filter by status, programme, area or date; the link keeps your view."
+      />
+      {degraded ? <DegradedNotice /> : null}
+      <DashboardTable proofs={proofs} initial={initial} />
     </section>
   );
 }

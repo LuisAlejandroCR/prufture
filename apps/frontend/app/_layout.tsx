@@ -4,14 +4,16 @@ import "react-native-get-random-values";
 // @proof/core's ed25519 is first touched by the keystore on launch. The native splash is held until
 // the animated LaunchSplash is on screen, then handed off so the sprout mark never flickers.
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Platform, View } from "react-native";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { LaunchSplash } from "../src/components/LaunchSplash";
+import { announce, connectivityChange, syncResult } from "../src/announce";
 import { color } from "../src/theme";
+import { useOnline } from "../src/useOnline";
 import { API_URL, useAutoSync } from "../src/useAutoSync";
 import { notifyReportConfirmed, registerForPush } from "../src/notifications";
 import { configurePurchasesForPlatform } from "../src/purchases";
@@ -43,7 +45,16 @@ export default function RootLayout() {
   // fallback for when no server push is delivered.
   useAutoSync((summary) => {
     if (summary.attested > 0) void notifyReportConfirmed(summary.attested);
+    void announce(syncResult(summary, false));
   });
+
+  // Tell a VoiceOver user when signal drops or returns; the Offline pill alone is visual.
+  const online = useOnline();
+  const lastOnline = useRef<boolean | null>(null);
+  useEffect(() => {
+    void announce(connectivityChange(lastOnline.current, online));
+    lastOnline.current = online;
+  }, [online]);
 
   return (
     <SafeAreaProvider>
@@ -75,6 +86,9 @@ export default function RootLayout() {
           <Stack.Screen name="report/sent" options={{ animation: "fade", gestureEnabled: false }} />
           <Stack.Screen name="status/[id]" />
           <Stack.Screen name="help" />
+          <Stack.Screen name="data-privacy" />
+          <Stack.Screen name="about" />
+          <Stack.Screen name="zk-bench" />
         </Stack>
         {launching ? <LaunchSplash onDone={done} /> : null}
       </View>

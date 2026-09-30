@@ -1,12 +1,13 @@
-// page.tsx: public /verify/[hash], no login ever. Alternative C style, light like the reporter app:
-// sprout brand header, status card, a three-stage timeline (received / community reviewed /
-// confirmed), a details card, share card, technical detail collapsed. Honest "not found" and
-// "unavailable" states. Coarse region only — no reporter identity, exact location or private media.
+// page.tsx: public /verify/[hash], no login ever. Plain-language lifecycle (received / waiting for
+// confirmation / confirmed) plus honest "not found" and "unavailable" states, with technical detail
+// collapsed. Coarse region only — no reporter identity, exact location or private media.
 
 import Link from "next/link";
 import { assuranceFromProof, assuranceLabel, isNeutralAssurance } from "../../../lib/assurance";
 import { fetchProof } from "../../../lib/api";
-import { activityLabel } from "../../../lib/dashboard";
+import { activityLabel, programmeName } from "../../../lib/dashboard";
+import { Icon, SiteFooter, SiteHeader, type IconName } from "../../_components/brand";
+import { qrPath } from "../../pitch/qr";
 import { ShareLink } from "./ShareLink";
 
 const VERIFY_BASE = process.env.NEXT_PUBLIC_VERIFY_BASE_URL ?? "http://localhost:3000";
@@ -37,35 +38,47 @@ const STAGE_COPY: Record<Stage, { pill: string; cls: string; line: string }> = {
   },
 };
 
-function Sprout() {
-  return (
-    <svg width="26" height="26" viewBox="0 0 24 24" aria-hidden>
-      <path d="M12 21V12.3" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" fill="none" />
-      <path d="M12 12.3c0-4 2.6-6.8 7.5-7-0.2 4.7-3 7.3-7.5 7.3Z" fill="currentColor" />
-      <path d="M12 14.5c0-3.3-2.2-5.6-6.5-5.8.2 3.9 2.6 6 6.5 6Z" fill="currentColor" />
-    </svg>
-  );
+const STAGES: { key: Stage; label: string }[] = [
+  { key: "received", label: "Received" },
+  { key: "waiting", label: "Waiting for confirmation" },
+  { key: "confirmed", label: "Confirmed" },
+];
+
+/** Tab and link-preview title (chat apps show it when the link is shared). Same fields as the page:
+ *  activity and plain status only, never a region, reporter or reference. */
+export async function generateMetadata({ params }: { params: Promise<{ hash: string }> }) {
+  const { hash } = await params;
+  const r = await fetchProof(hash);
+  if (r.state !== "ok") return { title: "Field report · Prufture" };
+  const title = `${activityLabel(r.proof.taskId)} · ${STAGE_COPY[stageFor(r.proof.attestationCount)].pill}`;
+  const description = "A community field report on Prufture. Checkable by anyone, with no personal data.";
+  return { title: `${title} · Prufture`, description, openGraph: { title, description, siteName: "Prufture" } };
 }
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="verify-page">
-      <main className="wrap fade-in">
-        <Link href="/" className="v-brand" aria-label="Prufture home">
-          <Sprout />
-          <span>Prufture</span>
-        </Link>
-        {children}
-      </main>
+    <div className="site">
+      <SiteHeader />
+      <main className="site-body fade-in">{children}</main>
+      <SiteFooter />
     </div>
   );
 }
 
-const TIMELINE: { label: string; detail: string; doneAt: number }[] = [
-  { label: "Received by the programme", detail: "The report reached the public index.", doneAt: 0 },
-  { label: "Community reviewed", detail: "Other reports from this area are compared.", doneAt: 1 },
-  { label: "Confirmed", detail: "More than one community member reported this activity.", doneAt: 2 },
-];
+function StateCard({ icon, title, children }: { icon: IconName; title: string; children: React.ReactNode }) {
+  return (
+    <div className="verify-hero state-card">
+      <div className="state-icon">
+        <Icon name={icon} size={26} />
+      </div>
+      <h1>{title}</h1>
+      <p className="muted">{children}</p>
+      <Link className="btn secondary" href="/">
+        Back to Prufture
+      </Link>
+    </div>
+  );
+}
 
 export default async function VerifyPage({ params }: { params: Promise<{ hash: string }> }) {
   const { hash } = await params;
@@ -75,11 +88,10 @@ export default async function VerifyPage({ params }: { params: Promise<{ hash: s
   if (result.state === "unreachable") {
     return (
       <Shell>
-        <h1>Verification temporarily unavailable</h1>
-        <p className="muted">
+        <StateCard icon="signal" title="Verification temporarily unavailable">
           The public index could not be reached right now. This report is not lost. Please try again
           shortly.
-        </p>
+        </StateCard>
       </Shell>
     );
   }
@@ -87,11 +99,10 @@ export default async function VerifyPage({ params }: { params: Promise<{ hash: s
   if (result.state === "not_found") {
     return (
       <Shell>
-        <h1>Report not found</h1>
-        <p className="muted">
+        <StateCard icon="reports" title="Report not found">
           No report is on file for this reference yet. If a reporter just finished it, the phone may
           not have had signal to send it.
-        </p>
+        </StateCard>
       </Shell>
     );
   }
@@ -99,6 +110,9 @@ export default async function VerifyPage({ params }: { params: Promise<{ hash: s
   const { proof } = result;
   const stage = stageFor(proof.attestationCount);
   const copy = STAGE_COPY[stage];
+  const stageIndex = STAGES.findIndex((s) => s.key === stage);
+  // Encodes only the public link (proofHash), the same thing the share field shows.
+  const qr = qrPath(shareUrl);
   const assurance = assuranceFromProof(proof);
   const captured = new Date(proof.capturedAt);
   const capturedText = Number.isNaN(captured.getTime())
@@ -107,64 +121,83 @@ export default async function VerifyPage({ params }: { params: Promise<{ hash: s
 
   return (
     <Shell>
-      <section className="card v-hero">
+      <section className="verify-hero">
+        <p className="eyebrow-label">Public field report</p>
         <span className={`pill ${copy.cls}`}>
           <span className="dot" aria-hidden />
           {copy.pill}
         </span>
         <h1>{activityLabel(proof.taskId)}</h1>
-        <p className="muted">{copy.line}</p>
-      </section>
-
-      <ol className="timeline v-timeline" aria-label="Report progress">
-        {TIMELINE.map((t, i) => {
-          const done = proof.attestationCount >= t.doneAt;
-          const current = !done && (i === 0 || proof.attestationCount >= (TIMELINE[i - 1]?.doneAt ?? 0));
-          return (
-            <li key={t.label} className={done ? "done" : current ? "current" : "upcoming"}>
-              <div>
-                <div className="node" aria-hidden>
-                  {done ? "✓" : ""}
-                </div>
-                {i < TIMELINE.length - 1 ? <div className="rail" /> : null}
-              </div>
-              <div className="stage">
-                <b>{t.label}</b>
-                <span className="muted v-detail">{t.detail}</span>
-              </div>
+        <p className="lede">{copy.line}</p>
+        <ol className="stepper" aria-label="Report progress">
+          {STAGES.map((s, i) => (
+            <li
+              key={s.key}
+              className={i <= stageIndex ? "done" : i === stageIndex + 1 ? "current" : "upcoming"}
+              aria-current={i === stageIndex ? "step" : undefined}
+            >
+              {s.label}
             </li>
-          );
-        })}
-      </ol>
-
-      <section className="card">
-        <h2 className="v-card-title">Report details</h2>
-        <dl className="fields">
-          <dt>Approximate area</dt>
-          <dd>
-            <code>{proof.geohashRegion || "not recorded"}</code>{" "}
-            <span className="faint">coarse region only</span>
-          </dd>
-          <dt>Captured</dt>
-          <dd>{capturedText}</dd>
-          <dt>Confirmations</dt>
-          <dd>{proof.attestationCount}</dd>
-          <dt>Identity check</dt>
-          <dd className={isNeutralAssurance(assurance) ? "faint" : undefined}>{assuranceLabel(assurance)}</dd>
-          <dt>Public reference</dt>
-          <dd>
-            <code>{proof.proofHash.slice(0, 12)}...</code>
-          </dd>
-        </dl>
+          ))}
+        </ol>
       </section>
 
-      <section className="card v-share">
-        <h2 className="v-card-title">Share this report</h2>
-      <p className="muted">
-        This link carries only the public reference. No reporter identity, photo, or exact location
-        is stored or shown, so it is safe to send over a chat or email.
-      </p>
-      <ShareLink url={shareUrl} />
+      <div className="fact-grid">
+        <div className="fact">
+          <span className="fact-icon"><Icon name="layers" /></span>
+          <small>Activity</small>
+          <strong>{activityLabel(proof.taskId)}</strong>
+          <span className="fact-note">{programmeName(proof.taskId)}</span>
+        </div>
+        <div className="fact">
+          <span className="fact-icon"><Icon name="pin" /></span>
+          <small>Approximate area</small>
+          <strong><code>{proof.geohashRegion || "not recorded"}</code></strong>
+          <span className="fact-note">coarse region only</span>
+        </div>
+        <div className="fact">
+          <span className="fact-icon"><Icon name="clock" /></span>
+          <small>Captured</small>
+          <strong>{capturedText}</strong>
+        </div>
+        <div className="fact">
+          <span className="fact-icon"><Icon name="users" /></span>
+          <small>Confirmations</small>
+          <strong>{proof.attestationCount}</strong>
+        </div>
+        <div className={`fact ${isNeutralAssurance(assurance) ? "is-neutral" : ""}`}>
+          <span className="fact-icon"><Icon name="shield" /></span>
+          <small>Anonymous pass</small>
+          <strong>{assuranceLabel(assurance)}</strong>
+        </div>
+        <div className="fact">
+          <span className="fact-icon"><Icon name="link" /></span>
+          <small>Public reference</small>
+          <strong><code>{proof.proofHash.slice(0, 12)}...</code></strong>
+        </div>
+      </div>
+
+      <section className="share-card share-grid">
+        <div>
+          <h2>Share this report</h2>
+          <p className="muted" style={{ margin: 0 }}>
+            This link carries only the public reference. No reporter identity, photo, or exact
+            location is stored or shown, so it is safe to send over a chat or email.
+          </p>
+          <ShareLink url={shareUrl} />
+          <ul className="privacy-list">
+            <li><Icon name="eyeOff" size={16} /> No name or face</li>
+            <li><Icon name="pin" size={16} /> No exact location</li>
+            <li><Icon name="lock" size={16} /> No account needed</li>
+          </ul>
+        </div>
+        <figure className="share-qr">
+          <svg viewBox={`0 0 ${qr.size} ${qr.size}`} role="img" aria-label="QR code of this report's public link">
+            <rect width={qr.size} height={qr.size} fill="#fbf6ef" />
+            <path d={qr.path} fill="#1c1208" />
+          </svg>
+          <figcaption>Scan to open on a phone</figcaption>
+        </figure>
       </section>
 
       <details className="tech">

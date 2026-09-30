@@ -10,6 +10,8 @@ import {
   Animated,
   Easing,
   Image,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -18,13 +20,17 @@ import {
   View,
   ViewStyle,
 } from "react-native";
+import { useScrollToTop } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { answerTone } from "../answer-tone";
 import { celebrationsAllowed } from "../feedback";
+import { keyboardFrame } from "../keyboard";
 import { categoryAccent, categoryIcon, type Category } from "../tasks";
 import {
+  cameraColor,
   categorySoft,
   color,
+  maxTextScale,
   radius,
   shadow,
   space,
@@ -44,7 +50,7 @@ export function screenPaddingTop(insetTop: number): number {
   return insetTop || space.md;
 }
 
-/** Full-screen frame: ivory ground, safe-area aware, optional scroll. */
+/** Full-screen frame: ivory ground, safe-area aware, keyboard aware (see src/keyboard.ts), optional scroll. */
 export function Screen({
   children,
   scroll = true,
@@ -62,15 +68,19 @@ export function Screen({
   refreshing?: boolean;
 }) {
   const insets = useSafeAreaInsets();
+  const kb = keyboardFrame(Platform.OS);
+  // On a tab root, tapping the current tab again scrolls back to the top (no-op on stack screens).
+  const scrollRef = useRef<ScrollView>(null);
+  useScrollToTop(scrollRef);
   const pad = padded ? { padding: space.lg } : undefined;
   const body = scroll ? (
     <ScrollView
+      ref={scrollRef}
       style={s.flex}
       contentContainerStyle={[pad, { paddingBottom: space.xl, gap: space.lg }]}
       keyboardShouldPersistTaps="handled"
-      // iOS: scroll the focused field (e.g. the Review note) above the keyboard instead of under it.
-      automaticallyAdjustKeyboardInsets
-      keyboardDismissMode="interactive"
+      keyboardDismissMode={kb.dismissMode}
+      automaticallyAdjustKeyboardInsets={kb.adjustInsets}
       refreshControl={
         onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={color.primary} /> : undefined
       }
@@ -82,12 +92,15 @@ export function Screen({
   );
 
   return (
-    <View style={[s.screen, { paddingTop: screenPaddingTop(insets.top) }]}>
+    <KeyboardAvoidingView
+      behavior={kb.avoidBehavior}
+      style={[s.screen, { paddingTop: screenPaddingTop(insets.top) }]}
+    >
       {body}
       {footer ? (
         <View style={[s.footer, { paddingBottom: insets.bottom + space.md }]}>{footer}</View>
       ) : null}
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -293,7 +306,17 @@ export function Row({
   );
 }
 
-export function BackLink({ label, onPress }: { label: string; onPress: () => void }) {
+export function BackLink({
+  label,
+  onPress,
+  tone = "default",
+}: {
+  label: string;
+  onPress: () => void;
+  /** `onDark` for the live camera, where `muted` would fall below AA contrast. */
+  tone?: "default" | "onDark";
+}) {
+  const ink = tone === "onDark" ? cameraColor.control : color.muted;
   return (
     <Pressable
       onPress={onPress}
@@ -301,8 +324,8 @@ export function BackLink({ label, onPress }: { label: string; onPress: () => voi
       accessibilityLabel={label}
       style={({ pressed }) => [s.back, pressed && s.pressed]}
     >
-      <Icon name="back" size={20} color={color.muted} />
-      <Text style={s.backText}>{label}</Text>
+      <Icon name="back" size={20} color={ink} />
+      <Text style={[s.backText, { color: ink }]}>{label}</Text>
     </Pressable>
   );
 }
@@ -419,7 +442,12 @@ export function EvidenceSteps({
           <>
             <View>
               {uri ? (
-                <Image source={{ uri }} style={[s.slot, { width: size, height: size }]} />
+                <Image
+                  source={{ uri }}
+                  style={[s.slot, { width: size, height: size }]}
+                  accessible={false}
+                  accessibilityIgnoresInvertColors
+                />
               ) : (
                 <View
                   style={[
@@ -433,7 +461,7 @@ export function EvidenceSteps({
                 </View>
               )}
               <View style={[s.slotNum, uri ? s.slotNumDone : current === i ? s.slotNumCurrent : null]}>
-                {uri ? <Icon name="check" size={12} color={color.onPrimary} /> : <Text style={s.slotNumText}>{i + 1}</Text>}
+                {uri ? <Icon name="check" size={12} color={color.onPrimary} /> : <Text style={s.slotNumText} maxFontSizeMultiplier={maxTextScale.badge}>{i + 1}</Text>}
               </View>
             </View>
             <Text style={s.slotText} numberOfLines={3}>
@@ -453,7 +481,7 @@ export function EvidenceSteps({
             {slot}
           </Pressable>
         ) : (
-          <View key={i} style={s.step} accessibilityLabel={label}>
+          <View key={i} style={s.step} accessible accessibilityLabel={label}>
             {slot}
           </View>
         );
