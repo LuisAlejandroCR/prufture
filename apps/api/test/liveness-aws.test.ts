@@ -19,6 +19,12 @@ import {
   type FaceLivenessClient,
 } from "../src/liveness-aws.js";
 import { readTicket } from "../src/liveness-ticket.js";
+import {
+  SESSION_TTL_MS,
+  claimLivenessSession,
+  rememberLivenessSession,
+  resetLivenessSessionsForTests,
+} from "../src/liveness-sessions.js";
 
 const SESSION = "0f8fad5b-d9cb-469f-a165-70867728950e";
 const CONFIGURED = { AWS_REGION: "eu-west-1", AWS_ACCESS_KEY_ID: "AKIATEST", AWS_SECRET_ACCESS_KEY: "test-secret" };
@@ -229,4 +235,60 @@ test("invariant: no image bytes, confidence, request id or vendor error text in 
   for (const key of ["confidence", "Confidence", "ReferenceImage", "AuditImages", "Bytes", "Status", "error\":\"Throttling"]) {
     assert.equal(all.includes(key), false, `response leaked key ${key}`);
   }
+});
+
+test("single use: a passed session mints one verified ticket; a replay or a never-opened id is a failed check", async () => {
+  resetLivenessSessionsForTests();
+  const { client, calls } = stub({ Status: "SUCCEEDED", Confidence: CONFIDENCE });
+  overrideLivenessSessionPortForTests(port(client));
+
+  // Never opened by this server: refused without asking AWS.
+  const stranger = await post("/liveness/result", { sessionId: SESSION });
+  const sj = (await stranger.json()) as { verifiedPerson: boolean; degraded: boolean; ticket: string };
+  assert.deepEqual(readTicket(sj.ticket), { verifiedPerson: false, degraded: false });
+  assert.equal(calls.filter((c) => c.startsWith("get:")).length, 0);
+
+  assert.equal((await post("/liveness/session")).status, 200);
+  const first = (await (await post("/liveness/result", { sessionId: SESSION })).json()) as { ticket: string };
+  assert.deepEqual(readTicket(first.ticket), { verifiedPerson: true, degraded: false });
+
+  const replay = (await (await post("/liveness/result", { sessionId: SESSION })).json()) as {
+    verifiedPerson: boolean;
+    ticket: string;
+  };
+  assert.equal(replay.verifiedPerson, false);
+  assert.deepEqual(readTicket(replay.ticket), { verifiedPerson: false, degraded: false });
+  assert.equal(calls.filter((c) => c.startsWith("get:")).length, 1, "a replay never reaches AWS");
+});
+
+test("single use: a provider outage gives the session back so the device can retry it", async () => {
+  resetLivenessSessionsForTests();
+  let down = true;
+  const client: FaceLivenessClient = {
+    async createSession() {
+      return { SessionId: SESSION } as { SessionId: string };
+    },
+    async getResults() {
+      if (down) throw new Error("ThrottlingException");
+      return { Status: "SUCCEEDED", Confidence: CONFIDENCE } as { Status?: string; Confidence?: number };
+    },
+  };
+  overrideLivenessSessionPortForTests(port(client));
+  await post("/liveness/session");
+  const outage = (await (await post("/liveness/result", { sessionId: SESSION })).json()) as { degraded: boolean };
+  assert.equal(outage.degraded, true);
+
+  down = false;
+  const retry = (await (await post("/liveness/result", { sessionId: SESSION })).json()) as { ticket: string };
+  assert.deepEqual(readTicket(retry.ticket), { verifiedPerson: true, degraded: false });
+});
+
+test("claimLivenessSession: once per id, never after the TTL", () => {
+  resetLivenessSessionsForTests();
+  rememberLivenessSession("a", 0);
+  assert.equal(claimLivenessSession("a", 1), true);
+  assert.equal(claimLivenessSession("a", 2), false);
+  rememberLivenessSession("b", 0);
+  assert.equal(claimLivenessSession("b", SESSION_TTL_MS + 1), false);
+  assert.equal(claimLivenessSession("never", 0), false);
 });

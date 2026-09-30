@@ -31,8 +31,14 @@ import {
 import { pushRegistrationCount, registerPushToken } from "./push-store.js";
 import { attestOnce } from "./relayer.js";
 import { taskReports } from "./confirmations.js";
-import { checkLivenessVerdict, createLivenessSession, livenessSessionVerdict } from "./assurance.js";
+import {
+  checkLivenessVerdict,
+  createLivenessSession,
+  livenessSessionVerdict,
+  selectedLivenessSessionPort,
+} from "./assurance.js";
 import { isSessionId } from "./liveness-aws.js";
+import { claimLivenessSession, releaseLivenessSession, rememberLivenessSession } from "./liveness-sessions.js";
 import {
   POLICY_VERSION,
   enrolCommitment,
@@ -269,6 +275,7 @@ app.post("/liveness-result", async (c) => {
 app.post("/liveness/session", async (c) => {
   const r = await createLivenessSession();
   if (!r.available) return c.json({ error: "liveness unavailable", degraded: true }, 503);
+  rememberLivenessSession(r.data.sessionId);
   return c.json({ sessionId: r.data.sessionId }, 200);
 });
 
@@ -278,11 +285,25 @@ app.post("/liveness/result", async (c) => {
   const sessionId = (raw as { sessionId?: unknown }).sessionId;
   if (!isSessionId(sessionId)) return c.json({ error: "invalid sessionId" }, 400);
 
-  const r = await livenessSessionVerdict(sessionId);
-  // Same degrade as /verify-identity: a typed unavailable becomes a degraded ticket, never a 5xx.
-  if (!r.available) {
+  const degradedTicket = () => {
     const verdict = { verifiedPerson: false, degraded: true };
     return c.json({ ...verdict, ticket: issueTicket(verdict) }, 200);
+  };
+  // Liveness off: nothing to claim, same degrade as /verify-identity.
+  if (!selectedLivenessSessionPort()) return degradedTicket();
+  // Single use: only a session this server opened, and only once. A replayed, unknown or expired id
+  // is a failed check, so one passed face check can never mint a second verified ticket.
+  if (!claimLivenessSession(sessionId)) {
+    const verdict = { verifiedPerson: false, degraded: false };
+    return c.json({ ...verdict, ticket: issueTicket(verdict) }, 200);
+  }
+
+  const r = await livenessSessionVerdict(sessionId);
+  // Same degrade as /verify-identity: a typed unavailable becomes a degraded ticket, never a 5xx.
+  // The id goes back so the device can ask again once the provider recovers.
+  if (!r.available) {
+    releaseLivenessSession(sessionId);
+    return degradedTicket();
   }
   const verifiedPerson = r.data.verifiedPerson === true;
   return c.json({ verifiedPerson, ticket: issueTicket({ verifiedPerson, degraded: false }) }, 200);
