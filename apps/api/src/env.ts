@@ -83,7 +83,7 @@ export const env = {
   get personhoodAdminAppUserIds(): string[] {
     return (process.env.PERSONHOOD_ADMIN_APP_USER_IDS ?? "")
       .split(",")
-      .map((s) => s.trim())
+      .map((s: string) => s.trim())
       .filter(Boolean);
   },
 
