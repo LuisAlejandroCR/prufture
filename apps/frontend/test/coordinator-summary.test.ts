@@ -64,4 +64,7 @@ test("the screen shows the summary and emails it; the CSV export lives on the we
   const paywall = readFileSync(new URL("../app/paywall.tsx", import.meta.url), "utf8");
   assert.doesNotMatch(paywall, /CSV/, "the plan must not promise an in-app CSV it no longer has");
   assert.match(paywall, /a summary you can email/);
+  const me = readFileSync(new URL("../app/(tabs)/me.tsx", import.meta.url), "utf8");
+  assert.doesNotMatch(me, /subtitle="[^"]*export/i, "the Me row must not promise an in-app export");
+  assert.match(me, /subtitle="Review reports and email a summary"/);
 });
