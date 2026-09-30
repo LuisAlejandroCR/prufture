@@ -7,6 +7,8 @@ import { test } from "node:test";
 
 const me = readFileSync(new URL("../app/(tabs)/me.tsx", import.meta.url), "utf8");
 const help = readFileSync(new URL("../app/help.tsx", import.meta.url), "utf8");
+const support = readFileSync(new URL("../app/support.tsx", import.meta.url), "utf8");
+const ui = readFileSync(new URL("../src/components/ui.tsx", import.meta.url), "utf8");
 
 test("Me routes privacy and about to dedicated screens and has no dead press handlers", () => {
   assert.match(me, /router\.push\("\/data-privacy"\)/);
@@ -17,6 +19,21 @@ test("Me routes privacy and about to dedicated screens and has no dead press han
 test("Help stays focused on guidance instead of repeating the privacy screen", () => {
   assert.doesNotMatch(help, /title: "My privacy"/);
   assert.doesNotMatch(help, /title: "Why approximate location is used"/);
+});
+
+test("Contact support opens a native destination with safe next steps", () => {
+  assert.match(me, /router\.push\("\/support"\)/);
+  assert.doesNotMatch(me, /siteUrl\("support"\)/);
+  assert.match(support, /router\.push\("\/help"\)/);
+  assert.match(support, /router\.push\("\/data-privacy"\)/);
+  assert.match(support, /Do not send photos of people/);
+});
+
+test("the shared screen chrome uses the approved app icon", () => {
+  assert.match(ui, /assets\/icon\.png/);
+  assert.match(ui, /screenAppIcon/);
+  assert.match(ui, /accessibilityLabel="Prufture"/);
+  assert.match(ui, /accessible=\{false\}/);
 });
 
 const privacy = readFileSync(new URL("../app/data-privacy.tsx", import.meta.url), "utf8");

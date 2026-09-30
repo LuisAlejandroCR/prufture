@@ -54,6 +54,7 @@ test("the hero phone uses the optimized real app journey and approved store icon
   assert.match(HERO, /playsInline/);
   assert.match(HERO, /poster="\/media\/app-journey\.webp"/);
   assert.match(HERO, /prefers-reduced-motion: reduce/);
+  assert.match(HERO, /playbackRate/);
   assert.match(HERO, /video\.play\(\)/);
   assert.match(PAGE, /src="\/media\/prufture-icon\.png"/);
   assert.doesNotMatch(PAGE, /journey-0[1-6]/, "App Store screenshots must not be used as loose landing images");

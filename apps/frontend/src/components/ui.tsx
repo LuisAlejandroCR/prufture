@@ -41,6 +41,8 @@ import {
 } from "../theme";
 import { Icon, type IconName } from "./icons/Icon";
 
+const APP_ICON = require("../../assets/icon.png");
+
 /**
  * Top padding for the screen frame: the real safe-area inset when there is one (notch / status bar),
  * else a small floor. An inverted ternary once dropped the pad on inset devices, hiding every header
@@ -96,6 +98,14 @@ export function Screen({
       behavior={kb.avoidBehavior}
       style={[s.screen, { paddingTop: screenPaddingTop(insets.top) }]}
     >
+      <View
+        pointerEvents="none"
+        style={[s.screenAppIcon, { top: screenPaddingTop(insets.top) + space.xs }]}
+        accessibilityRole="image"
+        accessibilityLabel="Prufture"
+      >
+        <Image source={APP_ICON} style={s.screenAppIconImage} accessible={false} accessibilityIgnoresInvertColors />
+      </View>
       {body}
       {footer ? (
         <View style={[s.footer, { paddingBottom: insets.bottom + space.md }]}>{footer}</View>
@@ -382,7 +392,7 @@ export function CategoryBadge({ category, size = 48 }: { category: Category; siz
 export function BrandMark() {
   return (
     <View style={s.brand} accessibilityRole="header" accessibilityLabel="Prufture">
-      <Icon name="sprout" size={24} filled color={color.primary} />
+      <Image source={APP_ICON} style={s.brandIcon} accessible={false} accessibilityIgnoresInvertColors />
       <Text style={s.brandText}>Prufture</Text>
     </View>
   );
@@ -586,6 +596,7 @@ const s = StyleSheet.create({
   infoBody: { ...type.meta, color: color.muted },
   badge: { borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
   brand: { flexDirection: "row", alignItems: "center", gap: space.xs },
+  brandIcon: { width: 28, height: 28, borderRadius: 8 },
   brandText: { ...type.title, color: color.text },
   offlineWrap: { alignItems: "flex-end", gap: 2 },
   offlinePill: {
@@ -601,6 +612,21 @@ const s = StyleSheet.create({
   offlineCaption: { ...type.meta, fontSize: 11, color: color.muted },
   flex: { flex: 1 },
   screen: { flex: 1, backgroundColor: color.background },
+  screenAppIcon: {
+    position: "absolute",
+    right: space.lg,
+    zIndex: 2,
+    width: 30,
+    height: 30,
+    borderRadius: 9,
+    overflow: "hidden",
+    shadowColor: color.text,
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
+  },
+  screenAppIconImage: { width: 30, height: 30 },
   footer: {
     paddingHorizontal: space.lg,
     paddingTop: space.md,
