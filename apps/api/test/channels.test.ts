@@ -120,7 +120,7 @@ test("whatsapp: exact Kapso v24 endpoint, X-API-Key, and the report_ready templa
     return new Response(JSON.stringify({ messaging_product: "whatsapp", messages: [{ id: "wamid.X" }] }), { status: 200 });
   }) as typeof fetch;
   try {
-    const r = await sendVerifyUrl("whatsapp", "46701234567", "https://prufture.vercel.app/verify/0xabc");
+    const r = await sendVerifyUrl("whatsapp", "46701234567", "https://prufture.voltarut.com/verify/0xabc");
     assert.equal(calls[0]!.url, "https://api.kapso.ai/meta/whatsapp/v24.0/111/messages");
     assert.equal((calls[0]!.init?.headers as Record<string, string>)["X-API-Key"], "k");
     assert.deepEqual(JSON.parse(String(calls[0]!.init?.body)), {
@@ -130,7 +130,7 @@ test("whatsapp: exact Kapso v24 endpoint, X-API-Key, and the report_ready templa
       template: {
         name: "report_ready",
         language: { code: "en" },
-        components: [{ type: "body", parameters: [{ type: "text", text: "https://prufture.vercel.app/verify/0xabc" }] }],
+        components: [{ type: "body", parameters: [{ type: "text", text: "https://prufture.voltarut.com/verify/0xabc" }] }],
       },
     });
     assert.ok(r.available && r.data.providerId === "wamid.X");

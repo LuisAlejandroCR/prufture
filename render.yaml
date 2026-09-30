@@ -27,7 +27,7 @@ services:
       # Durable proof store on the mounted disk.
       - key: STORE_PATH
         value: /data/store.json
-      # Public site base, used to build the verifyUrl in POST /notify. Set to the Vercel URL.
+      # Public site base, used to build the verifyUrl in POST /notify: https://prufture.voltarut.com
       - key: VERIFY_BASE_URL
         sync: false
       # On-chain attestation (Base Sepolia). Any JSON-RPC endpoint for the chain; the provider is

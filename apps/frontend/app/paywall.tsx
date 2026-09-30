@@ -20,7 +20,7 @@ import { color, radius, space, target, type } from "../src/theme";
 import { openInApp } from "../src/links";
 
 const PRIVACY_URL =
-  (Constants.expoConfig?.extra?.privacyPolicyUrl as string | undefined) || "https://prufture.vercel.app/privacy";
+  (Constants.expoConfig?.extra?.privacyPolicyUrl as string | undefined) || "https://prufture.voltarut.com/privacy";
 
 type LoadState =
   | { kind: "loading" }

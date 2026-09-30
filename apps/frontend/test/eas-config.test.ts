@@ -79,6 +79,8 @@ test("production store build carries the same public config as preview, and no p
     assert.equal(env[key], preview[key], `${key} differs between preview and production`);
   }
   assert.match(env.EXPO_PUBLIC_VERIFY_URL!, /^https:\/\/.+\/verify$/);
+  // Shared record links carry the public domain, not the Vercel project alias.
+  assert.equal(env.EXPO_PUBLIC_VERIFY_URL, "https://prufture.voltarut.com/verify");
   assert.match(env.EXPO_PUBLIC_PROGRAMME_PUBKEY!, /^[0-9a-f]{64}$/);
   assert.equal(env.EXPO_PUBLIC_IDENTITY_STEP, "off");
   for (const [key, value] of Object.entries(env)) {
