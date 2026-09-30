@@ -7,7 +7,7 @@ Pod::Spec.new do |s|
   s.summary        = 'On-device Semaphore v4 group-membership prover'
   s.description    = 'Groth16 prover for the Semaphore v4 depth-10 circuit, via UniFFI.'
   s.author         = 'Prufture'
-  s.homepage       = 'https://github.com/LuisAlejandroCR/unicef-firstblockathon'
+  s.homepage       = 'https://github.com/LuisAlejandroCR/prufture'
   s.license        = 'MIT'
   s.platforms      = { :ios => '15.1' }
   s.source         = { :git => '' }

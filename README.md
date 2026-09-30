@@ -132,7 +132,7 @@ Node API / relayer → EAS on Base Sepolia → public verifier
 | Mobile | Expo SDK 57, React Native, Expo Router, TypeScript |
 | Local proof | SHA-256, ed25519, Expo SecureStore, SQLite |
 | Membership pass | Semaphore v4 with native iOS and Android prover modules |
-| API | Express, signature validation, durable store, attest-only relayer |
+| API | Hono on Node.js, signature validation, durable store, attest-only relayer |
 | Chain | EAS on Base Sepolia through a configurable RPC boundary |
 | Web | Next.js public verifier, dashboard, privacy, support, and product site |
 | Monetization | RevenueCat React Native SDK and server-side entitlement check |
@@ -142,8 +142,8 @@ Node API / relayer → EAS on Base Sepolia → public verifier
 Requirements: Node.js 20+, npm, and an iOS or Android development environment for native flows.
 
 ```bash
-git clone https://github.com/LuisAlejandroCR/unicef-firstblockathon.git
-cd unicef-firstblockathon
+git clone https://github.com/LuisAlejandroCR/prufture.git
+cd prufture
 npm install
 cp apps/api/.env.example apps/api/.env.local
 cp apps/frontend/.env.example apps/frontend/.env.local

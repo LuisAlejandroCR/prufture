@@ -4,9 +4,20 @@
 import type { ReactNode } from "react";
 import "./globals.css";
 
+// Absolute base for link previews (app/opengraph-image.png); override per deploy with NEXT_PUBLIC_SITE_URL.
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, "") || "https://prufture.voltarut.com";
+
 export const metadata = {
+  metadataBase: new URL(SITE_URL),
   title: "Prufture",
   description: "Check field reports without an account. No personal data.",
+  openGraph: {
+    type: "website",
+    siteName: "Prufture",
+    title: "Prufture",
+    description: "Offline field reporting that protects the people doing the work.",
+  },
+  twitter: { card: "summary_large_image" },
 };
 
 export const viewport = { width: "device-width", initialScale: 1 };
