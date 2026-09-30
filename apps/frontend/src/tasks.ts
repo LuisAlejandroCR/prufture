@@ -192,6 +192,29 @@ export function sortByDistance(tasks: TaskDef[], myCell: string | null): TaskDef
   return [...tasks].sort((a, b) => cellDistanceKm(myCell, a.cell) - cellDistanceKm(myCell, b.cell));
 }
 
+/** An assignment can be reported only from within this distance of its area (cell centres, km). */
+export const REPORTABLE_KM = 25;
+
+/**
+ * Whether this reporter can report `task` from where they are. "anywhere" for a self-started report
+ * (no assignment area); "unknown" until the reporter's approximate area is known.
+ */
+export type MissionReach = "near" | "far" | "unknown" | "anywhere";
+
+export function missionReach(myCell: string | null, task: TaskDef): MissionReach {
+  if (!task.cell) return "anywhere";
+  if (!myCell) return "unknown";
+  return cellDistanceKm(myCell, task.cell) <= REPORTABLE_KM ? "near" : "far";
+}
+
+/** Missions the reporter can do now (nearest first), and the rest, shown around the world. */
+export function splitMissions(tasks: TaskDef[], myCell: string | null): { near: TaskDef[]; world: TaskDef[] } {
+  const sorted = sortByDistance(tasks, myCell);
+  const near = sorted.filter((t) => missionReach(myCell, t) !== "far" && missionReach(myCell, t) !== "unknown");
+  const world = sorted.filter((t) => !near.includes(t));
+  return { near, world };
+}
+
 /** Friendly distance: "Nearby", "12 km away", or "Far from you" past 200 km. */
 export function distanceLabel(myCell: string | null, task: TaskDef): string | null {
   if (!myCell || !task.cell) return null;
