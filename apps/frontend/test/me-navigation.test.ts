@@ -54,8 +54,25 @@ test("new screens keep DESIGN.md copy rules: no em-dash in UI strings", () => {
   assert.doesNotMatch(strip(about), /—/);
 });
 
-test("the Language value row is one VoiceOver element", () => {
-  assert.match(me, /<View style=\{styles\.valueRow\} accessible accessibilityLabel="Language\. English">/);
+test("Me stays compact: no English-only Language row, no second waiting-to-send banner", () => {
+  assert.doesNotMatch(me, /Language/);
+  assert.doesNotMatch(me, /waiting to send\./, "Offline storage already says what is waiting");
+  assert.doesNotMatch(me, /<Illustration/);
+  assert.doesNotMatch(me, /<Switch/, "toggles live on the Accessibility screen");
+});
+
+const accessibility = readFileSync(new URL("../app/accessibility.tsx", import.meta.url), "utf8");
+const layout = readFileSync(new URL("../app/_layout.tsx", import.meta.url), "utf8");
+
+test("Accessibility is one row on Me and keeps both toggles on its own screen", () => {
+  assert.match(me, /router\.push\("\/accessibility"\)/);
+  assert.match(layout, /<Stack\.Screen name="accessibility" \/>/);
+  assert.match(accessibility, /setHapticsEnabled\(v\)/);
+  assert.match(accessibility, /setCelebrationsEnabled\(v\)/);
+  assert.match(accessibility, /hydrateFeedbackSettings\(\)/);
+  assert.match(accessibility, /Text size follows your phone settings\./);
+  assert.match(accessibility, /accessibilityLabel=\{title\}/, "each switch is named for VoiceOver");
+  assert.doesNotMatch(accessibility.replace(/^\s*\/\/.*$/gm, ""), /—/);
 });
 
 test("About shows the app version only", () => {

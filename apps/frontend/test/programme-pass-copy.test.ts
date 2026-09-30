@@ -1,6 +1,7 @@
-// programme-pass-copy.test.ts: source checks on the screens that show the programme pass — Me explains
-// in-person enrolment and shows list status, Data and privacy discloses the pass, status shows the
-// per-report line — and none of them uses personhood, zero-knowledge or hardware claims in UI copy.
+// programme-pass-copy.test.ts: source checks on the screens that show the programme pass. Me shows one
+// row with the list status; the Programme pass screen explains in-person enrolment and shows the code;
+// Data and privacy discloses the pass; status shows the per-report line. None of them uses
+// personhood, zero-knowledge or hardware claims in UI copy.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -8,17 +9,27 @@ import { readFileSync } from "node:fs";
 
 const read = (p: string) => readFileSync(new URL(p, import.meta.url), "utf8");
 const me = read("../app/(tabs)/me.tsx");
+const pass = read("../app/programme-pass.tsx");
 const privacy = read("../app/data-privacy.tsx");
 const status = read("../app/status/[id].tsx");
 const stripComments = (src: string) => src.replace(/^\s*\/\/.*$/gm, "").replace(/\/\*[\s\S]*?\*\//g, "");
 
-test("Me explains how a reporter joins: in person, the coordinator adds the code", () => {
-  assert.match(me, /meet your programme coordinator in person/);
-  assert.match(me, /They add it to the programme list/);
-  assert.match(me, /A new phone\s+or a reinstall gives a new code/);
-  assert.match(me, /This phone is on the programme list\./);
-  assert.match(me, /This phone is not on the programme list yet\./);
+test("Me shows the pass as one row with the list status, only when the pass is on", () => {
+  assert.match(me, /passOn \? \(\s*<Row[\s\S]*?router\.push\("\/programme-pass"\)/);
   assert.match(me, /getEnrolment\(API_URL\)/);
+  assert.doesNotMatch(me, /getCommitment/, "the long code lives on the pass screen, not on Me");
+  assert.match(read("../app/_layout.tsx"), /<Stack\.Screen name="programme-pass" \/>/);
+});
+
+test("the pass screen explains how a reporter joins: in person, the coordinator adds the code", () => {
+  assert.match(pass, /meet your programme coordinator in person/);
+  assert.match(pass, /They add it to the programme list/);
+  assert.match(pass, /A new phone\s+or a reinstall gives a new code/);
+  assert.match(pass, /This phone is on the programme list\./);
+  assert.match(pass, /This phone is not on the programme list yet\./);
+  assert.match(pass, /getEnrolment\(API_URL\)/);
+  assert.match(pass, /getCommitment\(\)/);
+  assert.match(pass, /selectable/, "the coordinator may need to copy the code");
 });
 
 test("Data and privacy lists the pass only when it is on", () => {
@@ -32,7 +43,7 @@ test("status shows the pass line only when the pass is on and a check was attemp
 });
 
 test("no screen copy claims personhood, zero-knowledge, anonymity or hardware guarantees", () => {
-  for (const [name, src] of Object.entries({ me, privacy, status })) {
+  for (const [name, src] of Object.entries({ me, pass, privacy, status })) {
     const text = stripComments(src).toLowerCase();
     for (const banned of ["proof of personhood", "zero-knowledge", "zero knowledge", "unique human", "sybil", "anonymous", "hardware", "secure enclave"]) {
       assert.ok(!text.includes(banned), `${name}: "${banned}"`);
