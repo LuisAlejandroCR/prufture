@@ -9,15 +9,24 @@ import {
   nearbyReportCount,
   parseConfirmations,
   regionDistanceKm,
+  reportChecks,
   stageFor,
   type ConfirmationReport,
 } from "../lib/confirmations.js";
 
 const OWN = "d2g62"; // Bogotá cell of the real demo report
-const row = (own: boolean, geohashRegion: string, membershipVerified: boolean): ConfirmationReport => ({
+const row = (
+  own: boolean,
+  geohashRegion: string,
+  membershipVerified: boolean,
+  verifiedPerson: boolean | null = null,
+  verifiedPersonDegraded: boolean | null = null,
+): ConfirmationReport => ({
   own,
   geohashRegion,
   membershipVerified,
+  verifiedPerson,
+  verifiedPersonDegraded,
 });
 
 test("regionDistanceKm: same cell is 0, an adjacent cell is inside 5 km, another continent is not", () => {
@@ -76,11 +85,45 @@ test("parseConfirmations: keeps well-formed rows; a missing pass field reads as 
         null,
         { own: false, geohashRegion: "d2g63", extra: "dropped" },
         { own: false, geohashRegion: OWN, membershipVerified: "true" },
+        { own: false, geohashRegion: OWN, verifiedPerson: false, verifiedPersonDegraded: true },
+        { own: false, geohashRegion: OWN, verifiedPerson: "yes", verifiedPersonDegraded: "no" },
       ],
     }),
-    [row(true, OWN, true), row(false, "d2g63", false), row(false, OWN, false)],
+    [
+      row(true, OWN, true),
+      row(false, "d2g63", false),
+      row(false, OWN, false),
+      row(false, OWN, false, false, true),
+      row(false, OWN, false),
+    ],
   );
   assert.equal(parseConfirmations(null), null);
   assert.equal(parseConfirmations({ reports: "x" }), null);
   assert.equal(parseConfirmations([]), null);
+});
+
+const photo = (
+  membership: "verified" | null,
+  verifiedPerson: boolean | null = null,
+  verifiedPersonDegraded: boolean | null = null,
+) => ({ membership, verifiedPerson, verifiedPersonDegraded });
+
+test("reportChecks: a photo shows its report's pass and face check, not only its own", () => {
+  // Since #110 the pass is proven on one photo per report, and before #116 the face check went only
+  // to the first photo: the shared link (newest photo) showed neither.
+  const report = [row(true, OWN, true, true, false), row(false, OWN, false)];
+  assert.deepEqual(reportChecks(photo(null), report), {
+    membership: "verified",
+    verifiedPerson: true,
+    verifiedPersonDegraded: false,
+  });
+});
+
+test("reportChecks: without the route, or with no report verdict, the photo's own fields stand", () => {
+  const own = photo("verified", false, true);
+  assert.deepEqual(reportChecks(own, null), own);
+  assert.deepEqual(reportChecks(own, []), own);
+  assert.deepEqual(reportChecks(own, [row(true, OWN, false)]), own);
+  // Another report's pass or face check never lends itself to this one.
+  assert.deepEqual(reportChecks(photo(null), [row(false, OWN, true, true, false)]), photo(null));
 });

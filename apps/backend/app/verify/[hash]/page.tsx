@@ -5,7 +5,7 @@
 import Link from "next/link";
 import { assuranceFromProof, faceCheckLabel, isNeutralAssurance, passLabel } from "../../../lib/assurance";
 import { fetchConfirmations, fetchProof } from "../../../lib/api";
-import { nearbyReportCount, stageFor, type Stage } from "../../../lib/confirmations";
+import { nearbyReportCount, reportChecks, stageFor, type Stage } from "../../../lib/confirmations";
 import { activityLabel, programmeName } from "../../../lib/dashboard";
 import { Icon, SiteFooter, SiteHeader, type IconName } from "../../_components/brand";
 import { qrPath } from "../../../lib/qr";
@@ -108,13 +108,16 @@ export default async function VerifyPage({ params }: { params: Promise<{ hash: s
   }
 
   const { proof } = result;
-  const nearby = await nearbyFor(proof);
+  const reports = await fetchConfirmations(proof.proofHash);
+  const nearby = reports ? nearbyReportCount(proof.geohashRegion, reports) : null;
   const stage = stageFor(nearby, proof.attestationCount);
+  // The report's pass and face check, not only this photo's: see reportChecks.
+  const checks = reportChecks(proof, reports);
   const copy = STAGE_COPY[stage];
   const stageIndex = STAGES.findIndex((s) => s.key === stage);
   // Encodes only the public link (proofHash), the same thing the share field shows.
   const qr = qrPath(shareUrl);
-  const faceCheck = assuranceFromProof(proof);
+  const faceCheck = assuranceFromProof(checks);
   const captured = new Date(proof.capturedAt);
   const capturedText = Number.isNaN(captured.getTime())
     ? proof.capturedAt
@@ -167,10 +170,10 @@ export default async function VerifyPage({ params }: { params: Promise<{ hash: s
           <strong>{nearby ?? "Unavailable"}</strong>
           <span className="fact-note">{nearby === null ? "could not be checked right now" : "within 5 km, one pass per member"}</span>
         </div>
-        <div className={`fact ${proof.membership === "verified" ? "" : "is-neutral"}`}>
+        <div className={`fact ${checks.membership === "verified" ? "" : "is-neutral"}`}>
           <span className="fact-icon"><Icon name="shield" /></span>
           <small>Anonymous pass</small>
-          <strong>{passLabel(proof.membership)}</strong>
+          <strong>{passLabel(checks.membership)}</strong>
         </div>
         <div className={`fact ${isNeutralAssurance(faceCheck) ? "is-neutral" : ""}`}>
           <span className="fact-icon"><Icon name="eyeOff" /></span>
