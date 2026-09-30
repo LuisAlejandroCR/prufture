@@ -102,10 +102,13 @@ services:
         sync: false
       # Coordinator plan: server-side RevenueCat check behind /coordinator/*. Absent -> every
       # coordinator call answers 503 and the app keeps the review tools locked. GET /health reports
-      # whether both are set (never their values).
+      # whether all three are set (never their values). The entitlement id is the internal entl...
+      # id from Product catalog -> Entitlements, not the lookup key "coordinator_pro".
       - key: REVENUECAT_SECRET_KEY
         sync: false
       - key: REVENUECAT_PROJECT_ID
+        sync: false
+      - key: REVENUECAT_COORDINATOR_ENTITLEMENT_ID
         sync: false
       - key: REVENUECAT_API_BASE
         value: https://api.revenuecat.com/v2

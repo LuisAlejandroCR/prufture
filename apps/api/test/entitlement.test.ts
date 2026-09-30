@@ -10,10 +10,13 @@ const realFetch = globalThis.fetch;
 const SECRET = "sk_test_super_secret_value";
 
 const PROJECT = "proj1ab2c3d4";
+// v2 `active_entitlements` items carry RevenueCat's internal entitlement id, never the lookup key.
+const ENTL = "entl0c00rd1n4";
 
 function configure(on: boolean): void {
   process.env.REVENUECAT_SECRET_KEY = on ? SECRET : "";
   process.env.REVENUECAT_PROJECT_ID = on ? PROJECT : "";
+  process.env.REVENUECAT_COORDINATOR_ENTITLEMENT_ID = on ? ENTL : "";
 }
 
 afterEach(() => {
@@ -21,6 +24,64 @@ afterEach(() => {
   delete process.env.REVENUECAT_SECRET_KEY;
   delete process.env.REVENUECAT_API_BASE;
   delete process.env.REVENUECAT_PROJECT_ID;
+  delete process.env.REVENUECAT_COORDINATOR_ENTITLEMENT_ID;
+});
+
+test("the documented v2 item shape (internal entl id) for the configured entitlement => entitled:true", async () => {
+  configure(true);
+  globalThis.fetch = (async () =>
+    new Response(
+      JSON.stringify({
+        object: "list",
+        items: [{ object: "customer.active_entitlement", entitlement_id: ENTL, expires_at: Date.now() + 100000 }],
+        next_page: null,
+      }),
+      { status: 200 },
+    )) as typeof fetch;
+
+  const r = await checkEntitlement("anon-user-1");
+  assert.deepEqual(r.data, { entitled: true });
+});
+
+test("regression: the lookup key is not an entitlement id, so an item named coordinator_pro never counts", async () => {
+  // The check used to compare against "coordinator_pro"; RevenueCat never returns that here, so
+  // every paying coordinator got 402.
+  configure(true);
+  globalThis.fetch = (async () =>
+    new Response(JSON.stringify({ items: [{ entitlement_id: "coordinator_pro" }] }), { status: 200 })) as typeof fetch;
+
+  const r = await checkEntitlement("anon-user-1");
+  assert.deepEqual(r.data, { entitled: false });
+});
+
+test("entitlement id missing => typed unavailable naming the variable, and no request is made", async () => {
+  configure(true);
+  delete process.env.REVENUECAT_COORDINATOR_ENTITLEMENT_ID;
+  let called = 0;
+  globalThis.fetch = (async () => {
+    called += 1;
+    return new Response("{}", { status: 200 });
+  }) as typeof fetch;
+
+  const r = await checkEntitlement("anon-user-1");
+  assert.equal(r.available, false);
+  assert.match(r.error, /REVENUECAT_COORDINATOR_ENTITLEMENT_ID/);
+  assert.equal(called, 0);
+});
+
+test("the lookup key pasted as the entitlement id => typed unavailable, never a silent 402", async () => {
+  configure(true);
+  process.env.REVENUECAT_COORDINATOR_ENTITLEMENT_ID = "coordinator_pro";
+  let called = 0;
+  globalThis.fetch = (async () => {
+    called += 1;
+    return new Response("{}", { status: 200 });
+  }) as typeof fetch;
+
+  const r = await checkEntitlement("anon-user-1");
+  assert.equal(r.available, false);
+  assert.match(r.error, /entl/);
+  assert.equal(called, 0);
 });
 
 test("unconfigured env => available:false, no throw, no data", async () => {
@@ -32,11 +93,11 @@ test("unconfigured env => available:false, no throw, no data", async () => {
   assert.match(r.error, /not configured/);
 });
 
-test("stubbed 200 with active coordinator_pro => entitled:true", async () => {
+test("stubbed 200 with the active coordinator entitlement => entitled:true", async () => {
   configure(true);
   globalThis.fetch = (async () =>
     new Response(
-      JSON.stringify({ items: [{ entitlement_id: "coordinator_pro", expires_at: Date.now() + 100000 }] }),
+      JSON.stringify({ items: [{ entitlement_id: ENTL, expires_at: Date.now() + 100000 }] }),
       { status: 200 },
     )) as typeof fetch;
 
@@ -59,7 +120,7 @@ test("expired entitlement => entitled:false", async () => {
   configure(true);
   globalThis.fetch = (async () =>
     new Response(
-      JSON.stringify({ items: [{ entitlement_id: "coordinator_pro", expires_at: Date.now() - 1000 }] }),
+      JSON.stringify({ items: [{ entitlement_id: ENTL, expires_at: Date.now() - 1000 }] }),
       { status: 200 },
     )) as typeof fetch;
 
