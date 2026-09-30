@@ -302,7 +302,7 @@ async function saveOneReport(): Promise<Call[]> {
 
 const settle = () => new Promise((r) => setTimeout(r, 20));
 
-test("saved report: with the flag on, the stored pass is attached to the first proof via /liveness-result", async () => {
+test("saved report: with the flag on, the stored pass is attached to the report's proof via /liveness-result", async () => {
   await saveLivenessPass(PASS);
   process.env.EXPO_PUBLIC_LIVENESS_PROVIDER = "aws";
   const calls = await saveOneReport();

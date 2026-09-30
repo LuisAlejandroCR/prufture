@@ -237,6 +237,7 @@ export async function saveDraft(): Promise<SaveResult> {
   let saved = 0;
   let failed = 0;
   let firstProofHash: string | null = null;
+  const proofHashes: string[] = [];
   const sealedForSharing: { proofHash: string; bytes: Uint8Array }[] = [];
 
   const captureProof = captureProofImpl;
@@ -257,6 +258,7 @@ export async function saveDraft(): Promise<SaveResult> {
         reportId: draft.reportId,
       });
       firstProofHash = firstProofHash ?? proof.proofHash;
+      proofHashes.push(proof.proofHash);
       if (draft.shareEvidence === true) sealedForSharing.push({ proofHash: proof.proofHash, bytes });
       saved += 1;
     } catch {
@@ -265,8 +267,9 @@ export async function saveDraft(): Promise<SaveResult> {
   }
 
   // The payload is unchanged. Separately — and only if a liveness check ran — tell the
-  // api to store the verified-person boolean against the first proofHash. Fire-and-forget:
-  // it never blocks the "saved" screen and retries on the next sync pass if offline.
+  // api to store the verified-person boolean against every proofHash of the report: any photo's
+  // public record can be the one shared. Fire-and-forget: it never blocks the "saved" screen
+  // and retries on the next sync pass if offline.
   // The note stays on this phone, next to the report it describes. Awaited so it lands before
   // clearDraft() wipes the draft; saveLocalNote never throws.
   if (saved > 0 && draft.note) await saveLocalNote(draft.reportId, draft.note);
@@ -278,14 +281,16 @@ export async function saveDraft(): Promise<SaveResult> {
 
   if (firstProofHash) {
     const apiUrl = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8787";
+    let ticket = "";
     if (draft.livenessChecked && draft.livenessTicket) {
-      void attachLiveness(apiUrl, firstProofHash, draft.livenessTicket);
+      ticket = draft.livenessTicket;
     } else if (livenessProvider() === "aws") {
       // The one-time face check: its pass rides on every report while it is still usable. No pass,
       // no attach — verifiedPerson just stays null, and the report is never held back for it.
       const pass = await loadLivenessPass();
-      if (pass) void attachLiveness(apiUrl, firstProofHash, pass.ticket);
+      if (pass) ticket = pass.ticket;
     }
+    if (ticket) for (const hash of proofHashes) void attachLiveness(apiUrl, hash, ticket);
     // The signed payload stays coarse-only. The encrypted precise point is sent
     // separately as an opaque blob, keyed to this proofHash. Fire-and-forget: it
     // buffers and retries on the next sync pass if offline.
