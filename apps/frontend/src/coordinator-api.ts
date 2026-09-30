@@ -74,22 +74,6 @@ export async function recordReview(
   }
 }
 
-export async function fetchCoordinatorCsv(
-  base: string,
-  appUserId: string,
-  fetchImpl: typeof fetch = fetch,
-): Promise<CoordinatorResult<string>> {
-  try {
-    const res = await fetchImpl(url(base, "/coordinator/export.csv"), {
-      headers: { [APP_USER_HEADER]: appUserId },
-    });
-    if (!res.ok) return { kind: classify(res.status) };
-    return { kind: "ok", data: await res.text() };
-  } catch {
-    return { kind: "unavailable" };
-  }
-}
-
 /** Counts per review state, for the summary line above the list. */
 export function reviewCounts(rows: CoordinatorReport[]): Record<ReviewStatus, number> {
   const counts: Record<ReviewStatus, number> = { pending: 0, accepted: 0, rejected: 0 };

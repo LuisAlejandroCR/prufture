@@ -111,7 +111,7 @@ export default function MeScreen() {
         <Row
           icon="programme"
           title="Coordinator review"
-          subtitle="Check and export your programme's reports"
+          subtitle="Review reports and email a summary"
           onPress={() => router.push("/coordinator")}
         />
       </View>

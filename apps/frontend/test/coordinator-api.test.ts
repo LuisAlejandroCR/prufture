@@ -6,7 +6,6 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
   APP_USER_HEADER,
-  fetchCoordinatorCsv,
   fetchCoordinatorReports,
   recordReview,
   reviewCounts,
@@ -54,7 +53,6 @@ test("401, 503, bad bodies and thrown fetches are unavailable, never locked", as
     throw new Error("offline");
   }) as unknown as typeof fetch;
   assert.deepEqual(await fetchCoordinatorReports("https://api.test", "u", throwing), { kind: "unavailable" });
-  assert.deepEqual(await fetchCoordinatorCsv("https://api.test", "u", throwing), { kind: "unavailable" });
 });
 
 test("review: posts the verdict and returns the updated row", async () => {
@@ -70,11 +68,6 @@ test("review: posts the verdict and returns the updated row", async () => {
   assert.equal(seen.url, "https://api.test/coordinator/review");
   assert.equal(seen.init?.method, "POST");
   assert.deepEqual(JSON.parse(String(seen.init?.body)), { proofHash: row.proofHash, status: "accepted", note: "" });
-});
-
-test("export: returns the CSV text", async () => {
-  const csv = "proofHash,taskId\nab,solar\n";
-  assert.deepEqual(await fetchCoordinatorCsv("https://api.test", "u", fakeFetch(200, csv)), { kind: "ok", data: csv });
 });
 
 test("reviewCounts tallies each state", () => {
