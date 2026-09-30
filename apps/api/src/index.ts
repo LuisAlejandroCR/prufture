@@ -514,6 +514,10 @@ app.post("/personhood/proof", async (c) => {
     { nullifiers: storeNullifiers({ hasNullifier, addNullifier }) },
   );
   if (result.state === "verified") setMembershipVerified(proofHash);
+  // The reason code (e.g. unknown_root, bad_proof) stays server-side; the log carries only it, the
+  // state and a short public report prefix, never proof material, a nullifier or a commitment.
+  const report = proofHash.replace(/^0x/, "").slice(0, 12);
+  console.log(`personhood ${JSON.stringify({ report, state: result.state, reason: result.reason })}`);
   return c.json({ state: result.state }, 200);
 });
 

@@ -155,6 +155,31 @@ test("a failed attempt never marks the report", async () => {
   assert.equal(store.getProof(fx.hashes.two)?.membership, undefined);
 });
 
+test("each verdict is logged with its reason code only, so a rejection can be diagnosed from the logs", async () => {
+  freshStore();
+  seedGroup();
+  seedReport(fx.hashes.two);
+  process.env.PERSONHOOD_PROVIDER = "semaphore";
+  const lines: string[] = [];
+  const realLog = console.log;
+  console.log = (...a: unknown[]) => void lines.push(a.map(String).join(" "));
+  try {
+    await post("/personhood/proof", { proofHash: fx.hashes.two, programmeId: PROGRAMME, proof: fx.first });
+  } finally {
+    console.log = realLog;
+  }
+  const logged = lines.filter((l) => l.startsWith("personhood "));
+  assert.equal(logged.length, 1);
+  assert.deepEqual(JSON.parse(logged[0]!.slice("personhood ".length)), {
+    report: (fx.hashes.two as string).replace(/^0x/, "").slice(0, 12),
+    state: "invalid",
+    reason: "message_mismatch",
+  });
+  for (const secret of [fx.first.nullifier, fx.first.points[0], fx.first.merkleTreeRoot, fx.hashes.two]) {
+    assert.ok(!logged[0]!.includes(secret), "no proof material or full report hash in the log");
+  }
+});
+
 test("flag off -> unavailable; unknown report or programme -> 404", async () => {
   freshStore();
   seedGroup();
