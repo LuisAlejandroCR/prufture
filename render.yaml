@@ -61,8 +61,29 @@ services:
         value: "0x4200000000000000000000000000000000000021"
       - key: BASE_SEPOLIA_CHAIN_ID
         value: "84532"
-      # Selfie liveness: OFF ("none" is the only adapter). /verify-identity still answers, degraded.
+      # Liveness: OFF unless "aws" (Rekognition Face Liveness, session flow). Unset -> every
+      # liveness route answers degraded and the app skips the face check.
       - key: LIVENESS_PROVIDER
+        sync: false
+      # aws only. Least-privilege IAM: rekognition:CreateFaceLivenessSession and
+      # rekognition:GetFaceLivenessSessionResults, nothing else.
+      - key: AWS_REGION
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      # 0..100, default 90.
+      - key: LIVENESS_MIN_CONFIDENCE
+        sync: false
+      # >= 32 chars, keeps liveness tickets valid across restarts.
+      - key: LIVENESS_TICKET_SECRET
+        sync: false
+      # Paid sessions per UTC day across all callers (default 200; 0 closes the route).
+      - key: LIVENESS_SESSION_DAILY_CAP
+        sync: false
+      # Proxies appending to X-Forwarded-For in front of the api (default 1). Picks the per-IP key.
+      - key: TRUSTED_PROXY_HOPS
         sync: false
       # Delivery channels. Absent -> each channel degrades, /notify returns sent:false.
       - key: KAPSO_API_KEY

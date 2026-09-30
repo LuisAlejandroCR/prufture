@@ -41,6 +41,7 @@ import {
 } from "./assurance.js";
 import { isSessionId } from "./liveness-aws.js";
 import { claimLivenessSession, releaseLivenessSession, rememberLivenessSession } from "./liveness-sessions.js";
+import { clientKey, takeLivenessSessionSlot } from "./liveness-rate-limit.js";
 import {
   POLICY_VERSION,
   enrolCommitment,
@@ -309,6 +310,14 @@ app.post("/liveness-result", async (c) => {
 // directly; the api only opens the session and asks for the verdict. Neither route returns or
 // logs the provider's error text, confidence, images or raw response — result.error stays here.
 app.post("/liveness/session", async (c) => {
+  // Off costs nothing, so it answers before the spend guard and never burns a slot.
+  if (!selectedLivenessSessionPort()) return c.json({ error: "liveness unavailable", degraded: true }, 503);
+  // Each session is billed by the provider: per-IP bucket plus a global daily cap, typed-degraded.
+  const slot = takeLivenessSessionSlot(clientKey(c.req.header("x-forwarded-for")));
+  if (!slot.ok) {
+    c.header("Retry-After", String(slot.retryAfterSec));
+    return c.json({ error: "liveness rate limited", degraded: true }, 429);
+  }
   const r = await createLivenessSession();
   if (!r.available) return c.json({ error: "liveness unavailable", degraded: true }, 503);
   rememberLivenessSession(r.data.sessionId);
