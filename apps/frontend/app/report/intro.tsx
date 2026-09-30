@@ -138,7 +138,6 @@ export default function ReportIntroScreen() {
 
       <View style={styles.facts}>
         <Fact icon="clock" text={`About ${task.minutes} minutes`} />
-        <Fact icon="offline" text="You can finish without signal" tint={color.success} />
       </View>
 
       <Reassurance

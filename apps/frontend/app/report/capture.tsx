@@ -218,6 +218,12 @@ export default function ReportCaptureScreen() {
           {spec?.prompt}
         </Text>
         {spec?.hint ? <Text style={styles.hintLight}>{spec.hint}</Text> : null}
+        {task.peopleRisk ? (
+          <View style={styles.privacyLine}>
+            <Icon name="privacy" size={14} color={cameraColor.hint} />
+            <Text style={styles.hintLight}>No faces, names or documents in the photo.</Text>
+          </View>
+        ) : null}
 
         {error ? <Notice tone="attention" icon="warning">{error}</Notice> : null}
 
@@ -294,6 +300,7 @@ const styles = StyleSheet.create({
   stepLabelLight: { ...type.meta, color: cameraColor.step, fontWeight: "700" },
   instructionLight: { ...type.subtitle, color: cameraColor.text },
   hintLight: { ...type.meta, color: cameraColor.hint },
+  privacyLine: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: space.xs },
   shutter: {
     alignSelf: "center",
     width: 72,
