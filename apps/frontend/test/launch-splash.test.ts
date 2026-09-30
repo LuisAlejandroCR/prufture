@@ -24,9 +24,24 @@ test("LaunchSplash draws the sprout, the wordmark, and honours reduce motion", (
   assert.match(src, /celebrationsAllowed\(\)/);
 });
 
-test("native splash image is the sprout with the wordmark, not the old shield", () => {
-  const svg = read("../assets/splash-icon.svg");
-  assert.match(svg, />Prufture</);
-  assert.match(svg, /M12 12\.3c0-4 2\.6-6\.8 7\.5-7/);
-  assert.doesNotMatch(svg, /polygon/);
+test("native splash is blank, so the small native icon never shows before the big animated mark", () => {
+  const app = JSON.parse(read("../app.json")) as { expo: { plugins: Array<string | [string, { image?: string }]> } };
+  const splash = app.expo.plugins.find((p) => Array.isArray(p) && p[0] === "expo-splash-screen") as [
+    string,
+    { image: string },
+  ];
+  assert.equal(splash[1].image, "./assets/splash-blank.png");
+  const png = readFileSync(fileURLToPath(new URL("../assets/splash-blank.png", import.meta.url)));
+  assert.equal(png.toString("ascii", 12, 16), "IHDR");
+  assert.equal(png[25], 6, "RGBA, so it is fully transparent over the background colour");
+});
+
+test("the animation and the wordmark stay on screen long enough to read", () => {
+  const src = read("../src/components/LaunchSplash.tsx");
+  const ms = [...src.matchAll(/duration: (\d+)|grow\(\w+, (\d+)\)|delay\((\d+)\)/g)].map((m) =>
+    Number(m[1] ?? m[2] ?? m[3]),
+  );
+  const total = ms.reduce((a, b) => a + b, 0);
+  assert.ok(total >= 4000, `launch sequence totals ${total} ms`);
+  assert.match(src, /delay\(1300\)/, "the wordmark holds before the fade");
 });

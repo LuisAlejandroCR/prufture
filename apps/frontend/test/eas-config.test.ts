@@ -196,7 +196,8 @@ test("app.json: adaptive icon, splash and notification assets are wired via plug
   const plugins = app.expo.plugins as Array<string | [string, Record<string, unknown>]>;
   const cfg = (name: string) =>
     (plugins.find((p) => Array.isArray(p) && p[0] === name) as [string, Record<string, unknown>])[1];
-  assert.equal(cfg("expo-splash-screen").image, "./assets/splash-icon.png");
+  // Blank on purpose: the animated LaunchSplash is the only mark, so there is no small icon first.
+  assert.equal(cfg("expo-splash-screen").image, "./assets/splash-blank.png");
   assert.equal(cfg("expo-notifications").icon, "./assets/notification-icon.png");
   assert.equal(cfg("expo-notifications").color, "#C8533A");
 });
@@ -228,6 +229,7 @@ test("store assets exist on disk", () => {
     "icon.png",
     "adaptive-icon.png",
     "splash-icon.png",
+    "splash-blank.png",
     "notification-icon.png",
     "favicon.png",
   ]) {
