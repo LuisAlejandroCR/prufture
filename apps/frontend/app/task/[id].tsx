@@ -1,17 +1,28 @@
 // task/[id].tsx: Task details in the Alternative C evidence style — category header, the approximate
 // area on a map, the numbered evidence to capture, the questions that follow (offline is one meta fact;
 // the people-privacy reminder lives on the camera, where the photo is framed),
-// and one "Start report" action. A reporter near an assignment is told their report counts as a community
-// confirmation (src/confirmations.ts). Nothing is captured here.
+// and one "Start report" action, offered only when the mission is reportable from here (within
+// REPORTABLE_KM, or a self-started report). A far mission is view only; an unknown area can be shared
+// from here. A reporter near an assignment is told their report counts as a community confirmation
+// (src/confirmations.ts). Nothing is captured here.
 
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { StyleSheet, Text, View } from "react-native";
 import { CellMap } from "../../src/components/CellMap";
 import { Icon } from "../../src/components/icons/Icon";
-import { BackLink, EvidenceSteps, InfoCard, Notice, PrimaryButton, Screen, TaskHeader } from "../../src/components/ui";
+import {
+  BackLink,
+  EvidenceSteps,
+  InfoCard,
+  Notice,
+  PrimaryButton,
+  Screen,
+  SecondaryButton,
+  TaskHeader,
+} from "../../src/components/ui";
 import { confirmationInvite } from "../../src/confirmations";
 import { communityProgress } from "../../src/progress";
-import { distanceLabel, getTask } from "../../src/tasks";
+import { REPORTABLE_KM, distanceLabel, getTask, missionReach } from "../../src/tasks";
 import { color, radius, space, type } from "../../src/theme";
 import { useApproxArea } from "../../src/useApproxArea";
 
@@ -19,15 +30,32 @@ export default function TaskDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const task = getTask(id ?? "");
-  const { cell } = useApproxArea();
+  const { cell, requestArea } = useApproxArea();
   const distance = distanceLabel(cell, task);
   const progress = communityProgress(task);
   const invite = confirmationInvite(task, cell);
+  const reach = missionReach(cell, task);
 
   return (
     <Screen
       footer={
-        <PrimaryButton label="Start report" onPress={() => router.push({ pathname: "/report/intro", params: { id: task.id } })} />
+        reach === "near" || reach === "anywhere" ? (
+          <PrimaryButton label="Start report" onPress={() => router.push({ pathname: "/report/intro", params: { id: task.id } })} />
+        ) : reach === "unknown" ? (
+          <>
+            <Notice tone="info" icon="location">
+              {`This mission can be reported from within ${REPORTABLE_KM} km of ${task.area}. Share your approximate area to check.`}
+            </Notice>
+            <PrimaryButton label="Share my approximate area" onPress={() => void requestArea()} />
+          </>
+        ) : (
+          <>
+            <Notice tone="info" icon="location">
+              {`You are too far to report this mission. It can be reported from within ${REPORTABLE_KM} km of ${task.area}.`}
+            </Notice>
+            <SecondaryButton label="Report something near you" icon="report" onPress={() => router.push("/report/pick")} />
+          </>
+        )
       }
     >
       <BackLink label="Missions" onPress={() => router.back()} />

@@ -1,6 +1,7 @@
 // (tabs)/index.tsx: Missions — the reporter's home. Greeting, private contribution strip, resume and
-// waiting-to-send notices, then "Missions near you" as List or Map of approximate areas (never pins),
-// nearest first, plus a way into the full catalog. Home and the old Tasks tab are one screen now.
+// waiting-to-send notices, then "Missions near you" (reportable, within REPORTABLE_KM) as List or Map of
+// approximate areas (never pins), "Missions around the world" (view only), and a way into the full
+// catalog, which works anywhere. Home and the old Tasks tab are one screen now.
 
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -27,7 +28,15 @@ import {
   restoreDraft,
   resumeTarget,
 } from "../../src/report-draft";
-import { EXAMPLE_ASSIGNMENTS, distanceLabel, getTask, listTasks, sortByDistance, type TaskDef } from "../../src/tasks";
+import {
+  EXAMPLE_ASSIGNMENTS,
+  REPORTABLE_KM,
+  distanceLabel,
+  getTask,
+  listTasks,
+  splitMissions,
+  type TaskDef,
+} from "../../src/tasks";
 import { color, radius, shadow, space, target, type } from "../../src/theme";
 import { useApproxArea } from "../../src/useApproxArea";
 import { runPendingSync } from "../../src/useAutoSync";
@@ -46,7 +55,7 @@ export default function MissionsScreen() {
   const [view, setView] = useState<View_>("list");
   const picked = useRef(false);
   const [unfinished, setUnfinished] = useState<{ taskId: string } | null>(null);
-  const missions = useMemo(() => sortByDistance(listTasks(), cell), [cell]);
+  const { near, world } = useMemo(() => splitMissions(listTasks(), cell), [cell]);
 
   const count = useCallback((rows: LocalProof[]) => {
     setPending(rows.filter((r) => r.status === "pending_sync").length);
@@ -130,7 +139,7 @@ export default function MissionsScreen() {
 
   const mapCells: MapCell[] = [
     ...(cell ? [{ key: "me", cell, tone: "self" as const }] : []),
-    ...missions.map((t) => ({ key: t.id, cell: t.cell, title: t.title, tone: "task" as const, onPress: () => open(t.id) })),
+    ...[...near, ...world].map((t) => ({ key: t.id, cell: t.cell, title: t.title, tone: "task" as const, onPress: () => open(t.id) })),
   ];
 
   return (
@@ -238,12 +247,44 @@ export default function MissionsScreen() {
       )}
 
       <View style={{ gap: space.sm }}>
-        {missions.map((t, i) => (
+        {near.map((t, i) => (
           <Appear key={t.id} index={i}>
             <MissionRow task={t} place={missionPlace(t, distanceLabel(cell, t))} onPress={() => open(t.id)} />
           </Appear>
         ))}
+        {near.length === 0 ? (
+          <Text style={styles.rowMeta}>
+            {cell
+              ? `No missions within ${REPORTABLE_KM} km of you yet. You can still report something else below.`
+              : "Share your approximate area to see which missions you can report."}
+          </Text>
+        ) : null}
       </View>
+
+      {world.length > 0 ? (
+        <>
+          <View style={{ gap: space.xs }}>
+            <Text style={styles.section} accessibilityRole="header">
+              Missions around the world
+            </Text>
+            <Text style={styles.rowMeta}>
+              {`Reported only by people within ${REPORTABLE_KM} km. Open one to see what the programme needs.`}
+            </Text>
+          </View>
+          <View style={{ gap: space.sm }}>
+            {world.map((t, i) => (
+              <Appear key={t.id} index={near.length + i}>
+                <MissionRow
+                  task={t}
+                  place={missionPlace(t, distanceLabel(cell, t))}
+                  note={cell ? "Too far to report from here" : "Share your area to report"}
+                  onPress={() => open(t.id)}
+                />
+              </Appear>
+            ))}
+          </View>
+        </>
+      ) : null}
 
       <Pressable
         onPress={() => router.push("/report/pick")}
@@ -264,13 +305,24 @@ export default function MissionsScreen() {
   );
 }
 
-function MissionRow({ task, place, onPress }: { task: TaskDef; place: string; onPress: () => void }) {
+function MissionRow({
+  task,
+  place,
+  note,
+  onPress,
+}: {
+  task: TaskDef;
+  place: string;
+  /** View-only missions say why they cannot be reported from here. */
+  note?: string;
+  onPress: () => void;
+}) {
   const question = missionQuestion(task);
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`${task.title}. ${question}. ${place}.${task.progressLabel ? ` ${task.progressLabel}.` : ""}`}
+      accessibilityLabel={`${task.title}. ${question}. ${place}.${task.progressLabel ? ` ${task.progressLabel}.` : ""}${note ? ` ${note}.` : ""}`}
       style={({ pressed }) => [styles.row, pressed && styles.pressed]}
     >
       <CategoryBadge category={task.category} />
@@ -283,6 +335,7 @@ function MissionRow({ task, place, onPress }: { task: TaskDef; place: string; on
           <Icon name="location" size={14} color={color.muted} />
           <Text style={styles.rowMeta}>{place}</Text>
         </View>
+        {note ? <Text style={styles.rowNote}>{note}</Text> : null}
       </View>
       <Icon name="chevron" size={18} color={color.faint} />
     </Pressable>
@@ -442,6 +495,7 @@ const styles = StyleSheet.create({
   },
   rowTitle: { ...type.subtitle, color: color.text },
   rowMeta: { ...type.meta, color: color.muted },
+  rowNote: { ...type.meta, color: color.text, fontWeight: "600" },
   place: { flexDirection: "row", alignItems: "center", gap: space.xs, marginTop: 2 },
   other: {
     flexDirection: "row",
