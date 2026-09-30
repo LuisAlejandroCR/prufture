@@ -13,6 +13,8 @@ import {
   readPersistedPhotoBytes,
 } from "./draft-store";
 import { queueOptInEvidence } from "./evidence-share";
+import { loadLivenessPass } from "./face-liveness";
+import { livenessProvider } from "./flags";
 import { attachLiveness } from "./liveness";
 import { sanitizeNote, saveLocalNote } from "./report-note";
 import { attachPreciseLocation } from "./sync";
@@ -278,6 +280,11 @@ export async function saveDraft(): Promise<SaveResult> {
     const apiUrl = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8787";
     if (draft.livenessChecked && draft.livenessTicket) {
       void attachLiveness(apiUrl, firstProofHash, draft.livenessTicket);
+    } else if (livenessProvider() === "aws") {
+      // The one-time face check: its pass rides on every report while it is still usable. No pass,
+      // no attach — verifiedPerson just stays null, and the report is never held back for it.
+      const pass = await loadLivenessPass();
+      if (pass) void attachLiveness(apiUrl, firstProofHash, pass.ticket);
     }
     // The signed payload stays coarse-only. The encrypted precise point is sent
     // separately as an opaque blob, keyed to this proofHash. Fire-and-forget: it

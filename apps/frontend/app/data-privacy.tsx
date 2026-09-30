@@ -5,6 +5,7 @@ import { useRouter } from "expo-router";
 import { StyleSheet, Text, View } from "react-native";
 import { Icon, type IconName } from "../src/components/icons/Icon";
 import { BackLink, Notice, Screen, ScreenTitle } from "../src/components/ui";
+import { livenessProvider } from "../src/flags";
 import { color, radius, space, type } from "../src/theme";
 
 const ITEMS: { icon: IconName; title: string; detail: string }[] = [
@@ -15,6 +16,14 @@ const ITEMS: { icon: IconName; title: string; detail: string }[] = [
   { icon: "offline", title: "Saved locally when offline", detail: "Unsent reports wait on this phone and retry when a connection returns." },
 ];
 
+// Listed only in builds where the one-time face check exists; a build without it says nothing about it.
+const FACE_CHECK = {
+  icon: "shield" as IconName,
+  title: "Face check, only if you choose",
+  detail:
+    "The optional live-person check is processed by Amazon Web Services (AWS). A short video of your face goes from this phone to AWS, which checks whether a live person was there. No image of your face is stored by Prufture or returned to this phone, and Prufture keeps only a pass or fail. It does not identify you, and reporting never depends on it.",
+};
+
 export default function DataPrivacyScreen() {
   const router = useRouter();
   return (
@@ -23,7 +32,7 @@ export default function DataPrivacyScreen() {
       <ScreenTitle hint="A clear summary of the data used by a report.">Data and privacy</ScreenTitle>
       <Notice tone="info" icon="shield">Public reports contain a proof reference, task, approximate area, and capture time. Never your identity.</Notice>
       <View style={styles.list}>
-        {ITEMS.map((item) => (
+        {(livenessProvider() === "aws" ? [...ITEMS, FACE_CHECK] : ITEMS).map((item) => (
           <View key={item.title} style={styles.item}>
             <View style={styles.icon}><Icon name={item.icon} size={20} color={color.primary} /></View>
             <View style={styles.copy}>
