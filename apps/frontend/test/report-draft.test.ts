@@ -14,6 +14,7 @@ import {
   resumeTarget,
   saveDraft,
   setArea,
+  setLiveness,
   startDraft,
 } from "../src/report-draft.js";
 import {
@@ -194,4 +195,39 @@ test("resumeTarget: routes to the first incomplete step, review when complete", 
 
   const located = { ...answered, geohash: "abcde" };
   assert.equal(resumeTarget(located, task).pathname, "/report/review");
+});
+
+test("saveDraft: the face check verdict is attached to every photo of the report", async () => {
+  // The status screen's "See public record" opens the newest photo, so a verdict on the first
+  // photo alone left the shared link with no face check.
+  let n = 0;
+  __setCaptureProofForTest((async (input: { mediaBytes: Uint8Array }) => {
+    n += 1;
+    return { proofHash: `hash-${n}`, mediaBytes: input.mediaBytes };
+  }) as never);
+  const posted: { proofHash: string; ticket: string }[] = [];
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = (async (url: string, init?: RequestInit) => {
+    if (String(url).endsWith("/liveness-result")) posted.push(JSON.parse(String(init?.body)));
+    return new Response("{}", { status: 200 });
+  }) as typeof fetch;
+
+  try {
+    startDraft("solar-panel-install");
+    addPhoto({ uri: "file:///a.jpg", bytes: new Uint8Array([1]), stepIndex: 0 });
+    addPhoto({ uri: "file:///b.jpg", bytes: new Uint8Array([2]), stepIndex: 1 });
+    addPhoto({ uri: "file:///c.jpg", bytes: new Uint8Array([3]), stepIndex: 2 });
+    setLiveness(true, true, false, "ticket-1");
+
+    await saveDraft();
+    await new Promise((resolve) => setImmediate(resolve));
+
+    assert.deepEqual(
+      posted.map((p) => p.proofHash).sort(),
+      ["hash-1", "hash-2", "hash-3"],
+    );
+    assert.ok(posted.every((p) => p.ticket === "ticket-1"));
+  } finally {
+    globalThis.fetch = realFetch;
+  }
 });
