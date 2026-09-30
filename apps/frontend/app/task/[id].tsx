@@ -1,5 +1,6 @@
 // task/[id].tsx: Task details in the Alternative C evidence style — category header, the approximate
-// area on a map, the numbered evidence to capture, the questions that follow, privacy and offline notes,
+// area on a map, the numbered evidence to capture, the questions that follow (offline is one meta fact;
+// the people-privacy reminder lives on the camera, where the photo is framed),
 // and one "Start report" action. A reporter near an assignment is told their report counts as a community
 // confirmation (src/confirmations.ts). Nothing is captured here.
 
@@ -37,6 +38,8 @@ export default function TaskDetailsScreen() {
         <Text style={styles.metaText}>{distance ? `${task.area} · ${distance}` : task.area}</Text>
         <Icon name="clock" size={15} color={color.muted} />
         <Text style={styles.metaText}>About {task.minutes} min</Text>
+        <Icon name="offline" size={15} color={color.muted} />
+        <Text style={styles.metaText}>Works offline</Text>
       </View>
 
       {task.cell ? (
@@ -85,19 +88,6 @@ export default function TaskDetailsScreen() {
         />
       ) : null}
 
-      {task.peopleRisk ? (
-        <Notice tone="attention" icon="privacy">
-          Protect people's privacy. Avoid faces, names, identity documents and private records.
-        </Notice>
-      ) : null}
-
-      <InfoCard
-        icon="offline"
-        tint={color.success}
-        soft={color.successSoft}
-        title="Works offline"
-        body="You can finish this report without signal. It sends when you are back online."
-      />
     </Screen>
   );
 }
