@@ -178,7 +178,7 @@ export default function PaywallScreen() {
             <Text style={styles.fundsTitle}>What the plan includes</Text>
             <Text style={styles.fundsBody}>
               Coordinator review: every report your programme received, an accepted or rejected
-              verdict on each, and a CSV export. Reporting stays free for everyone.
+              verdict on each, and a summary you can email. Reporting stays free for everyone.
             </Text>
           </Card>
         </View>

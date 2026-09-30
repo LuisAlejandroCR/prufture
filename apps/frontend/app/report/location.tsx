@@ -1,6 +1,7 @@
 // report/location.tsx: confirm where the activity happened; mandatory, no lat/lng in the UI. Produces
 // a coarse 5-char cell (plaintext, signed, shown back) and a 9-char precise cell sealed on-device to
-// the programme key (src/location-seal.ts) — never signed, never on-chain.
+// the programme key (src/location-seal.ts) — never signed, never on-chain. An assignment more than
+// REPORTABLE_KM away is refused here: the area is not saved and the flow cannot continue.
 
 import * as Location from "expo-location";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -13,7 +14,7 @@ import { identityStepEnabled } from "../../src/flags";
 import { encodeGeohash } from "../../src/geohash";
 import { sealPrecise } from "../../src/location-seal";
 import { ensureDraft, setArea, setPreciseLocation } from "../../src/report-draft";
-import { getTask } from "../../src/tasks";
+import { REPORTABLE_KM, getTask, missionReach } from "../../src/tasks";
 import { color, space, type } from "../../src/theme";
 import { areaNameForCell, cityCentreForCell } from "../../src/useApproxArea";
 
@@ -68,14 +69,21 @@ export default function ReportLocationScreen() {
       // assignment's area — or "Near you" for a self-started report — is kept instead.
       const name = await areaNameForCell(coarse);
       setAreaName(name);
-      setArea(coarse, name ?? task.area);
-      setPreciseLocation(sealPrecisePoint(latitude, longitude, Math.floor(pos.timestamp ?? Date.now())));
+      // Too far from the assignment: nothing is written to the draft, so no route (including a
+      // Back to Review) can send a report from outside the mission's reach.
+      if (missionReach(coarse, task) !== "far") {
+        setArea(coarse, name ?? task.area);
+        setPreciseLocation(sealPrecisePoint(latitude, longitude, Math.floor(pos.timestamp ?? Date.now())));
+      }
       setState("ready");
       cityCentreForCell(coarse).then(setCityCentre).catch(() => undefined);
     } catch {
       setState("error");
     }
-  }, [task.area]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [task.area, task.cell]);
+
+  const tooFar = state === "ready" && missionReach(cell, task) === "far";
 
   useEffect(() => {
     detect();
@@ -90,7 +98,15 @@ export default function ReportLocationScreen() {
   return (
     <Screen
       footer={
-        state === "ready" ? (
+        tooFar ? (
+          <>
+            <Notice tone="warning" icon="location">
+              {`You are more than ${REPORTABLE_KM} km from ${task.area}, so this mission cannot be reported from here. You can report something near you instead.`}
+            </Notice>
+            <PrimaryButton label="Report something near you" onPress={() => router.replace("/report/pick")} />
+            <SecondaryButton label="Try again" icon="retry" onPress={detect} />
+          </>
+        ) : state === "ready" ? (
           <>
             <PrimaryButton label="Use this area" onPress={useArea} />
             <SecondaryButton label="Try again" icon="retry" onPress={detect} />
