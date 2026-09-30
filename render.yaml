@@ -79,3 +79,12 @@ services:
         value: https://api.resend.com
       - key: TELEGRAM_BOT_TOKEN
         sync: false
+      # Coordinator plan: server-side RevenueCat check behind /coordinator/*. Absent -> every
+      # coordinator call answers 503 and the app keeps the review tools locked. GET /health reports
+      # whether both are set (never their values).
+      - key: REVENUECAT_SECRET_KEY
+        sync: false
+      - key: REVENUECAT_PROJECT_ID
+        sync: false
+      - key: REVENUECAT_API_BASE
+        value: https://api.revenuecat.com/v2

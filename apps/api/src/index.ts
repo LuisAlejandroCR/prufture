@@ -127,7 +127,15 @@ app.use("*", async (c, next) => {
   return bodyLimit({ maxSize: MAX_BODY_BYTES, onError: tooLarge })(c, next);
 });
 
-app.get("/health", (c) => c.json({ ok: true, chainId: env.chainId }));
+// `coordinatorBilling` says only whether the RevenueCat secret and project are set, so a deploy can
+// be checked before App Review opens the coordinator screen. It never echoes either value.
+app.get("/health", (c) =>
+  c.json({
+    ok: true,
+    chainId: env.chainId,
+    coordinatorBilling: Boolean(env.revenuecatSecretKey && env.revenuecatProjectId),
+  }),
+);
 
 app.post("/sync", async (c) => {
   // `reportId` is an OPTIONAL top-level field (NOT inside SignedProof, NOT signed) that groups

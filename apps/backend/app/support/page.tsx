@@ -107,6 +107,12 @@ export default function SupportPage() {
           rejected verdict, and data export. Reporters never see a paywall.
         </p>
 
+        <h3>Where do I find it?</h3>
+        <p>
+          In the app, open Me, then Coordinator review. Without a plan it shows what the plan includes
+          and a See plans button with the monthly and annual prices.
+        </p>
+
         <h3>How do I cancel or get a refund?</h3>
         <p>
           Subscriptions are billed by Apple or Google, so cancellation and refunds are handled there —
@@ -116,7 +122,7 @@ export default function SupportPage() {
 
         <h3>I paid but the review tools are still locked.</h3>
         <p>
-          Restore purchases from the subscription screen. If it stays locked, the entitlement check may
+          Open Me, then Coordinator review, then See plans, and tap Restore purchases. If it stays locked, the entitlement check may
           be temporarily unreachable — the app deliberately keeps the tools locked rather than guessing.
           Try again shortly, and contact us if it persists.
         </p>

@@ -17,6 +17,9 @@ import {
   getOfferings,
   purchasePackage,
   restorePurchases,
+  presentOfferCodeSheet,
+  getAppUserId,
+  manageSubscriptionsUrl,
 } from "../src/purchases";
 
 const monthlyPkg = { identifier: "monthly", product: { priceString: "$4.99" } } as any;
@@ -133,6 +136,19 @@ test("restorePurchases: store error maps to available:false", async () => {
   });
   const result = await restorePurchases();
   assert.equal(result.available, false);
+});
+
+test("presentOfferCodeSheet: opens Apple's sheet; an SDK error maps to available:false", async () => {
+  let opened = 0;
+  install({ presentCodeRedemptionSheet: async () => void opened++ } as Partial<typeof Purchases>);
+  assert.equal((await presentOfferCodeSheet()).available, true);
+  assert.equal(opened, 1);
+  install({
+    presentCodeRedemptionSheet: async () => {
+      throw new Error("not configured");
+    },
+  } as Partial<typeof Purchases>);
+  assert.equal((await presentOfferCodeSheet()).available, false);
 });
 
 test("getEntitlement: reads coordinator_pro when active", async () => {
@@ -330,4 +346,22 @@ test("after a failed configure, a later successful configure still works", async
     console.warn = realWarn;
   }
   assert.equal(calls, 2, "a failed attempt must not latch the configure-once guard");
+});
+
+test("getAppUserId returns the SDK's anonymous id and degrades when the SDK fails", async () => {
+  install({ getAppUserID: async () => "$RCAnonymousID:abc" } as Partial<typeof Purchases>);
+  const result = await getAppUserId();
+  assert.equal(result.available, true);
+  assert.equal(result.data, "$RCAnonymousID:abc");
+  install({
+    getAppUserID: async () => {
+      throw new Error("not configured");
+    },
+  } as Partial<typeof Purchases>);
+  assert.equal((await getAppUserId()).available, false);
+});
+
+test("manageSubscriptionsUrl points at the store the build runs on", () => {
+  assert.match(manageSubscriptionsUrl("ios"), /^https:\/\/apps\.apple\.com\//);
+  assert.match(manageSubscriptionsUrl("android"), /^https:\/\/play\.google\.com\//);
 });

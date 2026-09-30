@@ -141,6 +141,21 @@ export async function restorePurchases(): Promise<ExternalResult<{ entitled: boo
   }
 }
 
+/**
+ * iOS only: open Apple's offer-code sheet so a subscription offer code (e.g. one handed to a reviewer
+ * or judge) can be redeemed inside the app. Apple does not report the outcome here; the entitlement
+ * arrives through RevenueCat afterwards, so callers re-check it (or the user taps Restore).
+ */
+export async function presentOfferCodeSheet(): Promise<ExternalResult<null>> {
+  try {
+    const RC = await loadPurchases();
+    await RC.presentCodeRedemptionSheet();
+    return ok(SOURCE, null);
+  } catch (e) {
+    return unavailable(SOURCE, e);
+  }
+}
+
 export interface Entitlement {
   entitled: boolean;
   willRenew: boolean;
@@ -160,6 +175,31 @@ export async function getEntitlement(): Promise<ExternalResult<Entitlement>> {
   } catch (e) {
     return unavailable(SOURCE, e);
   }
+}
+
+/**
+ * The SDK's anonymous app user id (`$RCAnonymousID:…`), sent as `x-app-user-id` so the api can run
+ * its own server-side entitlement check. Never an email, phone or device id.
+ */
+export async function getAppUserId(): Promise<ExternalResult<string>> {
+  try {
+    const RC = await loadPurchases();
+    const id = await RC.getAppUserID();
+    if (!id) return unavailable(SOURCE, "no app user id");
+    return ok(SOURCE, id);
+  } catch (e) {
+    return unavailable(SOURCE, e);
+  }
+}
+
+/** Apple's standard EULA, which applies because the app ships no custom licence agreement. */
+export const TERMS_OF_USE_URL = "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/";
+
+/** Where a subscriber manages or cancels the plan; the app never cancels on their behalf. */
+export function manageSubscriptionsUrl(platform: string): string {
+  return platform === "android"
+    ? "https://play.google.com/store/account/subscriptions"
+    : "https://apps.apple.com/account/subscriptions";
 }
 
 function isEntitled(customerInfo: CustomerInfo): boolean {
