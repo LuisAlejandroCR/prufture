@@ -3,15 +3,17 @@
 // collapsed. Coarse region only — no reporter identity, exact location or private media.
 
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { assuranceFromProof, faceCheckLabel, isNeutralAssurance, passLabel } from "../../../lib/assurance";
 import { fetchConfirmations, fetchProof } from "../../../lib/api";
 import { nearbyReportCount, reportChecks, stageFor, type Stage } from "../../../lib/confirmations";
 import { activityLabel, programmeName } from "../../../lib/dashboard";
 import { Icon, SiteFooter, SiteHeader, type IconName } from "../../_components/brand";
 import { qrPath } from "../../../lib/qr";
+import { verifyBase } from "../../../lib/site";
 import { ShareLink } from "./ShareLink";
 
-const VERIFY_BASE = process.env.NEXT_PUBLIC_VERIFY_BASE_URL ?? "http://localhost:3000";
+const VERIFY_BASE = verifyBase();
 
 /** Pass-confirmed reports near this one, this one included; null when the confirmations route is down. */
 async function nearbyFor(proof: { proofHash: string; geohashRegion: string }): Promise<number | null> {
@@ -96,16 +98,8 @@ export default async function VerifyPage({ params }: { params: Promise<{ hash: s
     );
   }
 
-  if (result.state === "not_found") {
-    return (
-      <Shell>
-        <StateCard icon="reports" title="Report not found">
-          No report is on file for this reference yet. If a reporter just finished it, the phone may
-          not have had signal to send it.
-        </StateCard>
-      </Shell>
-    );
-  }
+  // A real 404 (not-found.tsx), so a mistyped or stale link is not indexed as a report page.
+  if (result.state === "not_found") notFound();
 
   const { proof } = result;
   const reports = await fetchConfirmations(proof.proofHash);

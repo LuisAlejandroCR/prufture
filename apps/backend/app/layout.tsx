@@ -3,9 +3,8 @@
 
 import type { ReactNode } from "react";
 import "./globals.css";
-
 // Absolute base for link previews (app/opengraph-image.png); override per deploy with NEXT_PUBLIC_SITE_URL.
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, "") || "https://prufture.voltarut.com";
+import { SITE_URL } from "../lib/site";
 
 export const metadata = {
   metadataBase: new URL(SITE_URL),
