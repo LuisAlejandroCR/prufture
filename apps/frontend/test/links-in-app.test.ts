@@ -42,7 +42,7 @@ test("the support contact links are exact", () => {
   assert.equal(whatsappUrl(), "https://wa.me/@aleo._.o");
   assert.equal(whatsappUrl("@AleO._.O"), "https://wa.me/@aleo._.o", "usernames are lowercase");
   // A number still works, digits only.
-  assert.equal(whatsappUrl("+57 301 393 5156", "Hi"), "https://wa.me/573013935156?text=Hi");
+  assert.equal(whatsappUrl("+57 300 000 0001", "Hi"), "https://wa.me/573000000001?text=Hi");
   assert.equal(mailtoUrl(), "mailto:luisalejandrocardenasr@gmail.com?subject=Prufture%20support");
 });
 
