@@ -49,10 +49,10 @@ export default async function ExportsPage() {
           <h3>
             Signed evidence bundle <span className="pill neutral">Planned</span>
           </h3>
-          <p className="muted">A per-report evidence package is a planned feature.</p>
-          <button type="button" className="btn secondary" disabled>
-            Not available in this demo
-          </button>
+          <p className="muted">
+            A per-report evidence package is a planned feature. Today, a coordinator exports the inbox
+            as CSV and opens sealed evidence photos from the coordinator inbox in the Prufture app.
+          </p>
         </article>
       </div>
     </section>

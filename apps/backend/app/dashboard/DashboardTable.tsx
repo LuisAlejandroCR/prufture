@@ -13,6 +13,7 @@ import {
   activityLabel,
   applyReportFilters,
   byNewest,
+  parseReportFilters,
   programmeName,
   relativeDay,
   reportsQuery,
@@ -25,6 +26,7 @@ import {
 } from "../../lib/dashboard";
 import { Icon } from "../_components/brand";
 import { downloadCsv } from "./exports/ExportButton";
+import { RowLink } from "./RowLink";
 import { AreaChip, StatusPill } from "./ui";
 import { placeLabel } from "../../lib/places";
 
@@ -101,7 +103,12 @@ export function DashboardTable({
     return m;
   }, [proofs]);
 
-  const [f, setF] = useState<Required<ReportFilters>>(initial);
+  // The address bar is the source of truth for the view. On the server render, and on a fresh
+  // load, it matches `initial`; when Back restores this page from the router cache, `initial` is
+  // the stale first render while the URL still carries the filters the user had set.
+  const fromUrl = (): Required<ReportFilters> =>
+    compact || typeof window === "undefined" ? initial : parseReportFilters(new URLSearchParams(window.location.search));
+  const [f, setF] = useState<Required<ReportFilters>>(fromUrl);
   const [shown, setShown] = useState(PAGE);
   const search = useRef<HTMLInputElement>(null);
 
@@ -110,12 +117,24 @@ export function DashboardTable({
     setShown(PAGE);
   };
 
-  // Mirror filters into the URL without a navigation, so the server page is not re-fetched.
+  // A navigation to this page while it is open (the sidebar's Reports link, an alert, a metric
+  // tile) brings a new `initial`; without this the table would keep the previous view's filters
+  // under the new URL.
+  useEffect(() => {
+    setF(fromUrl());
+    setShown(PAGE);
+    // Deliberately keyed on `initial` alone: it changes once per navigation, never per keystroke.
+  }, [initial]);
+
+  // Mirror filters into the URL without a navigation, so the server page is not re-fetched. The
+  // state argument must be null, not window.history.state: Next.js only syncs its router with a
+  // replaceState it does not recognise as its own, and an unsynced router puts the old URL back on
+  // the next navigation, so Back from a report would lose the filters.
   useEffect(() => {
     if (compact) return;
     const next = `${window.location.pathname}${reportsQuery(f)}`;
     if (next !== `${window.location.pathname}${window.location.search}`) {
-      window.history.replaceState(window.history.state, "", next);
+      window.history.replaceState(null, "", next);
     }
   }, [f, compact]);
 
@@ -263,8 +282,9 @@ export function DashboardTable({
           <tbody>
             {visible.map((p) => {
               const label = activityLabel(p.taskId);
+              const href = `/dashboard/reports/${p.proofHash}${viewQuery}`;
               return (
-                <tr key={p.proofHash}>
+                <RowLink key={p.proofHash} href={href}>
                   <td>
                     <div className="cell-activity">
                       <span className="activity-avatar" aria-hidden>
@@ -290,11 +310,11 @@ export function DashboardTable({
                     <StatusPill status={reviewStatus(p)} />
                   </td>
                   <td>
-                    <Link className="rowlink" href={`/dashboard/reports/${p.proofHash}${viewQuery}`} aria-label={`Open ${label}`}>
+                    <Link className="rowlink" href={href} aria-label={`Open ${label}`}>
                       Open <Icon name="arrow" size={15} />
                     </Link>
                   </td>
-                </tr>
+                </RowLink>
               );
             })}
             {rows.length === 0 ? (

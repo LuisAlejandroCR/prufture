@@ -199,6 +199,12 @@ table.data th { text-align: left; border-bottom: 2px solid var(--border); paddin
 table.data td { border-bottom: 1px solid var(--border); padding: var(--sp-3); }
 table.data tr:last-child td { border-bottom: 0; }
 table.data tbody tr:hover { background: var(--surface-2); }
+.fact-link { color: inherit; text-decoration: underline; text-decoration-color: var(--brand-line); text-underline-offset: 3px; }
+.fact-link:hover { color: var(--brand); }
+.report-action-links { display: grid; gap: 8px; }
+.report-action-links .btn { justify-content: flex-start; }
+/* RowLink: the whole row opens its report or area, not only the small link at its end. */
+table.data tbody tr.is-rowlink { cursor: pointer; }
 
 .filters { display: flex; gap: var(--sp-3); flex-wrap: wrap; align-items: flex-end; margin: var(--sp-4) 0; }
 .filters label { display: grid; gap: var(--sp-1); font-size: 0.8rem; color: var(--text-muted); }
@@ -281,6 +287,8 @@ ul.plain li { padding-left: var(--sp-1); }
 }
 .cov-map-loading { display: grid; place-items: center; color: var(--text-muted); font-size: 0.9rem; }
 .cov-map .leaflet-container { background: var(--surface-2); font: inherit; }
+/* A mouse click on a zone should not leave a focus box around the SVG shape; keyboard focus keeps it. */
+.cov-map .leaflet-interactive:focus:not(:focus-visible) { outline: none; }
 .cov-legend { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; font-size: 0.8rem; color: var(--text-muted); }
 .cov-legend-swatch { width: 22px; height: 12px; border-radius: 2px; display: inline-block; border: 1px solid var(--border); }
 .cov-legend-label { white-space: nowrap; }
@@ -711,6 +719,7 @@ details.tech { border-radius: var(--radius-md); }
 .activity-col { position: relative; height: 100%; display: flex; align-items: flex-end; justify-content: center; }
 .activity-bar { width: 100%; max-width: 26px; background: var(--brand); border-radius: 4px 4px 0 0; min-height: 2px; opacity: .85; transition: opacity .15s ease; }
 .activity-bar[data-zero] { background: var(--border); opacity: 1; }
+.activity-col.is-link { color: inherit; text-decoration: none; cursor: pointer; }
 .activity-col:hover .activity-bar { opacity: 1; }
 .activity-col:hover::before { content: ""; position: absolute; inset: 0 -2px; background: var(--brand-soft); border-radius: 6px; z-index: -1; }
 .activity-tip {
@@ -921,7 +930,8 @@ a.pager-btn:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px
 /* Coverage map popup. */
 .cov-pop { display: grid; gap: 4px; font-family: var(--font); font-size: .85rem; }
 .cov-pop span { color: #806f5c; }
-.cov-pop a { color: #a8402b; font-weight: 650; text-decoration: none; }
+.cov-pop a { color: #a8402b; font-weight: 650; text-decoration: none; display: inline-block; padding: 6px 0 2px; }
+.cov-pop a:hover { text-decoration: underline; }
 
 /* /verify share card with QR. */
 .share-grid { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 24px; align-items: start; }
@@ -990,7 +1000,9 @@ a.pager-btn:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px
   .dash-grid, .report-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 960px) {
-  .dash { grid-template-columns: 1fr; background: var(--bg); }
+  /* minmax(0, 1fr), not 1fr: a wide table must scroll inside .table-scroll instead of widening
+     the column past the screen. align-content: start keeps the nav row from stretching on short pages. */
+  .dash { grid-template-columns: minmax(0, 1fr); align-content: start; background: var(--bg); }
   .dash-side {
     position: static; height: auto; flex-direction: row; align-items: center; padding: 10px 14px;
     gap: 14px; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--border);
