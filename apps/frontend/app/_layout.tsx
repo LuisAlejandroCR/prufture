@@ -14,8 +14,8 @@ import { LaunchSplash } from "../src/components/LaunchSplash";
 import { announce, connectivityChange, syncResult } from "../src/announce";
 import { color } from "../src/theme";
 import { useOnline } from "../src/useOnline";
-import { API_URL, useAutoSync } from "../src/useAutoSync";
-import { notifyReportConfirmed, registerForPush } from "../src/notifications";
+import { useAutoSync } from "../src/useAutoSync";
+import { notifyReportConfirmed, startPush } from "../src/notifications";
 import { configurePurchasesForPlatform } from "../src/purchases";
 
 // Keep the native splash until the animated one has painted. Never throws (Expo Go, tests).
@@ -28,9 +28,9 @@ export default function RootLayout() {
   }, []);
   const done = useCallback(() => setLaunching(false), []);
 
-  // Anonymous push registration: no permission -> the app is unchanged, just no push.
+  // OneSignal push, anonymous and consent-first: no permission -> the app is unchanged, just no push.
   useEffect(() => {
-    void registerForPush(API_URL);
+    void startPush();
   }, []);
 
   // Configure RevenueCat once per launch with the platform's PUBLIC key. Without this the SDK

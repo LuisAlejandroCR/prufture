@@ -192,8 +192,11 @@ export default function PrivacyPage() {
 
         <h2>Notifications</h2>
         <p>
-          If you allow notifications, the app registers a push token against a randomly generated device
-          identifier. It is not connected to your name, phone number or report history.
+          Notifications go through OneSignal, a push service. Only if you allow notifications does
+          OneSignal receive a push address for your phone and the basic device details it needs to
+          deliver them; never your name, phone number, location or reports. The app does not sign you
+          in to OneSignal or label your phone. Notices go to everyone who allowed them, for example when
+          a new round starts, and none is about a specific report.
         </p>
 
         <h2>Subscriptions</h2>

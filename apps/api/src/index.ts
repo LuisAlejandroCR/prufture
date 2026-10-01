@@ -30,7 +30,7 @@ import {
   setVerifiedPerson,
   upsertProof,
 } from "./store.js";
-import { pushRegistrationCount, registerPushToken } from "./push-store.js";
+import { pushNoticesConfigured, sendProgrammeNotice } from "./onesignal.js";
 import { attestOnce } from "./relayer.js";
 import { taskReports } from "./confirmations.js";
 import {
@@ -150,6 +150,8 @@ app.get("/health", (c) =>
     programmeStaff: (process.env.PROGRAMME_STAFF_APP_USER_IDS ?? "").split(",").some((s: string) => s.trim() !== ""),
     // REQUIRE_EVIDENCE_TOKEN: public writes without the syncing phone's token are refused.
     strictEvidenceToken: env.requireEvidenceToken,
+    // OneSignal programme notices are configured (ONESIGNAL_APP_ID and ONESIGNAL_REST_API_KEY); never the key.
+    pushNotices: pushNoticesConfigured(),
   }),
 );
 
@@ -475,16 +477,6 @@ app.post("/evidence-requests", async (c) => {
   return c.json({ requested: [...new Set(requested)] }, 200);
 });
 
-app.post("/register-push", async (c) => {
-  const body = await readJsonObject(c);
-  if (!body) return c.json({ error: "invalid json" }, 400);
-  // proofOwnerRef is intentionally ignored: tokens are never linked to a proof or an identity.
-  if (!registerPushToken(body.deviceId, body.token)) {
-    return c.json({ error: "invalid deviceId or token" }, 400);
-  }
-  return c.json({ registered: true, count: pushRegistrationCount() }, 200);
-});
-
 // REGION_PREFIX_LEN: how many geohash chars leave the api. 5 ≈ ~5 km cell, never exact GPS.
 // /sync now rejects anything finer, so new entries are already coarse; this slice stays as
 // defence in depth for entries stored before that check existed.
@@ -657,6 +649,12 @@ app.post("/coordinator/personhood/epoch", async (c) => {
   const group = getPersonhoodGroup(body.programmeId);
   if (!group) return c.json({ error: "unknown programme" }, 404);
   putPersonhoodGroup(body.programmeId, { ...group, epoch: group.epoch + 1 });
+  // Tell subscribed reporters they can confirm again. Fire-and-forget: a slow or failed notice never
+  // holds or fails the round, and it names no programme or report.
+  void sendProgrammeNotice({
+    heading: "A new round has started",
+    body: "You can confirm each activity once more. Open Prufture to see missions near you.",
+  });
   return c.json({ epoch: group.epoch + 1 }, 200);
 });
 

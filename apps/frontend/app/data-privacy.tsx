@@ -7,6 +7,7 @@ import { StyleSheet, Text, View } from "react-native";
 import { Icon, type IconName } from "../src/components/icons/Icon";
 import { BackLink, Notice, Screen, ScreenTitle } from "../src/components/ui";
 import { livenessProvider, personhoodProvider } from "../src/flags";
+import { oneSignalAppId } from "../src/push";
 import { color, radius, space, type } from "../src/theme";
 
 const ITEMS: { icon: IconName; title: string; detail: string }[] = [
@@ -31,12 +32,21 @@ const FACE_CHECK = {
     "The optional live-person check is processed by Amazon Web Services (AWS). A short video of your face goes from this phone to AWS, which checks whether a live person was there. No image of your face is stored by Prufture or returned to this phone, and Prufture keeps only a pass or fail. It does not identify you, and reporting never depends on it.",
 };
 
+// Listed only in builds with OneSignal configured.
+const NOTIFICATIONS = {
+  icon: "updates" as IconName,
+  title: "Notifications, only if you allow them",
+  detail:
+    "Notifications go through OneSignal, a push service. Only if you allow them, OneSignal receives a push address for this phone and basic device details it needs to deliver them; never your name, phone number, location or reports. Notices go to everyone who allowed them, for example when a new round starts, and none is about one of your reports.",
+};
+
 export default function DataPrivacyScreen() {
   const router = useRouter();
   const items = [
     ...ITEMS,
     ...(personhoodProvider() === "semaphore" ? [PASS_ITEM] : []),
     ...(livenessProvider() === "aws" ? [FACE_CHECK] : []),
+    ...(oneSignalAppId() ? [NOTIFICATIONS] : []),
   ];
   return (
     <Screen>

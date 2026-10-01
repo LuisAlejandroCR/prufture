@@ -216,6 +216,7 @@ test("app.json: plugins include the native modules we ship and nothing we do not
     "expo-location",
     "expo-notifications",
     "expo-splash-screen",
+    "onesignal-expo-plugin",
   ]) {
     assert.ok(names.includes(need), `missing plugin ${need}`);
   }
@@ -269,24 +270,38 @@ test("eas.json: submit.production has ios + android placeholders, key path is gi
   assert.equal(s.android.track, "internal");
 });
 
-test("notifications.ts registers anonymously — device id + token only, no identity fields", () => {
-  const src = readFileSync(
-    fileURLToPath(new URL("../src/notifications.ts", import.meta.url)),
-    "utf8",
-  );
-  assert.match(src, /\/register-push/);
-  assert.match(src, /toRegisterBody\(/);
-  for (const banned of [/\bemail\b/i, /\bfullName\b/, /\bphone\b/i, /proofHash/]) {
-    assert.equal(banned.test(src), false, `notifications.ts references ${banned}`);
+test("push is OneSignal, anonymous and consent-first: no login, tag, alias, email, phone or location", () => {
+  const src = readFileSync(fileURLToPath(new URL("../src/notifications.ts", import.meta.url)), "utf8");
+  const code = src.replace(/^\s*\/\/.*$/gm, "");
+  assert.match(code, /import\("react-native-onesignal"\)/, "loaded lazily, never in Expo Go");
+  const consentRequired = code.indexOf("setConsentRequired(true)");
+  const initialize = code.indexOf(".initialize(");
+  assert.ok(consentRequired >= 0 && initialize > consentRequired, "consent is required before initialize");
+  assert.match(code, /setConsentGiven\(granted\)/, "consent follows the person's own permission answer");
+  assert.doesNotMatch(code, /register-push|getExpoPushTokenAsync/, "the Expo token path is gone");
+  for (const banned of [/\.login\(/, /addTag/, /addAlias/, /addEmail/, /addSms/, /\.Location\./, /proofHash/, /\bemail\b/i, /\bphone\b/i]) {
+    assert.equal(banned.test(code), false, `notifications.ts references ${banned}`);
   }
 });
 
-test("_layout.tsx calls registerForPush on mount", () => {
-  const src = readFileSync(
-    fileURLToPath(new URL("../app/_layout.tsx", import.meta.url)),
-    "utf8",
-  );
-  assert.match(src, /registerForPush\(/);
+test("app.json: OneSignal runs without its service extension and without location", () => {
+  const plugins = app.expo.plugins as Array<string | [string, Record<string, unknown>]>;
+  const os = (plugins.find((p) => Array.isArray(p) && p[0] === "onesignal-expo-plugin") as [string, Record<string, unknown>])[1];
+  assert.equal(os.mode, "production");
+  assert.equal(os.disableNSE, true, "no extra iOS target to sign");
+  assert.equal(os.disableLocation, true, "OneSignal never links location APIs");
+});
+
+test("OneSignal packages are pinned exactly (native modules: no caret)", () => {
+  const pkg = JSON.parse(readFileSync(fileURLToPath(new URL("../package.json", import.meta.url)), "utf8"));
+  assert.match(pkg.dependencies["react-native-onesignal"], /^\d+\.\d+\.\d+$/);
+  assert.match(pkg.dependencies["onesignal-expo-plugin"], /^\d+\.\d+\.\d+$/);
+});
+
+test("_layout.tsx starts push on mount", () => {
+  const src = readFileSync(fileURLToPath(new URL("../app/_layout.tsx", import.meta.url)), "utf8");
+  assert.match(src, /startPush\(\)/);
+  assert.doesNotMatch(src, /registerForPush/);
 });
 
 // The preview profile stays an installable-APK profile under key reordering.
