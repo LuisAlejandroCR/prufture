@@ -131,3 +131,26 @@ test("fetchConfirmations calls the exact endpoint and degrades to null", async (
   }) as unknown as typeof fetch;
   assert.equal(await fetchConfirmations("https://api.example", "h", offline), null);
 });
+
+test("passes of different rounds never add up: a new round may be the same member", () => {
+  const p = liveConfirmations(solar, [rep({ own: true, round: 1 }), rep({ round: 0 }), rep({ round: 0 })], false)!;
+  assert.equal(p.have, 1, "only the reporter's own round counts");
+  assert.equal(p.ownCounts, true);
+  // Same round: they add up. A missing round is round 0.
+  assert.equal(liveConfirmations(solar, [rep({ own: true }), rep({ round: 0 })], false)!.have, 2);
+  // Without a counting report of their own, the round with the most counts.
+  const other = liveConfirmations(solar, [rep({ own: true, membershipVerified: false }), rep({ round: 0 }), rep({ round: 1 }), rep({ round: 1 })], false)!;
+  assert.equal(other.have, 2);
+  assert.equal(other.ownCounts, false);
+});
+
+test("parseConfirmations keeps a whole round and drops anything else", () => {
+  const rows = parseConfirmations({
+    reports: [
+      { own: true, geohashRegion: "kzdwb", verifiedPerson: null, verifiedPersonDegraded: null, membershipVerified: true, round: 2 },
+      { own: false, geohashRegion: "kzdwb", verifiedPerson: null, verifiedPersonDegraded: null, membershipVerified: true, round: "2" },
+      { own: false, geohashRegion: "kzdwb", verifiedPerson: null, verifiedPersonDegraded: null, membershipVerified: true, round: -1 },
+    ],
+  })!;
+  assert.deepEqual(rows.map((r) => r.round), [2, undefined, undefined]);
+});
