@@ -14,6 +14,7 @@ import {
 } from "../src/assurance.js";
 import {
   awsConfigured,
+  confidenceBand,
   createAwsLiveness,
   minConfidence,
   type FaceLivenessClient,
@@ -293,4 +294,30 @@ test("claimLivenessSession: once per id, never after the TTL", () => {
   rememberLivenessSession("b", 0);
   assert.equal(claimLivenessSession("b", SESSION_TTL_MS + 1), false);
   assert.equal(claimLivenessSession("never", 0), false);
+});
+
+test("confidenceBand: ten-point bands, and none for a missing or broken score", () => {
+  assert.equal(confidenceBand(97.12), "90-100");
+  assert.equal(confidenceBand(100), "90-100");
+  assert.equal(confidenceBand(89.99), "80-90");
+  assert.equal(confidenceBand(0), "0-10");
+  assert.equal(confidenceBand(undefined), "none");
+  assert.equal(confidenceBand(Number.NaN), "none");
+  assert.equal(confidenceBand(140), "none");
+});
+
+test("each verdict logs one line with a confidence band, never the score or the session", async () => {
+  const lines: string[] = [];
+  const real = console.log;
+  console.log = (...args: unknown[]) => void lines.push(args.map(String).join(" "));
+  try {
+    const { client } = stub({ Status: "SUCCEEDED", Confidence: 87.654321 });
+    await port(client).sessionResult(SESSION);
+  } finally {
+    console.log = real;
+  }
+  const line = lines.find((l) => l.startsWith("liveness "));
+  assert.ok(line, "a liveness line is logged");
+  assert.deepEqual(JSON.parse(line!.slice("liveness ".length)), { status: "SUCCEEDED", band: "80-90", min: 90, passed: false });
+  assert.ok(!line!.includes(SESSION) && !line!.includes("87.65"), line);
 });

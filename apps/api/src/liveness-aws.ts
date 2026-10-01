@@ -1,6 +1,7 @@
 // liveness-aws.ts: the "aws" liveness adapter (Rekognition Face Liveness), selected by
 // LIVENESS_PROVIDER=aws. Creates a session for the iOS capture view and reduces its result to one
-// boolean; confidence, reference/audit images and the raw response never leave this file.
+// boolean; reference/audit images and the raw response never leave this file, and confidence leaves
+// only as a ten-point band in one log line per verdict.
 
 import { ok, unavailable, type ExternalResult } from "@proof/core";
 import type { LivenessPort, LivenessSessionPort, LivenessVerdict } from "./assurance.js";
@@ -28,6 +29,16 @@ export function minConfidence(env: NodeJS.ProcessEnv = process.env): number {
   if (!raw) return DEFAULT_MIN_CONFIDENCE;
   const n = Number(raw);
   return Number.isFinite(n) && n >= 0 && n <= 100 ? n : DEFAULT_MIN_CONFIDENCE;
+}
+
+/**
+ * A ten-point band for a Rekognition confidence ("80-90"), or "none". The log carries only this,
+ * so the threshold can be tuned from real checks without keeping any score.
+ */
+export function confidenceBand(c: unknown): string {
+  if (typeof c !== "number" || !Number.isFinite(c) || c < 0 || c > 100) return "none";
+  const low = Math.min(90, Math.floor(c / 10) * 10);
+  return `${low}-${low + 10}`;
 }
 
 /**
@@ -96,8 +107,13 @@ export function createAwsLiveness(opts: AwsLivenessOptions = {}): AwsLiveness {
       // Read two fields and drop the response: the images and the raw object go no further.
       const status = r?.Status;
       const confidence = r?.Confidence;
+      const min = minConfidence(env());
       const verifiedPerson =
-        status === "SUCCEEDED" && typeof confidence === "number" && Number.isFinite(confidence) && confidence >= minConfidence(env());
+        status === "SUCCEEDED" && typeof confidence === "number" && Number.isFinite(confidence) && confidence >= min;
+      // One line per verdict: the band, never the score, the session id or an image.
+      console.log(
+        `liveness ${JSON.stringify({ status: typeof status === "string" ? status.slice(0, 20) : "none", band: confidenceBand(confidence), min, passed: verifiedPerson })}`,
+      );
       return ok("liveness", { verifiedPerson });
     },
   };
