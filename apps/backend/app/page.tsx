@@ -11,13 +11,14 @@ import { QrCard } from "./QrCard";
 // Goes through /verify/sample, which opens a report the store holds right now (lib/sample.ts).
 const SAMPLE_REPORT_HREF = "/verify/sample";
 
+// `||`, not `??`: an empty variable (as .env.example leaves it) must fall back, never build a QR of "".
 const ANDROID_BUILD_URL =
-  process.env.NEXT_PUBLIC_ANDROID_BUILD_URL ??
+  process.env.NEXT_PUBLIC_ANDROID_BUILD_URL?.trim() ||
   "https://expo.dev/accounts/alejoooo-team/projects/prufture/builds/18755ce0-982f-4505-87ed-97f62fa9a1c5";
 
 // iOS cannot sideload a store build, so the iOS equivalent of the APK is the public TestFlight link.
 const IOS_TESTFLIGHT_URL =
-  process.env.NEXT_PUBLIC_IOS_TESTFLIGHT_URL ?? "https://testflight.apple.com/join/rBhq72De";
+  process.env.NEXT_PUBLIC_IOS_TESTFLIGHT_URL?.trim() || "https://testflight.apple.com/join/rBhq72De";
 
 function Mark({ compact = false }: { compact?: boolean }) {
   return (
