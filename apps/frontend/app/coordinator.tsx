@@ -6,9 +6,10 @@
 
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
-import { ActivityIndicator, Linking, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Linking, Platform, Pressable, Share, StyleSheet, Text, View } from "react-native";
 import { BackLink, Card, Notice, PrimaryButton, Screen, ScreenTitle, SecondaryButton, SectionLabel } from "../src/components/ui";
 import { fetchCoordinatorReports, recordReview, type CoordinatorReport, type ReviewStatus } from "../src/coordinator-api";
+import { coordinatorIdMessage } from "../src/coordinator-id";
 import { coordinatorSummary, summaryEmail, summaryMailto } from "../src/coordinator-summary";
 import { siteUrl } from "../src/links";
 import { getAppUserId, showManageSubscriptions } from "../src/purchases";
@@ -21,7 +22,7 @@ type ListState =
   | { kind: "loading" }
   | { kind: "locked" }
   | { kind: "unavailable" }
-  | { kind: "ready"; rows: CoordinatorReport[]; sample: boolean };
+  | { kind: "ready"; rows: CoordinatorReport[]; sample: boolean; appUserId: string };
 
 export default function CoordinatorScreen() {
   const router = useRouter();
@@ -38,7 +39,7 @@ export default function CoordinatorScreen() {
       return;
     }
     const result = await fetchCoordinatorReports(API_URL, id.data);
-    setList(result.kind === "ok" ? { kind: "ready", ...result.data } : { kind: result.kind });
+    setList(result.kind === "ok" ? { kind: "ready", ...result.data, appUserId: id.data } : { kind: result.kind });
   }, []);
 
   // Re-check on focus so returning from the paywall picks up a new purchase.
@@ -172,10 +173,21 @@ function ReportList({
   return (
     <View style={{ gap: space.md }}>
       {list.sample ? (
-        <Notice tone="info">
-          Sample reports. Your programme's reports appear here once the programme team adds your
-          account. Reviews you make here only change this sample.
-        </Notice>
+        <Card>
+          <Notice tone="info">
+            Sample reports. Your programme's reports appear here once the programme team adds your
+            account. Reviews you make here only change this sample.
+          </Notice>
+          <Text style={styles.cardBody}>Your coordinator id</Text>
+          <Text style={styles.coordinatorId} selectable accessibilityLabel={`Your coordinator id, ${list.appUserId}`}>
+            {list.appUserId}
+          </Text>
+          <SecondaryButton
+            label="Share my id"
+            icon="report"
+            onPress={() => void Share.share({ message: coordinatorIdMessage(list.appUserId) }).catch(() => undefined)}
+          />
+        </Card>
       ) : null}
       <Card>
         <View style={styles.stats}>
@@ -273,6 +285,7 @@ const styles = StyleSheet.create({
   center: { paddingVertical: space.xxl, alignItems: "center" },
   cardTitle: { ...type.subtitle, color: color.text, marginBottom: space.xs },
   cardBody: { ...type.body, color: color.muted },
+  coordinatorId: { ...type.body, color: color.text, fontWeight: "600", marginBottom: space.sm },
   stats: { flexDirection: "row", marginBottom: space.sm },
   stat: { flex: 1, gap: 2 },
   statValue: { ...type.title, color: color.text },
