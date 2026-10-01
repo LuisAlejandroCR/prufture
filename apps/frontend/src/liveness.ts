@@ -2,6 +2,7 @@
 // /verify-identity). Nothing is signed or committed; frames + nonce leave the device exactly once and
 // are never stored — the api turns them into one verifiedPerson boolean against the proofHash.
 
+import { __attachItems, __resetAttachKind, outboxAdd, outboxItems, outboxRemove } from "./attach-outbox";
 import { evidenceTokenFor } from "./evidence-token";
 
 export type Gesture = "center" | "left" | "right" | "blink";
@@ -121,9 +122,6 @@ interface PendingAttach {
   ticket: string;
 }
 
-/** In-memory only. A missed attach just leaves verifiedPerson null on /verify — acceptable. */
-const pending: PendingAttach[] = [];
-
 async function tryAttach(
   apiUrl: string,
   item: PendingAttach,
@@ -155,7 +153,8 @@ export async function attachLiveness(
   if (!ticket) return;
   const item = { proofHash, ticket };
   const done = await tryAttach(apiUrl, item, fetchImpl);
-  if (!done && !pending.some((p) => p.proofHash === proofHash)) pending.push(item);
+  // Kept on disk (attach-outbox.ts): an offline report's verdict must survive the app closing.
+  if (!done) await outboxAdd({ kind: "liveness", proofHash, value: ticket });
 }
 
 /** Retry every buffered attach. Called from the sync pass. Never throws. */
@@ -163,16 +162,16 @@ export async function flushPendingLiveness(
   apiUrl: string,
   fetchImpl: typeof fetch = fetch,
 ): Promise<void> {
-  for (let i = pending.length - 1; i >= 0; i -= 1) {
-    const ok = await tryAttach(apiUrl, pending[i]!, fetchImpl).catch(() => false);
-    if (ok) pending.splice(i, 1);
+  for (const it of await outboxItems("liveness")) {
+    const ok = await tryAttach(apiUrl, { proofHash: it.proofHash, ticket: it.value }, fetchImpl).catch(() => false);
+    if (ok) await outboxRemove("liveness", it.proofHash);
   }
 }
 
 /** Test-only: inspect / reset the retry buffer. */
 export function __pendingLiveness(): PendingAttach[] {
-  return [...pending];
+  return __attachItems("liveness").map((a) => ({ proofHash: a.proofHash, ticket: a.value }));
 }
 export function __resetPendingLiveness(): void {
-  pending.length = 0;
+  __resetAttachKind("liveness");
 }

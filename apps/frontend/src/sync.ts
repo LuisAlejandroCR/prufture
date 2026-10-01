@@ -3,6 +3,7 @@
 // so mediaUri and other local columns can never leak.
 
 import type { QueuedProof, SignedProof } from "@proof/core";
+import { __attachItems, __resetAttachKind, outboxAdd, outboxItems, outboxRemove } from "./attach-outbox";
 import { evidenceTokenFor } from "./evidence-token";
 import { flushPendingLiveness } from "./liveness";
 
@@ -183,8 +184,6 @@ interface PendingPrecise {
   cipher: string;
 }
 
-/** In-memory only. A missed post just leaves the api without a precise point — acceptable. */
-const pendingPrecise: PendingPrecise[] = [];
 
 async function tryPostPrecise(
   apiUrl: string,
@@ -219,7 +218,9 @@ export async function attachPreciseLocation(
 ): Promise<void> {
   const item = { proofHash, cipher };
   const done = await tryPostPrecise(apiUrl, item, fetchImpl);
-  if (!done && !pendingPrecise.some((p) => p.proofHash === proofHash)) pendingPrecise.push(item);
+  // Kept on disk (attach-outbox.ts): a report saved offline must keep its precise point when the
+  // app is closed before signal comes back.
+  if (!done) await outboxAdd({ kind: "precise", proofHash, value: cipher });
 }
 
 /** Retry every buffered blob. Called from the sync pass. Never throws. */
@@ -227,16 +228,16 @@ export async function flushPendingPreciseLocation(
   apiUrl: string,
   fetchImpl: typeof fetch = fetch,
 ): Promise<void> {
-  for (let i = pendingPrecise.length - 1; i >= 0; i -= 1) {
-    const ok = await tryPostPrecise(apiUrl, pendingPrecise[i]!, fetchImpl).catch(() => false);
-    if (ok) pendingPrecise.splice(i, 1);
+  for (const it of await outboxItems("precise")) {
+    const ok = await tryPostPrecise(apiUrl, { proofHash: it.proofHash, cipher: it.value }, fetchImpl).catch(() => false);
+    if (ok) await outboxRemove("precise", it.proofHash);
   }
 }
 
 /** Test-only: inspect / reset the retry buffer. */
 export function __pendingPreciseLocation(): PendingPrecise[] {
-  return [...pendingPrecise];
+  return __attachItems("precise").map((a) => ({ proofHash: a.proofHash, cipher: a.value }));
 }
 export function __resetPendingPreciseLocation(): void {
-  pendingPrecise.length = 0;
+  __resetAttachKind("precise");
 }
