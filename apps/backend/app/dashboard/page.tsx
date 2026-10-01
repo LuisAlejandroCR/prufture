@@ -69,6 +69,8 @@ export default async function DashboardOverview() {
   // A healthy index with nothing in it yet. A degraded index is never "empty": it gets the alert.
   const empty = !degraded && proofs.length === 0;
   const attention = alerts(proofs, degraded);
+  const breakdown = statusBreakdown(proofs);
+  const attentionCount = breakdown.find((row) => row.status === "attention")?.count ?? 0;
   const today = new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
   // Matches metrics().thisWeek closely enough for a link: the last seven UTC days, today included.
   const weekStart = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
@@ -90,6 +92,44 @@ export default async function DashboardOverview() {
       {degraded ? <DegradedNotice /> : null}
 
       {empty ? <FirstRun /> : null}
+
+      {!empty && !degraded ? (
+        <div className="focus-strip">
+          <span className={`focus-icon ${attentionCount > 0 ? "is-urgent" : ""}`} aria-hidden>
+            <Icon name={attentionCount > 0 ? "alert" : "clock"} />
+          </span>
+          <div className="focus-copy">
+            <p className="dash-eyebrow">Start here</p>
+            <h2>
+              {attentionCount > 0
+                ? `${attentionCount} ${attentionCount === 1 ? "report needs" : "reports need"} attention`
+                : m.readyToReview > 0
+                  ? `${m.readyToReview} ${m.readyToReview === 1 ? "report is" : "reports are"} ready to review`
+                  : "The review queue is clear"}
+            </h2>
+            <p>
+              {attentionCount > 0
+                ? "Review the oldest reports first so programme confirmation can keep moving."
+                : m.readyToReview > 0
+                  ? "These reports have no community confirmation yet."
+                  : "There is no immediate review action. Check coverage or recent activity next."}
+            </p>
+          </div>
+          <Link
+            className="btn focus-action"
+            href={
+              attentionCount > 0
+                ? reportsHref({ status: "attention", sort: "oldest" })
+                : m.readyToReview > 0
+                  ? reportsHref({ status: "ready" })
+                  : "/dashboard/map"
+            }
+          >
+            {attentionCount > 0 ? "Review oldest" : m.readyToReview > 0 ? "Open review queue" : "View coverage"}
+            <Icon name="arrow" size={16} />
+          </Link>
+        </div>
+      ) : null}
 
       <div className="metrics">
         <Metric
@@ -134,7 +174,7 @@ export default async function DashboardOverview() {
               <h2>Review pipeline</h2>
               <span className="box-meta">{m.confirmed} confirmed</span>
             </div>
-            <StatusBar rows={statusBreakdown(proofs)} />
+            <StatusBar rows={breakdown} />
             <div className="box-sep" />
             <div className="box-head">
               <h2>Reports received</h2>

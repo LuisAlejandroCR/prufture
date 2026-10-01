@@ -110,6 +110,7 @@ export function DashboardTable({
     compact || typeof window === "undefined" ? initial : parseReportFilters(new URLSearchParams(window.location.search));
   const [f, setF] = useState<Required<ReportFilters>>(fromUrl);
   const [shown, setShown] = useState(PAGE);
+  const [moreOpen, setMoreOpen] = useState(Boolean(initial.programme || initial.area || initial.from || initial.to));
   const search = useRef<HTMLInputElement>(null);
 
   const update = (patch: Partial<ReportFilters>) => {
@@ -157,6 +158,7 @@ export function DashboardTable({
   const viewQuery = compact ? "" : reportsQuery(f);
 
   const active = Boolean(f.programme || f.area || f.status || f.from || f.to || f.q);
+  const secondaryCount = [f.programme, f.area, f.from, f.to].filter(Boolean).length;
   const limit = compact ? 6 : shown;
   const visible = rows.slice(0, limit);
   const reset = () => update({ status: "", programme: "", area: "", q: "", from: "", to: "" });
@@ -182,7 +184,7 @@ export function DashboardTable({
             ))}
           </div>
 
-          <div className="filters" role="search">
+          <div className="filter-primary" role="search">
             <label className="filter-search">
               <span className="sr-only">Search</span>
               <Icon name="search" />
@@ -198,44 +200,69 @@ export function DashboardTable({
                 /
               </kbd>
             </label>
-            <label>
-              Programme
-              <select className="field" value={f.programme} onChange={(e) => update({ programme: e.target.value })}>
-                <option value="">All programmes</option>
-                {programmeList.map((p) => (
-                  <option key={p} value={p}>
-                    {p}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Area
-              <select className="field" value={f.area} onChange={(e) => update({ area: e.target.value })}>
-                <option value="">All areas</option>
-                {/* A linked area missing from the data still shows, so the select never lies about the filter. */}
-                {f.area && !areaList.some((a) => a.region === f.area) ? <option value={f.area}>{f.area}</option> : null}
-                {areaList.map((a) => (
-                  <option key={a.region} value={a.region}>
-                    {a.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              From
-              <input type="date" className="field" value={f.from} max={f.to || undefined} onChange={(e) => update({ from: e.target.value })} />
-            </label>
-            <label>
-              To
-              <input type="date" className="field" value={f.to} min={f.from || undefined} onChange={(e) => update({ to: e.target.value })} />
-            </label>
             {active ? (
-              <button type="button" className="btn secondary small" onClick={reset}>
+              <button type="button" className="btn secondary" onClick={reset}>
                 Clear filters
               </button>
             ) : null}
           </div>
+
+          <details className="more-filters" open={moreOpen} onToggle={(event) => setMoreOpen(event.currentTarget.open)}>
+            <summary>
+              <span>
+                <Icon name="settings" size={16} /> More filters
+              </span>
+              {secondaryCount > 0 ? <span className="filter-badge">{secondaryCount} active</span> : null}
+            </summary>
+            <div className="filters">
+              <label>
+                Programme
+                <select className="field" value={f.programme} onChange={(e) => update({ programme: e.target.value })}>
+                  <option value="">All programmes</option>
+                  {/* Keep a deep-linked programme visible even while the index is degraded or empty. */}
+                  {f.programme && !programmeList.includes(f.programme) ? <option value={f.programme}>{f.programme}</option> : null}
+                  {programmeList.map((p) => (
+                    <option key={p} value={p}>
+                      {p}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Area
+                <select className="field" value={f.area} onChange={(e) => update({ area: e.target.value })}>
+                  <option value="">All areas</option>
+                  {/* A linked area missing from the data still shows, so the select never lies about the filter. */}
+                  {f.area && !areaList.some((a) => a.region === f.area) ? <option value={f.area}>{f.area}</option> : null}
+                  {areaList.map((a) => (
+                    <option key={a.region} value={a.region}>
+                      {a.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                From
+                <input type="date" className="field" value={f.from} max={f.to || undefined} onChange={(e) => update({ from: e.target.value })} />
+              </label>
+              <label>
+                To
+                <input type="date" className="field" value={f.to} min={f.from || undefined} onChange={(e) => update({ to: e.target.value })} />
+              </label>
+            </div>
+          </details>
+
+          {active ? (
+            <div className="active-filter-summary" aria-label="Active filters">
+              <span>Filtered by</span>
+              {f.status ? <strong>Status: {REVIEW_LABEL[f.status]}</strong> : null}
+              {f.q ? <strong>Search: “{f.q}”</strong> : null}
+              {f.programme ? <strong>Programme: {f.programme}</strong> : null}
+              {f.area ? <strong>Area: {placeLabel(f.area) || f.area}</strong> : null}
+              {f.from ? <strong>From: {f.from}</strong> : null}
+              {f.to ? <strong>To: {f.to}</strong> : null}
+            </div>
+          ) : null}
 
           <div className="result-bar">
             <p className="result-count" aria-live="polite">
