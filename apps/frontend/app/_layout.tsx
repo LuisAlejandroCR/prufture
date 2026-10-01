@@ -1,4 +1,7 @@
 import "react-native-get-random-values";
+// Second, right after the crypto shim: the background notices task must be defined at load, because
+// the system can start the app in the background only to run it.
+import "../src/background-task-define";
 // _layout.tsx: root navigation stack for the Expo Router app (tabs live in app/(tabs)/_layout.tsx).
 // The crypto shim above MUST stay the first statement: it binds crypto.getRandomValues before
 // @proof/core's ed25519 is first touched by the keystore on launch. The native splash is held until
@@ -15,6 +18,7 @@ import { announce, connectivityChange, syncResult } from "../src/announce";
 import { color } from "../src/theme";
 import { useOnline } from "../src/useOnline";
 import { API_URL, useAutoSync } from "../src/useAutoSync";
+import { registerBackgroundNotices } from "../src/background-notices";
 import { runReportNotices } from "../src/local-notices";
 import { listProofs } from "../src/queue";
 import { askNotificationPermission, notifyReportConfirmed } from "../src/notifications";
@@ -33,6 +37,8 @@ export default function RootLayout() {
   // Permission for local notices (worked out on this phone). Denied -> the app is unchanged.
   useEffect(() => {
     void askNotificationPermission();
+    // Let the system run the notices now and then while the app is closed (if a switch needs it).
+    void registerBackgroundNotices();
   }, []);
 
   // Configure RevenueCat once per launch with the platform's PUBLIC key. Without this the SDK

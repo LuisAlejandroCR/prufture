@@ -6,6 +6,7 @@ import { useCallback, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { ToggleRow } from "../src/components/ToggleRow";
 import { BackLink, Screen, ScreenTitle } from "../src/components/ui";
+import { registerBackgroundNotices } from "../src/background-notices";
 import { DEFAULT_PREFS, loadNoticePrefs, setNoticePref, type NoticePrefs } from "../src/local-notices";
 import { color, space, type } from "../src/theme";
 
@@ -21,6 +22,8 @@ export default function NotificationsScreen() {
 
   const toggle = (key: keyof NoticePrefs, value: boolean) => {
     setPrefs((p) => ({ ...p, [key]: value }));
+    // After the switch is stored, keep the background run in line with what is on.
+    setTimeout(() => void registerBackgroundNotices(), 0);
     return value;
   };
 

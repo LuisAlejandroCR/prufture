@@ -31,8 +31,9 @@ const PENDING = "pending_sync";
 
 interface KeyValueStore {
   getItemAsync(key: string): Promise<string | null>;
-  setItemAsync(key: string, value: string): Promise<void>;
+  setItemAsync(key: string, value: string, options?: { keychainAccessible?: number }): Promise<void>;
   deleteItemAsync(key: string): Promise<void>;
+  AFTER_FIRST_UNLOCK?: number;
 }
 
 let injected: KeyValueStore | null = null;
@@ -51,18 +52,27 @@ async function store(): Promise<KeyValueStore | null> {
   }
 }
 
-async function readJson<T>(key: string, fallback: T): Promise<T> {
+/** The stored value over the fallback, or null when the store cannot be read (a locked phone). */
+async function readStrict<T>(key: string, fallback: T): Promise<T | null> {
   try {
-    const raw = await (await store())?.getItemAsync(key);
+    const s = await store();
+    if (!s) return null;
+    const raw = await s.getItemAsync(key);
     return raw ? ({ ...fallback, ...JSON.parse(raw) } as T) : fallback;
   } catch {
-    return fallback;
+    return null;
   }
+}
+
+async function readJson<T>(key: string, fallback: T): Promise<T> {
+  return (await readStrict(key, fallback)) ?? fallback;
 }
 
 async function writeJson(key: string, value: unknown): Promise<void> {
   try {
-    await (await store())?.setItemAsync(key, JSON.stringify(value));
+    const s = await store();
+    // Not secret: readable after the first unlock, so a background run on a locked phone sees it.
+    await s?.setItemAsync(key, JSON.stringify(value), { keychainAccessible: s.AFTER_FIRST_UNLOCK });
   } catch {
     // Non-fatal: at worst a notice repeats or a switch resets.
   }
@@ -101,8 +111,10 @@ async function defaultShow(title: string, body: string): Promise<void> {
 export async function runReportNotices(apiUrl: string, rows: LocalProof[], deps: ReportNoticeDeps = {}): Promise<void> {
   const show = deps.show ?? defaultShow;
   try {
-    const prefs = await loadNoticePrefs();
-    const sent = await readJson<Sent>(SENT_KEY, { confirmed: [], requests: [] });
+    // Unreadable settings (a phone locked since restart) stop the run: never repeat a notice.
+    const prefs = await readStrict(PREFS_KEY, DEFAULT_PREFS);
+    const sent = await readStrict<Sent>(SENT_KEY, { confirmed: [], requests: [] });
+    if (!prefs || !sent) return;
     let changed = false;
 
     if (prefs.photoRequests) {
