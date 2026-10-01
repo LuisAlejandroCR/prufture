@@ -97,6 +97,15 @@ export const env = {
     return [...new Set([...staff, ...this.personhoodAdminAppUserIds])];
   },
 
+  // Invitation codes a coordinator redeems in the app to join the programme staff (comma or newline
+  // separated, 8+ characters each). Removing a code ends the access of everyone who joined with it.
+  get coordinatorInviteCodes(): string[] {
+    return (process.env.COORDINATOR_INVITE_CODES ?? "")
+      .split(/[,\n]/)
+      .map((s: string) => s.trim())
+      .filter(Boolean);
+  },
+
   // RevenueCat entitlement check: the secret key never reaches the client.
   get revenuecatSecretKey(): string {
     return process.env.REVENUECAT_SECRET_KEY ?? "";
