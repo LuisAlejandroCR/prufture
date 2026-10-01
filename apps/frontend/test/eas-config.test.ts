@@ -269,24 +269,19 @@ test("eas.json: submit.production has ios + android placeholders, key path is gi
   assert.equal(s.android.track, "internal");
 });
 
-test("notifications.ts registers anonymously — device id + token only, no identity fields", () => {
-  const src = readFileSync(
-    fileURLToPath(new URL("../src/notifications.ts", import.meta.url)),
-    "utf8",
-  );
-  assert.match(src, /\/register-push/);
-  assert.match(src, /toRegisterBody\(/);
+test("no push token leaves the phone: notices are local, permission is asked for them only", () => {
+  const src = readFileSync(fileURLToPath(new URL("../src/notifications.ts", import.meta.url)), "utf8").replace(/^\s*\/\/.*$/gm, "");
+  assert.doesNotMatch(src, /register-push|getExpoPushTokenAsync|getDevicePushTokenAsync|fetch\(/);
+  assert.match(src, /export async function askNotificationPermission\(/);
   for (const banned of [/\bemail\b/i, /\bfullName\b/, /\bphone\b/i, /proofHash/]) {
     assert.equal(banned.test(src), false, `notifications.ts references ${banned}`);
   }
 });
 
-test("_layout.tsx calls registerForPush on mount", () => {
-  const src = readFileSync(
-    fileURLToPath(new URL("../app/_layout.tsx", import.meta.url)),
-    "utf8",
-  );
-  assert.match(src, /registerForPush\(/);
+test("_layout.tsx asks for notification permission on mount, and registers nothing", () => {
+  const src = readFileSync(fileURLToPath(new URL("../app/_layout.tsx", import.meta.url)), "utf8");
+  assert.match(src, /askNotificationPermission\(\)/);
+  assert.doesNotMatch(src, /registerForPush/);
 });
 
 // The preview profile stays an installable-APK profile under key reordering.

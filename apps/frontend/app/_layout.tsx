@@ -15,7 +15,9 @@ import { announce, connectivityChange, syncResult } from "../src/announce";
 import { color } from "../src/theme";
 import { useOnline } from "../src/useOnline";
 import { API_URL, useAutoSync } from "../src/useAutoSync";
-import { notifyReportConfirmed, registerForPush } from "../src/notifications";
+import { runReportNotices } from "../src/local-notices";
+import { listProofs } from "../src/queue";
+import { askNotificationPermission, notifyReportConfirmed } from "../src/notifications";
 import { configurePurchasesForPlatform } from "../src/purchases";
 
 // Keep the native splash until the animated one has painted. Never throws (Expo Go, tests).
@@ -28,9 +30,9 @@ export default function RootLayout() {
   }, []);
   const done = useCallback(() => setLaunching(false), []);
 
-  // Anonymous push registration: no permission -> the app is unchanged, just no push.
+  // Permission for local notices (worked out on this phone). Denied -> the app is unchanged.
   useEffect(() => {
-    void registerForPush(API_URL);
+    void askNotificationPermission();
   }, []);
 
   // Configure RevenueCat once per launch with the platform's PUBLIC key. Without this the SDK
@@ -46,6 +48,10 @@ export default function RootLayout() {
   useAutoSync((summary) => {
     if (summary.attested > 0) void notifyReportConfirmed(summary.attested);
     void announce(syncResult(summary, false));
+    // Confirmed by the community, photo requested: worked out on this phone, shown locally.
+    void listProofs()
+      .then((rows) => runReportNotices(API_URL, rows))
+      .catch(() => undefined);
   });
 
   // Tell a VoiceOver user when signal drops or returns; the Offline pill alone is visual.
@@ -91,6 +97,7 @@ export default function RootLayout() {
           <Stack.Screen name="face-check" />
           <Stack.Screen name="programme-pass" />
           <Stack.Screen name="accessibility" />
+          <Stack.Screen name="notifications" />
           <Stack.Screen name="about" />
           <Stack.Screen name="coordinator" />
           <Stack.Screen name="paywall" />

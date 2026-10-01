@@ -104,6 +104,12 @@ export default function MeScreen() {
           subtitle="Haptics and motion"
           onPress={() => router.push("/accessibility")}
         />
+        <Row
+          icon="updates"
+          title="Notifications"
+          subtitle="Missions, confirmations and photo requests"
+          onPress={() => router.push("/notifications")}
+        />
       </View>
 
       <View style={{ gap: space.sm }}>
