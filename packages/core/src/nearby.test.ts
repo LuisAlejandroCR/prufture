@@ -45,3 +45,30 @@ test("a report without its own pass is confirmed by two other members nearby", (
   ];
   assert.equal(isCommunityConfirmed(OWN, reports), true);
 });
+
+test("passes from different rounds never confirm each other: a new round may be the same member", () => {
+  const twoRounds = [
+    { own: true, geohashRegion: OWN, membershipVerified: true, round: 0 },
+    { own: false, geohashRegion: NEXT_DOOR, membershipVerified: true, round: 1 },
+  ];
+  assert.equal(nearbyPassReportCount(OWN, twoRounds), 1);
+  assert.equal(isCommunityConfirmed(OWN, twoRounds), false);
+  // Same round, two members: confirmed. A missing round is round 0.
+  const sameRound = [
+    { own: true, geohashRegion: OWN, membershipVerified: true },
+    { own: false, geohashRegion: NEXT_DOOR, membershipVerified: true, round: 0 },
+  ];
+  assert.equal(isCommunityConfirmed(OWN, sameRound), true);
+});
+
+test("a report without a pass is confirmed only by two members of one round", () => {
+  const split = [
+    { own: true, geohashRegion: OWN, membershipVerified: false },
+    { own: false, geohashRegion: OWN, membershipVerified: true, round: 0 },
+    { own: false, geohashRegion: NEXT_DOOR, membershipVerified: true, round: 1 },
+  ];
+  assert.equal(isCommunityConfirmed(OWN, split), false);
+  const together = [...split, { own: false, geohashRegion: OWN, membershipVerified: true, round: 1 }];
+  assert.equal(nearbyPassReportCount(OWN, together), 2);
+  assert.equal(isCommunityConfirmed(OWN, together), true);
+});

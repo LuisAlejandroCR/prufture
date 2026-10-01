@@ -142,7 +142,7 @@ test("communityConfirmedHashes gives the same answer as the per-proof rule on ra
     for (let i = 0; i < count; i++) {
       const e = entry(`h${round}-${i}`, {
         reportId: `r${rnd(6)}`,
-        ...(rnd(3) > 0 ? pass : {}),
+        ...(rnd(3) > 0 ? { ...pass, membershipRound: rnd(2) } : {}),
         ...(rnd(8) === 0 ? { review: { status: "rejected" as const, note: "", reviewedAt: "2026-09-07T00:00:00Z" } } : {}),
       }, `task-${rnd(2)}`);
       e.payload.geohash = cells[rnd(cells.length)]!;
@@ -172,4 +172,16 @@ test("GET /proofs and /proof/:hash carry communityConfirmed as a plain boolean",
   assert.equal((await row(b))?.communityConfirmed, true);
   const one = (await (await app.request(`/proof/${a}`)).json()) as Record<string, unknown>;
   assert.equal(one.communityConfirmed, true);
+});
+
+test("passes from different rounds never confirm each other (a new round may be the same member)", () => {
+  const r0 = entry("p1", { reportId: "r1", ...pass, membershipRound: 0 });
+  const r1 = entry("p2", { reportId: "r2", ...pass, membershipRound: 1 });
+  assert.equal(communityConfirmedHashes([r0, r1], 5).size, 0);
+  assert.equal(communityConfirmed([r0, r1], "p1", 5), false);
+  // The public rows carry each pass's round, so /verify applies the same rule.
+  assert.deepEqual(taskReports([r0, r1], "p1", 5)?.map((r) => r.round), [0, 1]);
+  // A pass recorded before rounds were kept is round 0.
+  const legacy = entry("p3", { reportId: "r3", ...pass });
+  assert.deepEqual([...communityConfirmedHashes([r0, legacy], 5)].sort(), ["p1", "p3"]);
 });

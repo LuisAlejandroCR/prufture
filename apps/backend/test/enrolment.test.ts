@@ -14,6 +14,7 @@ import {
   isActionState,
   isCommitment,
   isProgrammeId,
+  newRoundConfirmed,
   postCoordinator,
   staffWriteAllowed,
   toActionState,
@@ -195,4 +196,15 @@ test("postCoordinator reports unreachable when fetch throws", async () => {
   } finally {
     globalThis.fetch = realFetch;
   }
+});
+
+test("a new round needs the programme id typed out, checked again by the server action", () => {
+  assert.equal(newRoundConfirmed("water-2026", "water-2026"), true);
+  assert.equal(newRoundConfirmed("water-2026", "  water-2026 "), true);
+  assert.equal(newRoundConfirmed("water-2026", "water"), false);
+  assert.equal(newRoundConfirmed("water-2026", ""), false);
+  assert.equal(newRoundConfirmed("water-2026", null), false);
+  assert.match(actionNotice("confirm_needed").text, /Nothing changed/);
+  const action = readFileSync(new URL("../app/dashboard/programmes/[id]/enrolment/actions.ts", import.meta.url), "utf8");
+  assert.match(action, /if \(!newRoundConfirmed\(programmeId, form\.get\("confirm"\)\)\) back\(programmeId, "confirm_needed"\)/);
 });

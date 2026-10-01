@@ -269,6 +269,8 @@ test("groups, nullifiers and membership survive a restart; junk is dropped", asy
 
   store.__setStorePathForTests(p); // simulate a restart
   assert.equal(store.getProof(fx.hashes.one)?.membership, "verified");
+  // The round the pass was proven in survives too, or a restart would merge rounds.
+  assert.equal(store.getProof(fx.hashes.one)?.membershipRound, store.getPersonhoodGroup(PROGRAMME)?.epoch);
   assert.equal(store.getPersonhoodGroup(PROGRAMME)?.roots.at(-1), fx.root);
   const replay = await post("/personhood/proof", {
     proofHash: fx.hashes.two,
@@ -280,11 +282,13 @@ test("groups, nullifiers and membership survive a restart; junk is dropped", asy
   // Hand-edited file: a forged membership value and non-numeric commitments do not survive.
   const raw = JSON.parse(readFileSync(p, "utf8"));
   raw[fx.hashes.two].membership = "trusted";
+  raw[fx.hashes.one].membershipRound = "7";
   raw.__personhoodGroups__[PROGRAMME].commitments.push("not-a-number");
   const { writeFileSync } = await import("node:fs");
   writeFileSync(p, JSON.stringify(raw));
   store.__setStorePathForTests(p);
   assert.equal(store.getProof(fx.hashes.two)?.membership, undefined);
+  assert.equal(store.getProof(fx.hashes.one)?.membershipRound, undefined, "a non-numeric round is dropped");
   assert.equal(store.getPersonhoodGroup(PROGRAMME)?.commitments.length, 5);
 });
 
