@@ -13,6 +13,9 @@ const kp = generateKeyPair();
 const realFetch = globalThis.fetch;
 const SECRET = "sk_test_coordinator_secret";
 const USER = "anon-coordinator-1";
+// These tests exercise the real inbox, so the caller is programme staff. coordinator-scope.test.ts
+// covers a subscriber who is not.
+process.env.PROGRAMME_STAFF_APP_USER_IDS = USER;
 
 function payload(hash: string) {
   return {

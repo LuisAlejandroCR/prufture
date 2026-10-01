@@ -26,6 +26,14 @@ export type CoordinatorResult<T> =
   | { kind: "unavailable" };
 
 export const APP_USER_HEADER = "x-app-user-id";
+/** Set by the api when the caller is not the programme's staff: the rows are a sample inbox. */
+export const SAMPLE_HEADER = "x-prufture-sample";
+
+/** The inbox, and whether it is the sample one a subscriber sees until the programme adds them. */
+export interface CoordinatorInbox {
+  rows: CoordinatorReport[];
+  sample: boolean;
+}
 
 function url(base: string, path: string): string {
   return `${base.replace(/\/+$/, "")}${path}`;
@@ -39,7 +47,7 @@ export async function fetchCoordinatorReports(
   base: string,
   appUserId: string,
   fetchImpl: typeof fetch = fetch,
-): Promise<CoordinatorResult<CoordinatorReport[]>> {
+): Promise<CoordinatorResult<CoordinatorInbox>> {
   try {
     const res = await fetchImpl(url(base, "/coordinator/reports"), {
       headers: { [APP_USER_HEADER]: appUserId },
@@ -47,7 +55,7 @@ export async function fetchCoordinatorReports(
     if (!res.ok) return { kind: classify(res.status) };
     const body: unknown = await res.json();
     if (!Array.isArray(body)) return { kind: "unavailable" };
-    return { kind: "ok", data: body as CoordinatorReport[] };
+    return { kind: "ok", data: { rows: body as CoordinatorReport[], sample: res.headers.get(SAMPLE_HEADER) === "1" } };
   } catch {
     return { kind: "unavailable" };
   }

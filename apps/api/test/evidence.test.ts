@@ -19,6 +19,8 @@ const S3_ENDPOINT = "https://acct.r2.example.test";
 const S3_SECRET = "s3-secret-DO-NOT-LEAK";
 const RC_SECRET = "sk_test_rc_secret";
 const asCoordinator = { [APP_USER_HEADER]: "anon-coordinator-evidence" };
+// Evidence is programme work: the caller is programme staff (coordinator-scope.test.ts covers others).
+process.env.PROGRAMME_STAFF_APP_USER_IDS = "anon-coordinator-evidence";
 
 const JPEG = Uint8Array.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, ...Buffer.from("JFIF"), ...randomBytes(200)]);
 const PNG = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, ...randomBytes(200)]);
