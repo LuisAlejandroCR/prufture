@@ -11,8 +11,8 @@ test("a username opens wa.me/@name, lowercase", () => {
 });
 
 test("a number keeps only its digits", () => {
-  assert.equal(whatsappLink("+57 301 393-5156"), "https://wa.me/573013935156");
-  assert.equal(whatsappLink("+573013935156"), "https://wa.me/573013935156");
+  assert.equal(whatsappLink("+57 300 000-0001"), "https://wa.me/573000000001");
+  assert.equal(whatsappLink("+573000000001"), "https://wa.me/573000000001");
 });
 
 test("nothing configured, or something that is neither, gives no link", () => {
