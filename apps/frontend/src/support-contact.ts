@@ -2,16 +2,24 @@
 // open them. Pure (no react-native) so node --test can check the exact links; screens open them with
 // Linking because a chat or mail compose screen belongs to its own app, not an in-app browser.
 
-export const SUPPORT_WHATSAPP = "+573013935156";
+// A WhatsApp username (WhatsApp usernames: lowercase letters, digits, "." and "_"), so no phone
+// number is published.
+export const SUPPORT_WHATSAPP = "@aleo._.o";
 export const SUPPORT_EMAIL = "luisalejandrocardenasr@gmail.com";
 
 const DEFAULT_SUBJECT = "Prufture support";
 
-/** wa.me wants the international number as digits only, no "+" or spaces. */
-export function whatsappUrl(phone: string = SUPPORT_WHATSAPP, text?: string): string {
-  const digits = phone.replace(/\D/g, "");
+const USERNAME = /^@[a-z0-9._]{3,35}$/;
+
+/**
+ * The chat link for a WhatsApp username ("@name" -> wa.me/@name) or a number (international,
+ * digits only, no "+" or spaces).
+ */
+export function whatsappUrl(contact: string = SUPPORT_WHATSAPP, text?: string): string {
+  const handle = contact.trim().toLowerCase();
+  const target = USERNAME.test(handle) ? handle : contact.replace(/\D/g, "");
   const query = text ? `?text=${encodeURIComponent(text)}` : "";
-  return `https://wa.me/${digits}${query}`;
+  return `https://wa.me/${target}${query}`;
 }
 
 export function mailtoUrl(address: string = SUPPORT_EMAIL, subject: string = DEFAULT_SUBJECT): string {

@@ -13,7 +13,7 @@ export const metadata = {
 };
 
 const SUPPORT_EMAIL = process.env.NEXT_PUBLIC_SUPPORT_EMAIL ?? "";
-// International number, e.g. +57 301 393 5156; whatsappLink keeps the digits wa.me wants.
+// A WhatsApp username (@name) or an international number; whatsappLink builds the wa.me link.
 const SUPPORT_WHATSAPP = process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP ?? "";
 const WHATSAPP_LINK = whatsappLink(SUPPORT_WHATSAPP);
 
