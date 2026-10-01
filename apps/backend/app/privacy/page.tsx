@@ -192,8 +192,11 @@ export default function PrivacyPage() {
 
         <h2>Notifications</h2>
         <p>
-          If you allow notifications, the app registers a push token against a randomly generated device
-          identifier. It is not connected to your name, phone number or report history.
+          Notifications are worked out on your phone and shown by your phone: a weekly reminder when
+          missions are near, when a report you sent is confirmed by the community, and when the
+          programme team asks for a photo. The app sends no push token or device identifier anywhere,
+          so no server or notification service learns which reports are yours. You can switch each
+          one off in the app under Me, Notifications.
         </p>
 
         <h2>Subscriptions</h2>

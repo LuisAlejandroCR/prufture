@@ -16,6 +16,7 @@ import {
   type ReviewStatus,
 } from "../src/coordinator-api";
 import { coordinatorIdMessage } from "../src/coordinator-id";
+import { newSinceLastVisit, readLastCoordinatorVisit, writeLastCoordinatorVisit } from "../src/local-notices";
 import { coordinatorSummary, summaryEmail, summaryMailto } from "../src/coordinator-summary";
 import { siteUrl } from "../src/links";
 import { getAppUserId, showManageSubscriptions } from "../src/purchases";
@@ -28,7 +29,7 @@ type ListState =
   | { kind: "loading" }
   | { kind: "locked" }
   | { kind: "unavailable" }
-  | { kind: "ready"; rows: CoordinatorReport[]; sample: boolean; appUserId: string };
+  | { kind: "ready"; rows: CoordinatorReport[]; sample: boolean; appUserId: string; newSince: number };
 
 export default function CoordinatorScreen() {
   const router = useRouter();
@@ -45,7 +46,15 @@ export default function CoordinatorScreen() {
       return;
     }
     const result = await fetchCoordinatorReports(API_URL, id.data);
-    setList(result.kind === "ok" ? { kind: "ready", ...result.data, appUserId: id.data } : { kind: result.kind });
+    if (result.kind !== "ok") {
+      setList({ kind: result.kind });
+      return;
+    }
+    // "New since your last visit": the last visit is kept only on this phone. Never for the sample.
+    const last = result.data.sample ? null : await readLastCoordinatorVisit();
+    const newSince = newSinceLastVisit(result.data.rows, last);
+    if (!result.data.sample) void writeLastCoordinatorVisit(Date.now());
+    setList({ kind: "ready", ...result.data, appUserId: id.data, newSince });
   }, []);
 
   // Re-check on focus so returning from the paywall picks up a new purchase.
@@ -233,6 +242,11 @@ function ReportList({
           </Text>
         ) : null}
       </Card>
+      {list.newSince > 0 ? (
+        <Notice tone="info">
+          {`${list.newSince} new ${list.newSince === 1 ? "report" : "reports"} since your last visit.`}
+        </Notice>
+      ) : null}
       {!list.sample ? (
         <SecondaryButton label="Email summary" icon="report" onPress={() => onEmail(list.rows)} disabled={list.rows.length === 0} />
       ) : null}

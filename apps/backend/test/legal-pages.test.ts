@@ -164,3 +164,9 @@ test("neither page leaks an internal field name, key or endpoint", () => {
     }
   }
 });
+
+test("privacy says notices are worked out on the phone and no push token is sent", () => {
+  assert.match(PRIVACY, /worked out on your phone/i);
+  assert.match(PRIVACY, /no push token/i);
+  assert.doesNotMatch(PRIVACY, /registers a push token/);
+});

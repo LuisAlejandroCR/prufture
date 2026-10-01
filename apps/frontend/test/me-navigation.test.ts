@@ -71,7 +71,12 @@ test("Accessibility is one row on Me and keeps both toggles on its own screen", 
   assert.match(accessibility, /setCelebrationsEnabled\(v\)/);
   assert.match(accessibility, /hydrateFeedbackSettings\(\)/);
   assert.match(accessibility, /Text size follows your phone settings\./);
-  assert.match(accessibility, /accessibilityLabel=\{title\}/, "each switch is named for VoiceOver");
+  // Each switch is named for VoiceOver by the shared row both settings screens use.
+  assert.match(accessibility, /<ToggleRow/);
+  assert.match(
+    readFileSync(new URL("../src/components/ToggleRow.tsx", import.meta.url), "utf8"),
+    /accessibilityLabel=\{title\}/,
+  );
   assert.doesNotMatch(accessibility.replace(/^\s*\/\/.*$/gm, ""), /—/);
 });
 

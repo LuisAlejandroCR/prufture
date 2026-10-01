@@ -100,7 +100,7 @@ test("a stored precise location cannot be replaced, but an identical retry is ac
 
 test("an oversized body is refused with 413 before any route reads it", async () => {
   const big = JSON.stringify({ proofHash: "a".repeat(64), pad: "x".repeat(MAX_BODY_BYTES) });
-  for (const route of ["/sync", "/attest", "/notify", "/liveness-result", "/precise-location", "/register-push"]) {
+  for (const route of ["/sync", "/attest", "/notify", "/liveness-result", "/precise-location"]) {
     assert.equal((await post(route, big)).status, 413, route);
   }
 });

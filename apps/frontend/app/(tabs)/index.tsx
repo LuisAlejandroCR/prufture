@@ -38,6 +38,7 @@ import {
   type TaskDef,
 } from "../../src/tasks";
 import { color, radius, shadow, space, target, type } from "../../src/theme";
+import { scheduleMissionsReminder } from "../../src/local-notices";
 import { useApproxArea } from "../../src/useApproxArea";
 import { runPendingSync } from "../../src/useAutoSync";
 import { useOnline } from "../../src/useOnline";
@@ -56,6 +57,10 @@ export default function MissionsScreen() {
   const picked = useRef(false);
   const [unfinished, setUnfinished] = useState<{ taskId: string } | null>(null);
   const { near, world } = useMemo(() => splitMissions(listTasks(), cell), [cell]);
+  // A weekly local reminder while missions are near; nothing leaves the phone. Only with a known area.
+  useEffect(() => {
+    if (cell) void scheduleMissionsReminder(near.length);
+  }, [cell, near.length]);
 
   const count = useCallback((rows: LocalProof[]) => {
     setPending(rows.filter((r) => r.status === "pending_sync").length);

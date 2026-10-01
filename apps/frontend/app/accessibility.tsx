@@ -3,8 +3,8 @@
 
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
-import { StyleSheet, Switch, Text, View } from "react-native";
-import { Icon, type IconName } from "../src/components/icons/Icon";
+import { StyleSheet, Text, View } from "react-native";
+import { ToggleRow } from "../src/components/ToggleRow";
 import { BackLink, Screen, ScreenTitle } from "../src/components/ui";
 import {
   hydrateFeedbackSettings,
@@ -13,7 +13,7 @@ import {
   setCelebrationsEnabled,
   setHapticsEnabled,
 } from "../src/feedback";
-import { color, radius, space, target, type } from "../src/theme";
+import { color, space, type } from "../src/theme";
 
 export default function AccessibilityScreen() {
   const router = useRouter();
@@ -60,60 +60,6 @@ export default function AccessibilityScreen() {
   );
 }
 
-function ToggleRow({
-  icon,
-  title,
-  subtitle,
-  value,
-  onValueChange,
-}: {
-  icon: IconName;
-  title: string;
-  subtitle: string;
-  value: boolean;
-  onValueChange: (v: boolean) => void;
-}) {
-  return (
-    <View style={styles.row}>
-      <View style={styles.icon}>
-        <Icon name={icon} size={20} color={color.text} />
-      </View>
-      <View style={{ flex: 1 }}>
-        <Text style={styles.title}>{title}</Text>
-        <Text style={styles.sub}>{subtitle}</Text>
-      </View>
-      <Switch
-        value={value}
-        onValueChange={onValueChange}
-        accessibilityLabel={title}
-        trackColor={{ false: color.border, true: color.primary }}
-        thumbColor={color.surface}
-      />
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   note: { ...type.meta, color: color.muted },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: space.md,
-    padding: space.md,
-    borderRadius: radius.md,
-    backgroundColor: color.surface,
-    borderWidth: 1,
-    borderColor: color.border,
-    minHeight: target.min + 12,
-  },
-  icon: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.pill,
-    backgroundColor: color.surfaceSoft,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  title: { ...type.subtitle, color: color.text },
-  sub: { ...type.meta, color: color.muted },
 });

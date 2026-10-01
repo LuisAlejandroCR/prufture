@@ -30,7 +30,6 @@ import {
   setVerifiedPerson,
   upsertProof,
 } from "./store.js";
-import { pushRegistrationCount, registerPushToken } from "./push-store.js";
 import { attestOnce } from "./relayer.js";
 import { taskReports } from "./confirmations.js";
 import {
@@ -473,16 +472,6 @@ app.post("/evidence-requests", async (c) => {
     })
     .map((p) => p.proofHash);
   return c.json({ requested: [...new Set(requested)] }, 200);
-});
-
-app.post("/register-push", async (c) => {
-  const body = await readJsonObject(c);
-  if (!body) return c.json({ error: "invalid json" }, 400);
-  // proofOwnerRef is intentionally ignored: tokens are never linked to a proof or an identity.
-  if (!registerPushToken(body.deviceId, body.token)) {
-    return c.json({ error: "invalid deviceId or token" }, 400);
-  }
-  return c.json({ registered: true, count: pushRegistrationCount() }, 200);
 });
 
 // REGION_PREFIX_LEN: how many geohash chars leave the api. 5 ≈ ~5 km cell, never exact GPS.
