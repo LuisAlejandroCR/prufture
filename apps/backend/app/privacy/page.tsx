@@ -195,8 +195,9 @@ export default function PrivacyPage() {
           Notifications are worked out on your phone and shown by your phone: a weekly reminder when
           missions are near, when a report you sent is confirmed by the community, and when the
           programme team asks for a photo. The app sends no push token or device identifier anywhere,
-          so no server or notification service learns which reports are yours. You can switch each
-          one off in the app under Me, Notifications.
+          so no server or notification service learns which reports are yours. Now and then,
+          while the app is closed, your phone may run the same checks it runs when you open it;
+          nothing else is sent. You can switch each one off in the app under Me, Notifications.
         </p>
 
         <h2>Subscriptions</h2>

@@ -170,3 +170,7 @@ test("privacy says notices are worked out on the phone and no push token is sent
   assert.match(PRIVACY, /no push token/i);
   assert.doesNotMatch(PRIVACY, /registers a push token/);
 });
+
+test("privacy says the phone may check now and then while the app is closed, sending nothing new", () => {
+  assert.match(PRIVACY, /while the app is closed/i);
+});
