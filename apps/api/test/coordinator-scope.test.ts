@@ -145,3 +145,20 @@ test("/health says whether programme staff and strict owner tokens are set, neve
   assert.equal(off.programmeStaff, false);
   assert.equal(off.strictEvidenceToken, false);
 });
+
+test("inbox rows carry communityConfirmed: the same rule as /proofs for staff, both states in the sample", async () => {
+  entitled();
+  const hash = await realProof();
+  const staff = (await (await get("/coordinator/reports", "staff-1")).json()) as Record<string, unknown>[];
+  const mine = staff.find((r) => r.proofHash === hash);
+  assert.equal(mine?.communityConfirmed, false, "one report without a pass is never confirmed");
+  const pub = (await (await app.request("/proofs")).json()) as Record<string, unknown>[];
+  for (const row of staff) {
+    assert.equal(typeof row.communityConfirmed, "boolean");
+    assert.equal(row.communityConfirmed, pub.find((p) => p.proofHash === row.proofHash)?.communityConfirmed);
+  }
+
+  const sample = (await (await get("/coordinator/reports", "someone-else")).json()) as Record<string, unknown>[];
+  assert.ok(sample.some((r) => r.communityConfirmed === true));
+  assert.ok(sample.some((r) => r.communityConfirmed === false));
+});

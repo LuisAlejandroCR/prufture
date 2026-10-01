@@ -21,16 +21,18 @@ interface SampleSeed {
   daysAgo: number;
   status: ReviewStatus;
   note: string;
+  /** Shown as community-confirmed, so the sample inbox demonstrates both states. */
+  confirmed: boolean;
 }
 
 // The app's example assignments (apps/frontend/src/tasks.ts) and their coarse cells.
 const SEEDS: SampleSeed[] = [
-  { taskId: "cold-chain-bogota", cell: "d2g38", daysAgo: 1, status: "pending", note: "" },
-  { taskId: "water-pump-repair", cell: "sb8v1", daysAgo: 1, status: "pending", note: "" },
-  { taskId: "solar-panel-install", cell: "kzdwb", daysAgo: 2, status: "pending", note: "" },
-  { taskId: "cold-chain-bogota", cell: "d2g38", daysAgo: 3, status: "pending", note: "" },
-  { taskId: "handwashing-lima", cell: "6mc5z", daysAgo: 5, status: "accepted", note: "Stations working" },
-  { taskId: "latrine-construction", cell: "kzujq", daysAgo: 8, status: "rejected", note: "Photo shows another site" },
+  { taskId: "cold-chain-bogota", cell: "d2g38", daysAgo: 1, status: "pending", note: "", confirmed: true },
+  { taskId: "water-pump-repair", cell: "sb8v1", daysAgo: 1, status: "pending", note: "", confirmed: false },
+  { taskId: "solar-panel-install", cell: "kzdwb", daysAgo: 2, status: "pending", note: "", confirmed: false },
+  { taskId: "cold-chain-bogota", cell: "d2g38", daysAgo: 3, status: "pending", note: "", confirmed: true },
+  { taskId: "handwashing-lima", cell: "6mc5z", daysAgo: 5, status: "accepted", note: "Stations working", confirmed: false },
+  { taskId: "latrine-construction", cell: "kzujq", daysAgo: 8, status: "rejected", note: "Photo shows another site", confirmed: false },
 ];
 
 const sampleHash = (i: number) => createHash("sha256").update(`prufture-sample-report|${i}`).digest("hex");
@@ -71,6 +73,8 @@ export function sampleRows(appUserId: string, now = Date.now()): CoordinatorRow[
       // Whole days back from today, so the sample always looks recent.
       capturedAt: new Date(Math.floor(now / DAY_MS) * DAY_MS - seed.daysAgo * DAY_MS + 10 * 60 * 60 * 1000).toISOString(),
       attestationCount: 1,
+      // The two Bogotá cold-chain reports are two members nearby, so the sample shows both states.
+      communityConfirmed: seed.confirmed,
       reviewStatus: review?.status ?? seed.status,
       reviewNote: review?.note ?? seed.note,
       reviewedAt: review?.reviewedAt ?? (seed.status === "pending" ? "" : new Date(now - seed.daysAgo * DAY_MS).toISOString()),

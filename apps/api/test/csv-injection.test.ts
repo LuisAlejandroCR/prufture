@@ -24,6 +24,7 @@ function row(o: Partial<CoordinatorRow> = {}): CoordinatorRow {
     geohashRegion: "u4pru",
     capturedAt: "2026-01-01T00:00:00Z",
     attestationCount: 0,
+    communityConfirmed: false,
     reviewStatus: "pending",
     reviewNote: "",
     reviewedAt: "",
@@ -82,6 +83,6 @@ test("a neutralised value that also needs quoting gets both treatments", () => {
 
 test("an empty cell stays empty", () => {
   const cells = cellsOf(toCsv([row({ reviewNote: "", reviewedAt: "" })]));
-  assert.equal(cells[6], "");
   assert.equal(cells[7], "");
+  assert.equal(cells[8], "");
 });

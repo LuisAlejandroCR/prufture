@@ -197,7 +197,7 @@ test("export.csv: correct content type, header row, and RFC 4180 escaping of a h
   const csv = await res.text();
   assert.equal(
     csv.split("\r\n")[0],
-    "proofHash,taskId,geohashRegion,capturedAt,attestationCount,reviewStatus,reviewNote,reviewedAt",
+    "proofHash,taskId,geohashRegion,capturedAt,attestationCount,communityConfirmed,reviewStatus,reviewNote,reviewedAt",
   );
   assert.ok(
     csv.includes('"has,comma ""quote"" and\nnewline"'),
@@ -211,7 +211,8 @@ test("toCsv is pure: a cell with every delimiter is quoted and its quotes double
     taskId: 'task,"with"\r\nbreaks',
     geohashRegion: "9q8yy",
     capturedAt: "2026-09-06T14:32:00.000Z",
-    attestationCount: 2,
+    attestationCount: 1,
+    communityConfirmed: true,
     reviewStatus: "accepted",
     reviewNote: "",
     reviewedAt: "2026-09-21T00:00:00.000Z",
@@ -219,7 +220,7 @@ test("toCsv is pure: a cell with every delimiter is quoted and its quotes double
   const csv = toCsv([row]);
   assert.equal(
     csv.split("\r\n")[0],
-    "proofHash,taskId,geohashRegion,capturedAt,attestationCount,reviewStatus,reviewNote,reviewedAt",
+    "proofHash,taskId,geohashRegion,capturedAt,attestationCount,communityConfirmed,reviewStatus,reviewNote,reviewedAt",
   );
   assert.ok(csv.includes('"task,""with""\r\nbreaks"'));
 });
