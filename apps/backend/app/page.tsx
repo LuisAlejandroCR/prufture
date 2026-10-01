@@ -6,13 +6,18 @@ import Link from "next/link";
 import { qrPath } from "../lib/qr";
 import { ScrollFilms } from "./ScrollFilms";
 import { HeroPhone } from "./HeroPhone";
+import { QrCard } from "./QrCard";
 
 // Goes through /verify/sample, which opens a report the store holds right now (lib/sample.ts).
 const SAMPLE_REPORT_HREF = "/verify/sample";
 
 const ANDROID_BUILD_URL =
   process.env.NEXT_PUBLIC_ANDROID_BUILD_URL ??
-  "https://expo.dev/accounts/alejoo_oo/projects/prufture/builds/4bb39156-6542-44af-b2f8-1976cc90e47d";
+  "https://expo.dev/accounts/alejoooo-team/projects/prufture/builds/18755ce0-982f-4505-87ed-97f62fa9a1c5";
+
+// iOS cannot sideload a store build, so the iOS equivalent of the APK is the public TestFlight link.
+const IOS_TESTFLIGHT_URL =
+  process.env.NEXT_PUBLIC_IOS_TESTFLIGHT_URL ?? "https://testflight.apple.com/join/rBhq72De";
 
 function Mark({ compact = false }: { compact?: boolean }) {
   return (
@@ -58,7 +63,8 @@ function ProductPreview() {
 }
 
 export default function Home() {
-  const { size, path } = qrPath(ANDROID_BUILD_URL);
+  const android = qrPath(ANDROID_BUILD_URL);
+  const ios = qrPath(IOS_TESTFLIGHT_URL);
   return (
     <main className="landing">
       <nav className="landing-nav" aria-label="Primary navigation">
@@ -121,8 +127,11 @@ export default function Home() {
       </section>
 
       <section className="try-section" id="try">
-        <div className="try-copy"><div className="section-index">05 / TRY PRUFTURE</div><h2>See the full journey.<br /><em>Then take it with you.</em></h2><p>Explore a sample public report, open the programme dashboard, or install the Android preview. The prototype is open and honest about what is live today.</p><div className="try-links"><Link className="landing-btn landing-btn-primary" href={SAMPLE_REPORT_HREF}>Open sample report <ArrowIcon /></Link><Link className="landing-btn landing-btn-ghost" href="/dashboard">View dashboard</Link></div></div>
-        <a className="download-card" href={ANDROID_BUILD_URL} target="_blank" rel="noreferrer noopener"><svg viewBox={`0 0 ${size} ${size}`} role="img" aria-label="QR code to install the Android preview"><rect width={size} height={size} fill="#ffffff" /><path d={path} fill="#1c1c1e" /></svg><span><small>ANDROID PREVIEW</small><strong>Scan to install</strong><em>No store or account required</em></span><ArrowIcon /></a>
+        <div className="try-copy"><div className="section-index">05 / TRY PRUFTURE</div><h2>See the full journey.<br /><em>Then take it with you.</em></h2><p>Explore a sample public report, open the programme dashboard, or install the Android or iOS preview. The prototype is open and honest about what is live today.</p><div className="try-links"><Link className="landing-btn landing-btn-primary" href={SAMPLE_REPORT_HREF}>Open sample report <ArrowIcon /></Link><Link className="landing-btn landing-btn-ghost" href="/dashboard">View dashboard</Link></div></div>
+        <div className="download-cards">
+          <QrCard href={ANDROID_BUILD_URL} size={android.size} path={android.path} platform="Android" label="ANDROID PREVIEW" title="Scan to install" note="No store or account required" scanHint="Scan with an Android phone to install the Prufture preview." />
+          <QrCard href={IOS_TESTFLIGHT_URL} size={ios.size} path={ios.path} platform="iOS" label="IOS · TESTFLIGHT" title="Scan to join the beta" note="Needs the free TestFlight app" scanHint="Scan with an iPhone to join the Prufture beta in TestFlight." />
+        </div>
       </section>
 
       <section className="closing-section"><Mark compact /><p>Evidence should travel farther than connectivity.</p><h2>Make every completed task<br /><em>visible, verifiable, and human.</em></h2><Link className="landing-btn landing-btn-white" href={SAMPLE_REPORT_HREF}>Explore Prufture <ArrowIcon /></Link></section>
