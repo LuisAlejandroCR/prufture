@@ -6,9 +6,15 @@
 
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
-import { ActivityIndicator, Linking, Platform, Pressable, Share, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Linking, Platform, Pressable, Share, StyleSheet, Text, TextInput, View } from "react-native";
 import { BackLink, Card, Notice, PrimaryButton, Screen, ScreenTitle, SecondaryButton, SectionLabel } from "../src/components/ui";
-import { fetchCoordinatorReports, recordReview, type CoordinatorReport, type ReviewStatus } from "../src/coordinator-api";
+import {
+  fetchCoordinatorReports,
+  joinProgramme,
+  recordReview,
+  type CoordinatorReport,
+  type ReviewStatus,
+} from "../src/coordinator-api";
 import { coordinatorIdMessage } from "../src/coordinator-id";
 import { coordinatorSummary, summaryEmail, summaryMailto } from "../src/coordinator-summary";
 import { siteUrl } from "../src/links";
@@ -84,6 +90,28 @@ export default function CoordinatorScreen() {
     Linking.openURL(summaryMailto(mail)).catch(() => setNotice("No mail app is set up on this phone."));
   };
 
+  // A programme code turns this subscriber into programme staff on the api; the real inbox follows.
+  const join = async (code: string): Promise<void> => {
+    setNotice(null);
+    const id = await getAppUserId();
+    if (!id.available) {
+      setNotice("Couldn't check the code. Check your connection and try again.");
+      return;
+    }
+    const outcome = await joinProgramme(API_URL, id.data, code);
+    if (outcome === "joined") {
+      void loadReports();
+      return;
+    }
+    setNotice(
+      outcome === "invalid"
+        ? "That code wasn't accepted. Check it with your programme team."
+        : outcome === "limited"
+          ? "Too many tries. Wait an hour, then try again."
+          : "Couldn't check the code. Check your connection and try again.",
+    );
+  };
+
   const locked = status === "free" || list.kind === "locked";
 
   return (
@@ -125,6 +153,7 @@ export default function CoordinatorScreen() {
           onReview={review}
           onRetry={loadReports}
           onEmail={emailSummary}
+          onJoin={join}
         />
       )}
 
@@ -147,12 +176,14 @@ function ReportList({
   onReview,
   onRetry,
   onEmail,
+  onJoin,
 }: {
   list: ListState;
   busyHash: string | null;
   onReview: (row: CoordinatorReport, next: ReviewStatus) => void;
   onRetry: () => void;
   onEmail: (rows: CoordinatorReport[]) => void;
+  onJoin: (code: string) => Promise<void>;
 }) {
   if (list.kind === "loading" || list.kind === "locked") {
     return (
@@ -187,6 +218,7 @@ function ReportList({
             icon="report"
             onPress={() => void Share.share({ message: coordinatorIdMessage(list.appUserId) }).catch(() => undefined)}
           />
+          <JoinForm onJoin={onJoin} />
         </Card>
       ) : null}
       <Card>
@@ -213,6 +245,35 @@ function ReportList({
           <ReviewRow key={row.proofHash} row={row} busy={busyHash === row.proofHash} onReview={onReview} />
         ))
       )}
+    </View>
+  );
+}
+
+/** Redeem a programme code from the programme team. */
+function JoinForm({ onJoin }: { onJoin: (code: string) => Promise<void> }) {
+  const [code, setCode] = useState("");
+  const [busy, setBusy] = useState(false);
+  return (
+    <View style={{ gap: space.sm, marginTop: space.md }}>
+      <Text style={styles.cardBody}>Have a programme code? Enter it to see your programme's reports.</Text>
+      <TextInput
+        value={code}
+        onChangeText={setCode}
+        placeholder="Programme code"
+        placeholderTextColor={color.muted}
+        autoCapitalize="characters"
+        autoCorrect={false}
+        style={styles.codeInput}
+        accessibilityLabel="Programme code"
+      />
+      <PrimaryButton
+        label="Join programme"
+        disabled={busy || code.trim().length === 0}
+        onPress={() => {
+          setBusy(true);
+          void onJoin(code).finally(() => setBusy(false));
+        }}
+      />
     </View>
   );
 }
@@ -285,6 +346,16 @@ const styles = StyleSheet.create({
   center: { paddingVertical: space.xxl, alignItems: "center" },
   cardTitle: { ...type.subtitle, color: color.text, marginBottom: space.xs },
   cardBody: { ...type.body, color: color.muted },
+  codeInput: {
+    ...type.body,
+    color: color.text,
+    minHeight: target.min,
+    paddingHorizontal: space.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: color.border,
+    backgroundColor: color.surface,
+  },
   coordinatorId: { ...type.body, color: color.text, fontWeight: "600", marginBottom: space.sm },
   stats: { flexDirection: "row", marginBottom: space.sm },
   stat: { flex: 1, gap: 2 },

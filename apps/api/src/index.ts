@@ -65,6 +65,7 @@ import {
 } from "./coordinator.js";
 import { coordinatorEntitlementId } from "./entitlement.js";
 import { SAMPLE_HEADER, sampleRows, setSampleReview } from "./coordinator-sample.js";
+import { isCodeShaped, isJoinedStaff, tryJoin } from "./coordinator-join.js";
 import { evidenceStorage } from "./evidence-storage.js";
 import {
   MAX_REQUEST_CHECK,
@@ -605,8 +606,19 @@ app.use("/coordinator/*", requireCoordinator);
 /** Staff of the programme review its real reports; any other subscriber gets a sample inbox. */
 function isProgrammeStaff(c: Context): boolean {
   const caller = c.req.header(APP_USER_HEADER)?.trim() ?? "";
-  return caller !== "" && env.programmeStaffAppUserIds.includes(caller);
+  return caller !== "" && (env.programmeStaffAppUserIds.includes(caller) || isJoinedStaff(caller));
 }
+
+// A coordinator joins the staff with an invitation code from the programme team (coordinator-join.ts).
+app.post("/coordinator/join", async (c) => {
+  const body = await readJsonObject(c);
+  if (!body) return c.json({ error: "invalid json" }, 400);
+  if (!isCodeShaped(body.code)) return c.json({ error: "invalid code" }, 400);
+  const outcome = tryJoin(c.req.header(APP_USER_HEADER)!.trim(), body.code);
+  if (outcome === "limited") return c.json({ error: "too many attempts, try again later" }, 429);
+  if (outcome === "invalid") return c.json({ error: "code not accepted" }, 403);
+  return c.json({ staff: true }, 200);
+});
 
 // Asking a reporter for a photo, or fetching one, is programme work: never for a sample inbox.
 app.use("/coordinator/evidence*", async (c, next) => {

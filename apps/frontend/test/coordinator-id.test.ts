@@ -20,3 +20,34 @@ test("the sample inbox shows the id selectable and offers to share it", () => {
   assert.match(screen, /Share\.share\(\{ message: coordinatorIdMessage\(/);
   assert.match(screen, /label="Share my id"/);
 });
+
+test("joinProgramme posts the code and maps each answer", async () => {
+  const { joinProgramme, APP_USER_HEADER } = await import("../src/coordinator-api.js");
+  let seen: { url?: string; init?: RequestInit } = {};
+  const answer = (status: number) =>
+    (async (url: string, init?: RequestInit) => {
+      seen = { url, init };
+      return new Response("{}", { status });
+    }) as unknown as typeof fetch;
+  assert.equal(await joinProgramme("https://api.test/", "u1", " PILOT-CODE-1 ", answer(200)), "joined");
+  assert.equal(seen.url, "https://api.test/coordinator/join");
+  assert.equal(seen.init?.method, "POST");
+  assert.equal((seen.init?.headers as Record<string, string>)[APP_USER_HEADER], "u1");
+  assert.deepEqual(JSON.parse(String(seen.init?.body)), { code: "PILOT-CODE-1" });
+  assert.equal(await joinProgramme("https://api.test", "u1", "x", answer(403)), "invalid");
+  assert.equal(await joinProgramme("https://api.test", "u1", "x", answer(400)), "invalid");
+  assert.equal(await joinProgramme("https://api.test", "u1", "x", answer(429)), "limited");
+  assert.equal(await joinProgramme("https://api.test", "u1", "x", answer(503)), "unavailable");
+  const throwing = (async () => {
+    throw new Error("offline");
+  }) as unknown as typeof fetch;
+  assert.equal(await joinProgramme("https://api.test", "u1", "x", throwing), "unavailable");
+});
+
+test("the sample inbox offers to join with a programme code and reloads on success", () => {
+  const screen = readFileSync(new URL("../app/coordinator.tsx", import.meta.url), "utf8");
+  assert.match(screen, /accessibilityLabel="Programme code"/);
+  assert.match(screen, /label="Join programme"/);
+  assert.match(screen, /joinProgramme\(/);
+  assert.match(screen, /if \(outcome === "joined"\) \{?\s*(void )?loadReports\(\)/);
+});

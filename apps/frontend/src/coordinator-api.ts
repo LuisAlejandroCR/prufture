@@ -82,6 +82,33 @@ export async function recordReview(
   }
 }
 
+export type JoinOutcome = "joined" | "invalid" | "limited" | "unavailable";
+
+/**
+ * Redeem a programme invitation code, so the api treats this subscriber as programme staff and the
+ * inbox shows the programme's real reports. Never throws.
+ */
+export async function joinProgramme(
+  base: string,
+  appUserId: string,
+  code: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<JoinOutcome> {
+  try {
+    const res = await fetchImpl(url(base, "/coordinator/join"), {
+      method: "POST",
+      headers: { "content-type": "application/json", [APP_USER_HEADER]: appUserId },
+      body: JSON.stringify({ code: code.trim() }),
+    });
+    if (res.ok) return "joined";
+    if (res.status === 400 || res.status === 403) return "invalid";
+    if (res.status === 429) return "limited";
+    return "unavailable";
+  } catch {
+    return "unavailable";
+  }
+}
+
 /** Counts per review state, for the summary line above the list. */
 export function reviewCounts(rows: CoordinatorReport[]): Record<ReviewStatus, number> {
   const counts: Record<ReviewStatus, number> = { pending: 0, accepted: 0, rejected: 0 };
