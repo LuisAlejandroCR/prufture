@@ -95,6 +95,7 @@ export type ActionState =
   | "enrolled"
   | "already_enrolled"
   | "new_round"
+  | "confirm_needed"
   | "invalid"
   | "unknown_programme"
   | "not_configured"
@@ -108,6 +109,7 @@ export const ACTION_STATES: readonly ActionState[] = [
   "enrolled",
   "already_enrolled",
   "new_round",
+  "confirm_needed",
   "invalid",
   "unknown_programme",
   "not_configured",
@@ -215,6 +217,12 @@ export function actionNotice(state: ActionState): ActionNotice {
       return { tone: "info", title: "Already enrolled", text: "That commitment was already in the group. Nothing changed." };
     case "new_round":
       return { tone: "ok", title: "New round started", text: "Every enrolled participant can submit once more per task in this round." };
+    case "confirm_needed":
+      return {
+        tone: "attn",
+        title: "New round not started",
+        text: "Type the programme id to confirm. A new round cannot be undone. Nothing changed.",
+      };
     case "invalid":
       return { tone: "attn", title: "Not accepted", text: "The commitment or programme id was not valid. Nothing was saved." };
     case "unknown_programme":
@@ -256,4 +264,12 @@ export function actionNotice(state: ActionState): ActionNotice {
         text: "We could not reach the api, so we cannot tell whether anything changed. Reload to see the current group before trying again.",
       };
   }
+}
+
+/**
+ * A new round cannot be undone and lets every member report each task again, so the form asks for
+ * the programme id typed out. Surrounding spaces are forgiven; anything else is not.
+ */
+export function newRoundConfirmed(programmeId: string, typed: unknown): boolean {
+  return typeof typed === "string" && typed.trim() === programmeId;
 }

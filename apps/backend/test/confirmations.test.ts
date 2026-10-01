@@ -127,3 +127,18 @@ test("reportChecks: without the route, or with no report verdict, the photo's ow
   // Another report's pass or face check never lends itself to this one.
   assert.deepEqual(reportChecks(photo(null), [row(false, OWN, true, true, false)]), photo(null));
 });
+
+test("parseConfirmations keeps a pass's round, and /verify never adds passes of different rounds", () => {
+  const rows = parseConfirmations({
+    reports: [
+      { own: true, geohashRegion: "d2g62", membershipVerified: true, round: 0 },
+      { own: false, geohashRegion: "d2g63", membershipVerified: true, round: 1 },
+      { own: false, geohashRegion: "d2g63", membershipVerified: true, round: "1" },
+    ],
+  });
+  assert.ok(rows);
+  assert.deepEqual(rows.map((r) => r.round), [0, 1, undefined]);
+  // Round 0 (own) and round 1 are possibly one member: one counts. The junk round reads as 0.
+  assert.equal(nearbyReportCount("d2g62", rows), 2);
+  assert.equal(nearbyReportCount("d2g62", rows.slice(0, 2)), 1);
+});

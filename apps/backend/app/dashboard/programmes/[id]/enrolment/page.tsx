@@ -7,8 +7,8 @@ import Link from "next/link";
 import { actionNotice, fetchGroup, isActionState, isProgrammeId } from "../../../../../lib/enrolment";
 import { Icon } from "../../../../_components/brand";
 import { EmptyState, Metric, Notice, PageHeader } from "../../../ui";
-import { newRoundAction } from "./actions";
 import { EnrolForm } from "./EnrolForm";
+import { NewRoundForm } from "./NewRoundForm";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Enrolment" };
@@ -101,14 +101,10 @@ export default async function EnrolmentPage({
           <h2>Start new round</h2>
           <p className="muted">
             A new round lets every enrolled participant submit once more per task. Reports already
-            verified keep their result.
+            verified keep their result. Reports from different rounds never confirm each other, since
+            they may come from the same person. A new round cannot be undone.
           </p>
-          <form action={newRoundAction}>
-            <input type="hidden" name="programmeId" value={programmeId} />
-            <button type="submit" className="btn secondary" disabled={result.state !== "ok"}>
-              Start new round
-            </button>
-          </form>
+          <NewRoundForm programmeId={programmeId} disabled={result.state !== "ok"} />
         </article>
       </div>
     </section>

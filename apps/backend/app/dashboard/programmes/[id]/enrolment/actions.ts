@@ -7,7 +7,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { isProgrammeId, postCoordinator, staffWriteAllowed } from "../../../../../lib/enrolment";
+import { isProgrammeId, newRoundConfirmed, postCoordinator, staffWriteAllowed } from "../../../../../lib/enrolment";
 import { isStaffAuthConfigured } from "../../../../../lib/staff-auth";
 import { INVITE_COOKIE, isInviteRequired, verifyPass } from "../../../../../lib/staff-invite";
 
@@ -38,5 +38,7 @@ export async function newRoundAction(form: FormData): Promise<void> {
   const programmeId = String(form.get("programmeId") ?? "");
   if (!isProgrammeId(programmeId)) redirect("/dashboard/programmes");
   if (!(await isStaff())) back(programmeId, "not_staff");
+  // Re-checked here: the form's own check is only a convenience.
+  if (!newRoundConfirmed(programmeId, form.get("confirm"))) back(programmeId, "confirm_needed");
   back(programmeId, await postCoordinator("epoch", { programmeId }));
 }

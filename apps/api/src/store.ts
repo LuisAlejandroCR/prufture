@@ -48,6 +48,8 @@ export interface Entry {
    * unauthenticated, so a failed attempt must not be able to mark someone else's report.
    */
   membership?: "verified";
+  /** Round (personhood epoch) the pass above was proven in. Missing on older entries: round 0. */
+  membershipRound?: number;
 }
 
 /** One programme's enrolled commitments and the roots a proof may be made against. */
@@ -220,6 +222,14 @@ function load(): void {
                 : undefined,
             reportId: typeof v.reportId === "string" ? v.reportId : undefined,
             membership: v.membership === "verified" ? "verified" : undefined,
+            // Kept only beside a verified pass, and only as a whole round number.
+            membershipRound:
+              v.membership === "verified" &&
+              typeof v.membershipRound === "number" &&
+              Number.isSafeInteger(v.membershipRound) &&
+              v.membershipRound >= 0
+                ? v.membershipRound
+                : undefined,
           });
         }
       }
@@ -376,12 +386,16 @@ export function setReview(proofHash: string, rec: ReviewRecord): boolean {
   return true;
 }
 
-/** Record a verified membership proof against a report. Write-once. False if the proof is unknown. */
-export function setMembershipVerified(proofHash: string): boolean {
+/**
+ * Record a verified membership proof against a report, with the round (epoch) it was proven in.
+ * Write-once, round included. False if the proof is unknown.
+ */
+export function setMembershipVerified(proofHash: string, round = 0): boolean {
   const entry = byHash.get(proofHash);
   if (!entry) return false;
   if (entry.membership !== "verified") {
     entry.membership = "verified";
+    entry.membershipRound = round;
     scheduleFlush();
   }
   return true;

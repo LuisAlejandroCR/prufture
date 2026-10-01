@@ -2,7 +2,9 @@
 // web's public /verify page so the two can never disagree. A report counts when it carries a verified
 // programme pass and its coarse cell centre is within NEARBY_KM of the report being judged; two such
 // reports confirm it. The pass is spent once per member per task and epoch, so two counted reports are
-// two different enrolled members. Pure: geohash decode and a great-circle distance, nothing else.
+// two different enrolled members — within one round. A new round (epoch) lets every member prove
+// once more per task, so a pass from round 1 and a pass from round 2 may be the same person: only
+// passes of the same round count together. Pure: geohash decode and a great-circle distance.
 
 /** A report counts only from within this distance of the judged report's area (same as the app). */
 export const NEARBY_KM = 5;
@@ -59,16 +61,17 @@ export interface PassReport {
   own: boolean;
   geohashRegion: string;
   membershipVerified: boolean;
+  /** Round (epoch) the pass was proven in. Missing reads as round 0 (passes before rounds were kept). */
+  round?: number;
 }
 
-/**
- * Pass-carrying reports near `ownRegion`, the judged report included when it carries a pass. A
- * report without a pass, or with an unreadable region, never counts.
- */
-export function nearbyPassReportCount(ownRegion: string, reports: readonly PassReport[]): number {
+const roundOf = (r: PassReport) => (typeof r.round === "number" && Number.isFinite(r.round) ? r.round : 0);
+
+/** Pass-carrying reports of one round near `ownRegion`, the judged report included when it is one. */
+function countInRound(ownRegion: string, reports: readonly PassReport[], round: number): number {
   let n = 0;
   for (const r of reports) {
-    if (!r.membershipVerified) continue;
+    if (!r.membershipVerified || roundOf(r) !== round) continue;
     if (r.own) {
       n += 1;
       continue;
@@ -77,6 +80,20 @@ export function nearbyPassReportCount(ownRegion: string, reports: readonly PassR
     if (d !== null && d < NEARBY_KM) n += 1;
   }
   return n;
+}
+
+/**
+ * Pass-carrying reports near `ownRegion`, the judged report included when it carries a pass. Only
+ * one round counts: the judged report's own round when it carries a pass, else the round with the
+ * most. A report without a pass, or with an unreadable region, never counts.
+ */
+export function nearbyPassReportCount(ownRegion: string, reports: readonly PassReport[]): number {
+  const own = reports.find((r) => r.own && r.membershipVerified);
+  if (own) return countInRound(ownRegion, reports, roundOf(own));
+  const rounds = new Set(reports.filter((r) => r.membershipVerified).map(roundOf));
+  let best = 0;
+  for (const round of rounds) best = Math.max(best, countInRound(ownRegion, reports, round));
+  return best;
 }
 
 /** True when enough pass-carrying reports nearby agree. */

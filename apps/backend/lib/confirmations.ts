@@ -16,6 +16,8 @@ export interface ConfirmationReport {
   verifiedPerson: boolean | null;
   /** For a false verdict: true when the provider was down, not a failed check. */
   verifiedPersonDegraded: boolean | null;
+  /** Round (epoch) of the pass. Passes of different rounds never confirm each other. Missing: round 0. */
+  round?: number;
 }
 
 // The rule itself lives in @proof/core, shared with the api's dashboard status, so /verify and the
@@ -78,6 +80,7 @@ export function parseConfirmations(body: unknown): ConfirmationReport[] | null {
         membershipVerified?: unknown;
         verifiedPerson?: unknown;
         verifiedPersonDegraded?: unknown;
+        round?: unknown;
       } => !!r && typeof r === "object" && typeof r.own === "boolean" && typeof r.geohashRegion === "string",
     )
     .map((r) => ({
@@ -86,5 +89,6 @@ export function parseConfirmations(body: unknown): ConfirmationReport[] | null {
       membershipVerified: r.membershipVerified === true,
       verifiedPerson: typeof r.verifiedPerson === "boolean" ? r.verifiedPerson : null,
       verifiedPersonDegraded: typeof r.verifiedPersonDegraded === "boolean" ? r.verifiedPersonDegraded : null,
+      ...(typeof r.round === "number" && Number.isSafeInteger(r.round) && r.round >= 0 ? { round: r.round } : {}),
     }));
 }

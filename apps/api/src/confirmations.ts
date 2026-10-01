@@ -22,6 +22,17 @@ export interface ConfirmationReport {
    * enrolled members. Boolean only: no nullifier, commitment or programme id leaves this route.
    */
   membershipVerified: boolean;
+  /**
+   * Round (epoch) of that pass, only when there is one. Passes of different rounds may be the same
+   * member, so they never confirm each other. The epoch is public (/personhood/group) anyway.
+   */
+  round?: number;
+}
+
+/** The round of a report's pass: the earliest recorded among its verified photos, 0 when unrecorded. */
+function passRound(group: Entry[]): number {
+  const rounds = group.filter((e) => e.membership === "verified").map((e) => e.membershipRound ?? 0);
+  return rounds.length > 0 ? Math.min(...rounds) : 0;
 }
 
 /** Every non-rejected report for the task of `ownHash`, one row per report. null for an unknown hash. */
@@ -52,6 +63,7 @@ export function taskReports(entries: Entry[], ownHash: string, regionLen: number
       verifiedPersonDegraded:
         anyTrue ? false : falses.length > 0 ? falses.every((e) => e.verifiedPersonDegraded === true) : null,
       membershipVerified: group.some((e) => e.membership === "verified"),
+      ...(group.some((e) => e.membership === "verified") ? { round: passRound(group) } : {}),
     });
   }
   return out;
@@ -87,11 +99,11 @@ export function communityConfirmedHashes(entries: Entry[], regionLen: number): S
   const out = new Set<string>();
   for (const groups of byTask.values()) {
     // Only the rows that can count: not rejected and carrying a pass (the rule skips the rest).
-    const passRows: { key: string; geohashRegion: string }[] = [];
+    const passRows: { key: string; geohashRegion: string; round: number }[] = [];
     for (const [key, group] of groups) {
       if (group.some((e) => e.review?.status === "rejected")) continue;
       if (!group.some((e) => e.membership === "verified")) continue;
-      passRows.push({ key, geohashRegion: group[0]!.payload.geohash.slice(0, regionLen) });
+      passRows.push({ key, geohashRegion: group[0]!.payload.geohash.slice(0, regionLen), round: passRound(group) });
     }
     if (passRows.length === 0) continue;
     for (const [key, group] of groups) {
@@ -99,6 +111,7 @@ export function communityConfirmedHashes(entries: Entry[], regionLen: number): S
         own: r.key === key,
         geohashRegion: r.geohashRegion,
         membershipVerified: true,
+        round: r.round,
       }));
       for (const e of group) {
         if (isCommunityConfirmed(e.payload.geohash.slice(0, regionLen), rows)) out.add(e.payload.proofHash);

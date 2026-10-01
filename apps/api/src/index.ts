@@ -537,7 +537,9 @@ app.post("/personhood/proof", async (c) => {
     { proof: body.proof, proofHash, scope, acceptedRoots: group.roots },
     { nullifiers: storeNullifiers({ hasNullifier, addNullifier }) },
   );
-  if (result.state === "verified") setMembershipVerified(proofHash);
+  // The round goes with the pass: a new round lets a member prove again, so passes of different
+  // rounds may be one person and never confirm each other (@proof/core nearby.ts).
+  if (result.state === "verified") setMembershipVerified(proofHash, group.epoch);
   // The reason code (e.g. unknown_root, bad_proof) stays server-side; the log carries only it, the
   // state and a short public report prefix, never proof material, a nullifier or a commitment.
   const report = proofHash.replace(/^0x/, "").slice(0, 12);
