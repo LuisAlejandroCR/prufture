@@ -164,3 +164,10 @@ test("neither page leaks an internal field name, key or endpoint", () => {
     }
   }
 });
+
+test("privacy names OneSignal for notifications and what it never receives", () => {
+  assert.match(PRIVACY, /OneSignal/);
+  assert.match(PRIVACY, /never your name, phone number, location or reports/);
+  assert.match(PRIVACY, /none is about a specific report/i);
+  assert.doesNotMatch(PRIVACY, /registers a push token against a randomly generated device/);
+});

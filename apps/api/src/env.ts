@@ -106,6 +106,18 @@ export const env = {
       .filter(Boolean);
   },
 
+  // OneSignal programme notices (onesignal.ts). The REST key is secret; the app id is public (the app
+  // ships it as EXPO_PUBLIC_ONESIGNAL_APP_ID). The segment defaults to every subscribed device.
+  get oneSignalAppId(): string {
+    return process.env.ONESIGNAL_APP_ID?.trim() ?? "";
+  },
+  get oneSignalRestApiKey(): string {
+    return process.env.ONESIGNAL_REST_API_KEY?.trim() ?? "";
+  },
+  get oneSignalSegment(): string {
+    return process.env.ONESIGNAL_SEGMENT?.trim() || "Total Subscriptions";
+  },
+
   // RevenueCat entitlement check: the secret key never reaches the client.
   get revenuecatSecretKey(): string {
     return process.env.REVENUECAT_SECRET_KEY ?? "";

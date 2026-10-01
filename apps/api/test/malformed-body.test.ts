@@ -14,7 +14,6 @@ const POST_ROUTES = [
   "/verify-identity",
   "/liveness-result",
   "/precise-location",
-  "/register-push",
 ];
 
 async function post(route: string, body: string): Promise<Response> {

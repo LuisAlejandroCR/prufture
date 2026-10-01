@@ -1,33 +1,24 @@
-// push.test.ts: pure push-registration helpers (src/push.ts). No native imports here —
-// the Expo glue in src/notifications.ts is grepped by eas-config.test.ts instead.
+// push.test.ts: pure push helpers (src/push.ts). OneSignal replaced the Expo token registration; the
+// app id is public build config, and a malformed or missing one leaves push off rather than half-on.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { isExpoPushToken, randomDeviceId, toRegisterBody } from "../src/push";
+import { oneSignalAppId } from "../src/push";
 
-test("toRegisterBody emits exactly deviceId + token, nothing else", () => {
-  const body = toRegisterBody("deadbeefdeadbeef", "ExpoPushToken[abc]");
-  assert.deepEqual(Object.keys(body).sort(), ["deviceId", "token"]);
-  assert.equal(body.deviceId, "deadbeefdeadbeef");
-  assert.equal(body.token, "ExpoPushToken[abc]");
+test("oneSignalAppId accepts a OneSignal app id (a UUID) and nothing else", () => {
+  const id = "6b1f6c4a-3f3e-4a8e-9a55-2f1d9c0b7e21";
+  assert.equal(oneSignalAppId({ EXPO_PUBLIC_ONESIGNAL_APP_ID: id }), id);
+  assert.equal(oneSignalAppId({ EXPO_PUBLIC_ONESIGNAL_APP_ID: ` ${id.toUpperCase()} ` }), id);
+  for (const bad of [undefined, "", "not-an-id", "<<ONESIGNAL_APP_ID>>"]) {
+    assert.equal(oneSignalAppId({ EXPO_PUBLIC_ONESIGNAL_APP_ID: bad }), null, String(bad));
+  }
 });
 
-test("isExpoPushToken accepts both Expo forms and rejects everything else", () => {
-  assert.equal(isExpoPushToken("ExponentPushToken[xxx]"), true);
-  assert.equal(isExpoPushToken("ExpoPushToken[xxx]"), true);
-  assert.equal(isExpoPushToken("Bearer xyz"), false);
-  assert.equal(isExpoPushToken(null), false);
-});
-
-test("randomDeviceId is 32 lowercase hex chars and uses the injected RNG", () => {
-  let called = 0;
-  const rng = (a: Uint8Array) => {
-    called += 1;
-    a.fill(0xab);
-    return a;
-  };
-  const id = randomDeviceId(rng);
-  assert.equal(called, 1);
-  assert.match(id, /^[0-9a-f]{32}$/);
-  assert.equal(id, "ab".repeat(16));
+test("Data and privacy discloses OneSignal only in builds where push is configured", async () => {
+  const { readFileSync } = await import("node:fs");
+  const src = readFileSync(new URL("../app/data-privacy.tsx", import.meta.url), "utf8");
+  assert.match(src, /\.\.\.\(oneSignalAppId\(\) \? \[NOTIFICATIONS\] : \[\]\)/);
+  assert.match(src, /OneSignal/);
+  assert.match(src, /only if you allow/i);
+  assert.match(src, /never your name, phone number, location or reports/);
 });

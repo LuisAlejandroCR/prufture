@@ -36,11 +36,13 @@
     "expo-status-bar": "~57.0.1",
     "expo-updates": "~57.0.21",
     "expo-web-browser": "~57.0.3",
+    "onesignal-expo-plugin": "2.7.1",
     "react": "19.2.3",
     "react-native": "0.86.3",
     "react-native-confetti-cannon": "^1.5.2",
     "react-native-get-random-values": "~1.11.0",
     "react-native-maps": "1.27.2",
+    "react-native-onesignal": "5.5.14",
     "react-native-purchases": "10.9.0",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-svg": "15.15.4"

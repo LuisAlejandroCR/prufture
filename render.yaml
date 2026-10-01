@@ -105,6 +105,12 @@ services:
       # Proxies appending to X-Forwarded-For in front of the api (default 1). Picks the per-IP key.
       - key: TRUSTED_PROXY_HOPS
         sync: false
+      # OneSignal programme notices (push to every subscribed reporter, no per-person targeting).
+      # The app id is public; the REST API key is secret. Absent -> no notice is sent.
+      - key: ONESIGNAL_APP_ID
+        sync: false
+      - key: ONESIGNAL_REST_API_KEY
+        sync: false
       # Delivery channels. Absent -> each channel degrades, /notify returns sent:false.
       - key: KAPSO_API_KEY
         sync: false

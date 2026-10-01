@@ -19,6 +19,7 @@
       ["expo-camera", { "cameraPermission": "Prufture uses the camera to photograph the field activity you are reporting on and, only if you choose, for a live-person face check. Prufture never stores an image of your face.", "recordAudioAndroid": false }],
       ["expo-location", { "locationWhenInUsePermission": "Prufture records an approximate area for the report, not your exact location, plus an encrypted precise point that only the programme team can open for audit." }],
       ["expo-notifications", { "icon": "./assets/notification-icon.png", "color": "#C8533A" }],
+      ["onesignal-expo-plugin", { "mode": "production", "disableNSE": true, "disableLocation": true }],
       "expo-web-browser"
     ],
     "ios": {
