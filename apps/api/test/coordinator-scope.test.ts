@@ -130,3 +130,18 @@ test("evidence requests and downloads are for programme staff only", async () =>
   assert.equal((await post("/coordinator/evidence-request", { proofHash: hash }, "buyer-7")).status, 403);
   assert.equal((await get(`/coordinator/evidence/${hash}`, "buyer-7")).status, 403);
 });
+
+test("/health says whether programme staff and strict owner tokens are set, never who", async () => {
+  process.env.PROGRAMME_STAFF_APP_USER_IDS = "staff-secret-9";
+  process.env.REQUIRE_EVIDENCE_TOKEN = "true";
+  const on = await (await app.request("/health")).text();
+  const j = JSON.parse(on) as { programmeStaff: boolean; strictEvidenceToken: boolean };
+  assert.equal(j.programmeStaff, true);
+  assert.equal(j.strictEvidenceToken, true);
+  assert.ok(!on.includes("staff-secret-9"));
+  delete process.env.PROGRAMME_STAFF_APP_USER_IDS;
+  delete process.env.REQUIRE_EVIDENCE_TOKEN;
+  const off = (await (await app.request("/health")).json()) as { programmeStaff: boolean; strictEvidenceToken: boolean };
+  assert.equal(off.programmeStaff, false);
+  assert.equal(off.strictEvidenceToken, false);
+});
