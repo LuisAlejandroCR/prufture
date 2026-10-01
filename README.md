@@ -69,8 +69,14 @@ Entitlements are also checked server-side before coordinator data is returned. T
 closed for staff-only routes and never blocks a reporter's core flow. RevenueCat Test Store support
 is included for review builds.
 
+The plan alone never opens a programme's real reports. The programme's staff accounts review its
+reports; any other subscriber gets a sample inbox of their own, with the same review flow, whose
+decisions never touch a real report. Enrolling members for the programme pass is limited to the
+programme's admin account.
+
 **For reviewers:** in the app open *Me* → *Coordinator review* → *See plans*. On iOS, tap *Redeem
-offer code*, enter the code supplied with the submission, then tap *Restore purchases*.
+offer code*, enter the code supplied with the submission, then tap *Restore purchases*. The review
+screen then shows a sample inbox you can accept and reject freely.
 
 ## Designed for social good
 
@@ -109,6 +115,9 @@ or anonymity guarantees. Those require separate technical and legal work.
 - Offline capture, on-device SHA-256 + ed25519 signing, SQLite queue, and reconnect sync are
   implemented with automated coverage.
 - The API rejects tampered proofs and over-precise geohashes before persistence or attestation.
+- Public writes keyed by a report reference are bound to the phone that synced it: a face-check
+  verdict or sealed precise point sent with another device's token is refused. Builds that predate
+  the token are still accepted until the operator switches on strict mode.
 - A real EAS attestation exists on Base Sepolia under schema `#2438`: transaction
   `0xee879341dbb965363bf37e1c3c8b56af8fdc732902ff3f736e6389d6b0994a9b`, UID
   `0x4798879a555b6442a876a9b9a9dacfd7c3a73c3bd7fb3978f492b0fd72522905`.
