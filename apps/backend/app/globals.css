@@ -653,6 +653,7 @@ details.tech { border-radius: var(--radius-md); }
 .dash-privacy strong { display: block; font-size: .8rem; }
 .dash-privacy small { display: block; font-size: .74rem; color: var(--text-muted); line-height: 1.4; }
 .dash-account { padding: 0 8px; }
+.dash-more { display: none; }
 .dash-main { padding: 28px clamp(20px, 3.4vw, 48px) 64px; max-width: 1360px; width: 100%; }
 .dash-auth-banner {
   margin: 0 0 24px; padding: 10px 14px; border-radius: 12px; font-size: .86rem;
@@ -1031,14 +1032,36 @@ a.pager-btn:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px
      the column past the screen. align-content: start keeps the nav row from stretching on short pages. */
   .dash { grid-template-columns: minmax(0, 1fr); align-content: start; background: var(--bg); }
   .dash-side {
-    position: static; height: auto; flex-direction: row; align-items: center; padding: 10px 14px;
-    gap: 14px; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 30; height: auto; flex-direction: row; align-items: center; padding: 10px 14px;
+    gap: 10px; overflow: visible; border-right: 0; border-bottom: 1px solid var(--border); box-shadow: var(--shadow-sm);
   }
   .dash-groups { display: flex; gap: 4px; }
+  .dash-group:nth-child(n + 2) { display: none; }
   .dash-group-title, .dash-side-foot .dash-privacy { display: none; }
   .dash-side-foot { margin: 0 0 0 auto; }
   .dash-nav { grid-auto-flow: column; gap: 2px; }
-  .dash-nav a { white-space: nowrap; }
+  .dash-nav a { min-height: 44px; white-space: nowrap; }
+  /* Static so the menu anchors to the sticky bar, not the More button, and never runs off-screen. */
+  .dash-more { display: block; position: static; }
+  .dash-more > summary {
+    min-width: 44px; min-height: 44px; padding: 0 10px; border-radius: 10px; cursor: pointer;
+    display: flex; align-items: center; gap: 8px; color: var(--text-muted); font-size: .92rem; font-weight: 600; list-style: none;
+  }
+  .dash-more > summary::-webkit-details-marker { display: none; }
+  .dash-more > summary:hover, .dash-more > summary[aria-current="page"], .dash-more[open] > summary { background: var(--brand-soft); color: var(--brand); }
+  .dash-more > summary:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+  .dash-more-menu {
+    position: absolute; top: calc(100% + 6px); right: 10px; z-index: 40; width: min(260px, calc(100vw - 20px));
+    display: grid; gap: 2px; padding: 8px; border: 1px solid var(--border); border-radius: 14px;
+    background: var(--surface); box-shadow: var(--shadow-md);
+  }
+  .dash-more-menu a {
+    min-height: 44px; padding: 0 12px; border-radius: 9px; display: flex; align-items: center; gap: 10px;
+    color: var(--text-muted); text-decoration: none; font-size: .9rem; font-weight: 600;
+  }
+  .dash-more-menu a:hover { background: var(--surface-2); color: var(--text); }
+  .dash-more-menu a[aria-current="page"] { background: var(--brand-soft); color: var(--brand); }
+  .dash-more-menu a:focus-visible { outline: 2px solid var(--brand); outline-offset: -2px; }
   .dash-main { padding: 18px 16px 48px; }
   .dash-narrow-note {
     display: block; background: var(--info-bg); color: var(--text);
@@ -1046,6 +1069,13 @@ a.pager-btn:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px
   }
 }
 @media (max-width: 560px) {
+  .dash-side { padding-inline: 10px; gap: 6px; }
+  .dash-brand { padding: 0 4px; }
+  .dash-brand .brand-mark > span { display: none; }
+  .dash-nav a { width: 44px; justify-content: center; padding-inline: 0; }
+  .dash-nav a span, .dash-more > summary span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .dash-more > summary { padding-inline: 0; justify-content: center; }
+  .dash-account { padding: 0 2px; }
   .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   .metric { padding: 14px; }
   .metric .n { font-size: 1.6rem; }
