@@ -2,7 +2,7 @@
 // stacked bar of review statuses with a labelled legend, so status is never colour-alone.
 // ActivityChart is a single-series column chart of reports per day with a hover/focus tooltip
 // and a screen-reader list. Inputs are aggregate counts only. Each legend row links to the
-// workspace filtered to that status.
+// workspace filtered to that status, and each day's column to that day's reports.
 
 import Link from "next/link";
 import { REVIEW_CLASS, REVIEW_LABEL, reportsHref, type ReviewStatus } from "../../lib/dashboard";
@@ -62,24 +62,45 @@ export function ActivityChart({ series }: { series: { day: string; count: number
           <span data-v={0} />
         </div>
         <div className="activity-cols">
-          {series.map((d, i) => (
-            <div className="activity-col" key={d.day}>
-              <span className="activity-bar" style={{ height: `${(d.count / top) * 100}%` }} data-zero={d.count === 0 || undefined} />
-              <span className="activity-tip">
-                <strong>{d.count}</strong> {d.count === 1 ? "report" : "reports"}
-                <small>{shortDay(d.day)}</small>
-              </span>
-              {i === 0 || i === series.length - 1 || i === Math.floor(series.length / 2) ? (
-                <span className="activity-x">{i === series.length - 1 ? "Today" : shortDay(d.day)}</span>
-              ) : null}
-            </div>
-          ))}
+          {series.map((d, i) => {
+            const col = (
+              <>
+                <span className="activity-bar" style={{ height: `${(d.count / top) * 100}%` }} data-zero={d.count === 0 || undefined} />
+                <span className="activity-tip">
+                  <strong>{d.count}</strong> {d.count === 1 ? "report" : "reports"}
+                  <small>{shortDay(d.day)}</small>
+                </span>
+                {i === 0 || i === series.length - 1 || i === Math.floor(series.length / 2) ? (
+                  <span className="activity-x">{i === series.length - 1 ? "Today" : shortDay(d.day)}</span>
+                ) : null}
+              </>
+            );
+            // The plot is aria-hidden and its links are out of the tab order; the list below
+            // carries the same links for keyboard and screen-reader users.
+            return d.count > 0 ? (
+              <Link className="activity-col is-link" key={d.day} href={reportsHref({ from: d.day, to: d.day })} tabIndex={-1}>
+                {col}
+              </Link>
+            ) : (
+              <div className="activity-col" key={d.day}>
+                {col}
+              </div>
+            );
+          })}
         </div>
       </div>
       <ul className="sr-only">
         {series.map((d) => (
           <li key={d.day}>
-            {shortDay(d.day)}: {d.count} {d.count === 1 ? "report" : "reports"}
+            {d.count > 0 ? (
+              <Link href={reportsHref({ from: d.day, to: d.day })}>
+                {shortDay(d.day)}: {d.count} {d.count === 1 ? "report" : "reports"}
+              </Link>
+            ) : (
+              <>
+                {shortDay(d.day)}: no reports
+              </>
+            )}
           </li>
         ))}
       </ul>

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { fetchProofs } from "../../../lib/api";
 import { areas, reportsHref } from "../../../lib/dashboard";
 import { Icon } from "../../_components/brand";
+import { RowLink } from "../RowLink";
 import { AreaChip, DegradedNotice, EmptyState, Metric, Notice, PageHeader } from "../ui";
 
 export const dynamic = "force-dynamic";
@@ -39,9 +40,15 @@ export default async function CommunitiesPage() {
       ) : (
         <>
           <div className="metrics metrics-3">
-            <Metric icon="pin" value={rows.length} label="Approximate regions" />
+            <Metric icon="pin" value={rows.length} label="Approximate regions" href="/dashboard/map" />
             <Metric icon="check" value={fullyConfirmed} label="Fully confirmed" tone="ok" />
-            <Metric icon="users" value={gaps.length} label="Need a second report" tone="wait" />
+            <Metric
+              icon="users"
+              value={gaps.length}
+              label="Need a second report"
+              tone="wait"
+              href={reportsHref({ status: "needs-another" })}
+            />
           </div>
           {gaps.length > 0 ? (
             <Notice tone="info" title={`${gaps.length} ${gaps.length === 1 ? "region needs" : "regions need"} a second community report`}>
@@ -59,40 +66,49 @@ export default async function CommunitiesPage() {
                 </tr>
               </thead>
               <tbody>
-                {rows.map((r) => (
-                  <tr key={r.region}>
-                    <td>
-                      {r.region === "(none)" ? (
-                        <AreaChip region="" />
-                      ) : (
-                        <AreaChip region={r.region} href={reportsHref({ area: r.region })} />
-                      )}
-                    </td>
-                    <td>
-                      <span className="inline-bar">
-                        <span className="inline-bar-track">
-                          <span style={{ width: `${(r.received / max) * 100}%` }} />
+                {rows.map((r) => {
+                  const cells = (
+                    <>
+                      <td>
+                        {r.region === "(none)" ? (
+                          <AreaChip region="" />
+                        ) : (
+                          <AreaChip region={r.region} href={reportsHref({ area: r.region })} />
+                        )}
+                      </td>
+                      <td>
+                        <span className="inline-bar">
+                          <span className="inline-bar-track">
+                            <span style={{ width: `${(r.received / max) * 100}%` }} />
+                          </span>
+                          <strong>{r.received}</strong>
                         </span>
-                        <strong>{r.received}</strong>
-                      </span>
-                    </td>
-                    <td>{r.confirmed}</td>
-                    <td>
-                      {r.needsAnother > 0 && r.region !== "(none)" ? (
-                        <Link
-                          className="pill wait is-link"
-                          href={reportsHref({ area: r.region, status: "needs-another" })}
-                          aria-label={`${r.needsAnother} in ${r.region} need another report`}
-                        >
-                          <span className="dot" aria-hidden />
-                          {r.needsAnother}
-                        </Link>
-                      ) : (
-                        <span className="faint">{r.needsAnother}</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td>{r.confirmed}</td>
+                      <td>
+                        {r.needsAnother > 0 && r.region !== "(none)" ? (
+                          <Link
+                            className="pill wait is-link"
+                            href={reportsHref({ area: r.region, status: "needs-another" })}
+                            aria-label={`${r.needsAnother} in ${r.region} need another report`}
+                          >
+                            <span className="dot" aria-hidden />
+                            {r.needsAnother}
+                          </Link>
+                        ) : (
+                          <span className="faint">{r.needsAnother}</span>
+                        )}
+                      </td>
+                    </>
+                  );
+                  return r.region === "(none)" ? (
+                    <tr key={r.region}>{cells}</tr>
+                  ) : (
+                    <RowLink key={r.region} href={reportsHref({ area: r.region })}>
+                      {cells}
+                    </RowLink>
+                  );
+                })}
               </tbody>
             </table>
           </div>

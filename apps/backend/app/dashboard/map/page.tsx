@@ -5,6 +5,7 @@
 import { fetchProofs } from "../../../lib/api";
 import { coverage, reportsHref } from "../../../lib/dashboard";
 import { CoverageMap } from "../CoverageMap";
+import { RowLink } from "../RowLink";
 import { AreaChip, DegradedNotice, EmptyState, Metric, PageHeader } from "../ui";
 
 export const dynamic = "force-dynamic";
@@ -32,14 +33,25 @@ export default async function CoverageMapPage() {
       ) : (
         <>
           <div className="metrics metrics-3">
-            <Metric icon="pin" value={cells.length} label={cells.length === 1 ? "Zone" : "Zones"} />
-            <Metric icon="inbox" value={totalReports} label={totalReports === 1 ? "Report" : "Reports"} />
-            <Metric icon="check" value={totalConfirmed} label="Confirmed" tone="ok" />
+            <Metric icon="pin" value={cells.length} label={cells.length === 1 ? "Zone" : "Zones"} href="#zones" />
+            <Metric
+              icon="inbox"
+              value={totalReports}
+              label={totalReports === 1 ? "Report" : "Reports"}
+              href={reportsHref()}
+            />
+            <Metric
+              icon="check"
+              value={totalConfirmed}
+              label="Confirmed"
+              tone="ok"
+              href={reportsHref({ status: "confirmed" })}
+            />
           </div>
           <div className="box box-flush">
             <CoverageMap cells={cells} />
           </div>
-          <div className="section-head">
+          <div className="section-head" id="zones">
             <h2>Zones by report count</h2>
           </div>
           <div className="table-scroll">
@@ -53,13 +65,13 @@ export default async function CoverageMapPage() {
               </thead>
               <tbody>
                 {cells.map((c) => (
-                  <tr key={c.region}>
+                  <RowLink key={c.region} href={reportsHref({ area: c.region })}>
                     <td>
                       <AreaChip region={c.region} href={reportsHref({ area: c.region })} />
                     </td>
                     <td>{c.count}</td>
                     <td>{c.confirmed}</td>
-                  </tr>
+                  </RowLink>
                 ))}
               </tbody>
             </table>

@@ -1,8 +1,8 @@
 // reports/[hash]/page.tsx: review one report — status, approximate area, capture time, evidence
-// summary, confirmation count and timeline. Unsupported actions are shown disabled and labelled,
-// never faked. No reporter identity, exact location or private media path. The workspace view it was
-// opened from rides along in the query string, so Back returns to that exact view and Previous /
-// Next step through it.
+// summary, confirmation count and timeline. Actions are real links only: review decisions are made in
+// the app's coordinator inbox, and this page says so instead of showing a dead button. No reporter
+// identity, exact location or private media path. The workspace view it was opened from rides along
+// in the query string, so Back returns to that exact view and Previous / Next step through it.
 
 import Link from "next/link";
 import { fetchProof, fetchProofs } from "../../../../lib/api";
@@ -154,7 +154,15 @@ export default async function ReportReviewPage({
             <div className="fact">
               <span className="fact-icon"><Icon name="pin" /></span>
               <small>Approximate area</small>
-              <strong>{placeLabel(proof.geohashRegion) || <code>{proof.geohashRegion || "not recorded"}</code>}</strong>
+              <strong>
+                {proof.geohashRegion ? (
+                  <Link className="fact-link" href={reportsHref({ area: proof.geohashRegion })}>
+                    {placeLabel(proof.geohashRegion) || <code>{proof.geohashRegion}</code>}
+                  </Link>
+                ) : (
+                  <code>not recorded</code>
+                )}
+              </strong>
               <span className="fact-note">
                 {placeLabel(proof.geohashRegion) ? <>region <code>{proof.geohashRegion}</code> · </> : null}coarse region only
               </span>
@@ -251,12 +259,22 @@ export default async function ReportReviewPage({
               <h2>Actions</h2>
             </div>
             <p className="faint" style={{ fontSize: "0.9rem" }}>
-              Review actions are not wired to a backend in this demo. Confirmation happens automatically
-              when a second community member reports the same activity.
+              Accept or reject a report in the coordinator inbox of the Prufture app. Confirmation
+              happens on its own when a second community member reports the same activity nearby.
             </p>
-            <button type="button" className="btn secondary" disabled style={{ width: "100%" }}>
-              Mark reviewed (not available in this demo)
-            </button>
+            <div className="report-action-links">
+              {proof.geohashRegion ? (
+                <Link className="btn secondary" href={reportsHref({ area: proof.geohashRegion })}>
+                  <Icon name="pin" size={16} /> Other reports in this area
+                </Link>
+              ) : null}
+              <Link className="btn secondary" href={reportsHref({ q: activityLabel(proof.taskId) })}>
+                <Icon name="reports" size={16} /> All {activityLabel(proof.taskId)} reports
+              </Link>
+              <Link className="btn secondary" href="/dashboard/map">
+                <Icon name="map" size={16} /> See it on the coverage map
+              </Link>
+            </div>
           </div>
         </aside>
       </div>

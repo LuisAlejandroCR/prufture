@@ -309,6 +309,21 @@ export function coverage(proofs: ProofSummary[]): CoverageCell[] {
   return cells.sort((a, b) => b.count - a.count);
 }
 
+/** Smallest and largest on-screen radius (px) of a zone's click target on the coverage map. */
+export const ZONE_MARKER_MIN_PX = 9;
+export const ZONE_MARKER_MAX_PX = 18;
+
+/**
+ * Pixel radius of the round marker drawn at a zone's centre. A 2.4 km zone is a sub-pixel speck
+ * at country or world zoom, so the shaded square alone cannot be seen or clicked; the marker keeps
+ * a finger-sized target at every zoom and grows with the zone's share of reports.
+ */
+export function zoneMarkerRadius(count: number, maxCount: number): number {
+  if (!(maxCount > 0) || !(count > 0)) return ZONE_MARKER_MIN_PX;
+  const share = Math.min(1, count / maxCount);
+  return Math.round(ZONE_MARKER_MIN_PX + (ZONE_MARKER_MAX_PX - ZONE_MARKER_MIN_PX) * Math.sqrt(share));
+}
+
 export const REVIEW_ORDER: ReviewStatus[] = ["confirmed", "needs-another", "ready", "attention"];
 
 /** Count of reports in each review status, in the fixed REVIEW_ORDER. */
