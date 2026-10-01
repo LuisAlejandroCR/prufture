@@ -16,6 +16,22 @@ final class NoViewControllerException: Exception {
   override var reason: String { "no view controller to present the liveness check from" }
 }
 
+/// A stable code per SDK error, so the app can say what to do. Several SDK errors share one message
+/// ("Check failed during countdown."), so the message itself cannot be used. Compared with `==`,
+/// which FaceLivenessDetectionError defines on its internal code.
+private func codeFor(_ error: FaceLivenessDetectionError) -> String {
+  if error == .userCancelled { return "user_cancelled" }
+  if error == .faceInOvalMatchExceededTimeLimitError { return "face_not_in_oval" }
+  if error == .countdownFaceTooClose { return "too_close" }
+  if error == .countdownNoFace { return "no_face" }
+  if error == .countdownMultipleFaces { return "multiple_faces" }
+  if error == .sessionInterrupted { return "interrupted" }
+  if error == .sessionTimedOut { return "timed_out" }
+  if error == .cameraPermissionDenied { return "camera_denied" }
+  if error == .cameraNotAvailable { return "camera_unavailable" }
+  return "other"
+}
+
 public class PruftureLivenessModule: Module {
   private static var configured = false
 
@@ -60,7 +76,7 @@ public class PruftureLivenessModule: Module {
             case .success:
               promise.resolve(["status": "completed"])
             case .failure(let error):
-              promise.resolve(["status": "failed", "code": error.message])
+              promise.resolve(["status": "failed", "code": codeFor(error)])
             }
           }
         }

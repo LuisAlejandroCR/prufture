@@ -11,7 +11,17 @@ export interface LivenessCapture {
   start(sessionId: string, region: string): Promise<{ status: "completed" } | { status: "failed"; code: string }>;
 }
 
-export type UnavailableReason = "off" | "not-configured" | "no-module" | "rate-limited" | "api" | "network";
+export type UnavailableReason =
+  | "off"
+  | "not-configured"
+  | "no-module"
+  | "rate-limited"
+  | "api"
+  | "network"
+  | "cooling-down";
+
+/** Why a capture ended on the phone, from the native module's stable code. */
+export type IncompleteReason = "face-position" | "multiple-faces" | "interrupted" | "cancelled" | "camera" | "other";
 
 export type FaceLivenessOutcome =
   /** The api confirmed a live person. `ticket` is its signed receipt: two booleans and a time. */
@@ -19,9 +29,9 @@ export type FaceLivenessOutcome =
   /** The capture finished but the api did not confirm a live person. Nothing is kept. */
   | { state: "not-confirmed" }
   /** The capture was cancelled, timed out or errored on the device. The api was not asked. */
-  | { state: "incomplete" }
-  /** The check could not run. Reporting is never blocked by this. */
-  | { state: "unavailable"; reason: UnavailableReason };
+  | { state: "incomplete"; reason: IncompleteReason }
+  /** The check could not run. Reporting is never blocked by this. `until`: end of a pause. */
+  | { state: "unavailable"; reason: UnavailableReason; until?: number };
 
 export interface RunFaceLivenessArgs {
   provider: LivenessProvider;
@@ -31,6 +41,8 @@ export interface RunFaceLivenessArgs {
   apiUrl: string;
   fetchImpl?: typeof fetch;
   timeoutMs?: number;
+  /** Clock, for the pause after repeated failures. */
+  now?: number;
 }
 
 export const REQUEST_TIMEOUT_MS = 15_000;
@@ -70,13 +82,52 @@ function failedRequest(r: PostResult): FaceLivenessOutcome {
   return unavailable(r.status === 429 ? "rate-limited" : "api");
 }
 
+/**
+ * The native module's code (PruftureLivenessModule.swift codeFor) as a reason the screen can advise
+ * on. Builds before those codes sent the SDK's message text, which reads as "other".
+ */
+export function incompleteReason(code: string): IncompleteReason {
+  switch (code) {
+    case "user_cancelled":
+      return "cancelled";
+    case "face_not_in_oval":
+    case "too_close":
+    case "no_face":
+      return "face-position";
+    case "multiple_faces":
+      return "multiple-faces";
+    case "interrupted":
+    case "timed_out":
+      return "interrupted";
+    case "camera_denied":
+    case "camera_unavailable":
+      return "camera";
+    default:
+      return "other";
+  }
+}
+
 export async function runFaceLiveness(args: RunFaceLivenessArgs): Promise<FaceLivenessOutcome> {
+  const now = args.now ?? Date.now();
+  const out = await runOnce(args, now);
+  // A person cancelling, or a phone without a camera, is not a failed check.
+  const failed =
+    out.state === "not-confirmed" || (out.state === "incomplete" && out.reason !== "cancelled" && out.reason !== "camera");
+  if (failed) await recordFailedCheck(now);
+  return out;
+}
+
+async function runOnce(args: RunFaceLivenessArgs, now: number): Promise<FaceLivenessOutcome> {
   const fetchImpl = args.fetchImpl ?? fetch;
   const timeoutMs = args.timeoutMs ?? REQUEST_TIMEOUT_MS;
   if (args.provider !== "aws") return unavailable("off");
   if (!args.config) return unavailable("not-configured");
   const capture = args.capture;
   if (!capture || !capture.available()) return unavailable("no-module");
+
+  // AWS's guidance: after repeated failures from one device, pause before opening another session.
+  const until = await coolingDownUntil(now);
+  if (until !== null) return { state: "unavailable", reason: "cooling-down", until };
 
   // Guest credentials only (no account). A failure here is a build/setup problem, not the person's.
   try {
@@ -95,9 +146,11 @@ export async function runFaceLiveness(args: RunFaceLivenessArgs): Promise<FaceLi
   // "completed" means the capture finished, not that a live person was confirmed.
   try {
     const run = await capture.start(sessionId, args.config.region);
-    if (run?.status !== "completed") return { state: "incomplete" };
+    if (run?.status !== "completed") {
+      return { state: "incomplete", reason: incompleteReason(run && "code" in run ? String(run.code) : "") };
+    }
   } catch {
-    return { state: "incomplete" };
+    return { state: "incomplete", reason: "other" };
   }
 
   const result = await post(args.apiUrl, "/liveness/result", { sessionId }, fetchImpl, timeoutMs);
@@ -210,6 +263,50 @@ export async function loadLivenessPass(now = Date.now()): Promise<{ ticket: stri
   }
 }
 
+// ---- Pause after repeated failures -----------------------------------------------------------------
+
+/** AWS's recommendation for Face Liveness: five failed checks in three minutes, then a pause. */
+export const MAX_FAILED_CHECKS = 5;
+export const FAILED_WINDOW_MS = 3 * 60 * 1000;
+export const COOLDOWN_MS = 30 * 60 * 1000;
+const FAILURES_KEY = "prufture.liveness.failures";
+
+async function readFailures(): Promise<number[]> {
+  try {
+    const s = await passStore();
+    const raw = s ? await s.store.getItemAsync(FAILURES_KEY) : null;
+    const list: unknown = raw ? JSON.parse(raw) : [];
+    return Array.isArray(list) ? list.filter((t): t is number => typeof t === "number" && Number.isFinite(t)) : [];
+  } catch {
+    return [];
+  }
+}
+
+async function recordFailedCheck(now: number): Promise<void> {
+  try {
+    const s = await passStore();
+    if (!s) return;
+    // Keep only what can still matter: the last window's failures, or those holding a pause open.
+    const keep = (await readFailures()).filter((t) => now - t < FAILED_WINDOW_MS + COOLDOWN_MS);
+    keep.push(now);
+    await s.store.setItemAsync(FAILURES_KEY, JSON.stringify(keep.slice(-MAX_FAILED_CHECKS)), {
+      keychainAccessible: s.thisDeviceOnly,
+    });
+  } catch {
+    // Non-fatal: the api's own per-network limit still applies.
+  }
+}
+
+/** End of the current pause, or null. Five failures inside three minutes start a 30-minute pause. */
+async function coolingDownUntil(now: number): Promise<number | null> {
+  const list = (await readFailures()).sort((a, b) => a - b);
+  if (list.length < MAX_FAILED_CHECKS) return null;
+  const recent = list.slice(-MAX_FAILED_CHECKS);
+  if (recent[recent.length - 1]! - recent[0]! > FAILED_WINDOW_MS) return null;
+  const until = recent[recent.length - 1]! + COOLDOWN_MS;
+  return now < until ? until : null;
+}
+
 export async function clearLivenessPass(): Promise<void> {
   try {
     const s = await passStore();
@@ -220,6 +317,67 @@ export async function clearLivenessPass(): Promise<void> {
 }
 
 // ---- Screen copy ---------------------------------------------------------------------------------
+
+/** Shown before the check starts: what most often makes it fail. */
+export const GET_READY_TIPS: readonly string[] = [
+  "Find even light on your face, not a bright window behind you.",
+  "Hold the phone at eye level, about an arm's length away.",
+  "Take off sunglasses or a hat.",
+  "Keep looking at the screen and stay still until it finishes. It takes a few seconds.",
+];
+
+function incompleteCopy(reason: IncompleteReason): OutcomeCopy {
+  const tone = "warning" as const;
+  switch (reason) {
+    case "face-position":
+      return {
+        title: "Keep your face in the oval",
+        body: "Keep your face inside the oval, with the phone at eye level, and keep looking at the screen until it finishes. Nothing was kept. You can try again, or keep reporting as usual.",
+        tone,
+        retry: true,
+      };
+    case "multiple-faces":
+      return {
+        title: "More than one face was seen",
+        body: "Make sure only your face is in the picture, then try again. Nothing was kept. Reporting works as usual.",
+        tone,
+        retry: true,
+      };
+    case "interrupted":
+      return {
+        title: "The check was interrupted",
+        body: "A call, a notification or leaving the app stops it. Try again when you have a few quiet seconds. Nothing was kept. Reporting works as usual.",
+        tone,
+        retry: true,
+      };
+    case "cancelled":
+      return {
+        title: "Check stopped",
+        body: "Nothing was kept. Start again when you are ready, or keep reporting as usual.",
+        tone: "info",
+        retry: true,
+      };
+    case "camera":
+      return {
+        title: "The camera is not available",
+        body: "Allow camera access for Prufture in Settings, then try again. Reporting works as usual.",
+        tone,
+        retry: true,
+      };
+    case "other":
+      return {
+        title: "The check did not finish",
+        body: "Nothing was kept. You can try again, or keep reporting as usual.",
+        tone,
+        retry: true,
+      };
+  }
+}
+
+/** "14:30" in the phone's own format. */
+function timeLabel(at: number): string {
+  return new Date(at).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+}
 
 export interface OutcomeCopy {
   title: string;
@@ -249,23 +407,25 @@ export function outcomeCopy(outcome: FaceLivenessOutcome, now = Date.now()): Out
     case "not-confirmed":
       return {
         title: "Could not confirm a live person",
-        body: "Nothing was kept. You can try again in good light, or keep reporting as usual.",
+        body: "Nothing was kept. Try again facing the light, with the phone at eye level and no sunglasses or hat, or keep reporting as usual.",
         tone: "warning",
         retry: true,
       };
     case "incomplete":
-      return {
-        title: "The check did not finish",
-        body: "Nothing was kept. You can try again, or keep reporting as usual.",
-        tone: "warning",
-        retry: true,
-      };
+      return incompleteCopy(outcome.reason);
     case "unavailable":
       switch (outcome.reason) {
         case "rate-limited":
           return { title: "The face check is busy", body: "Too many checks right now. Try again later. Reporting works as usual.", tone: "info", retry: false };
         case "network":
           return { title: "No connection", body: "The face check needs a connection. Reporting still works offline.", tone: "info", retry: true };
+        case "cooling-down":
+          return {
+            title: "Take a short break",
+            body: `The last few checks did not finish. You can try again after ${timeLabel(outcome.until ?? now)}. Reporting works as usual.`,
+            tone: "info",
+            retry: false,
+          };
         case "no-module":
           return { title: "Not available on this phone", body: "This version of the app cannot run the face check. Reporting works as usual.", tone: "info", retry: false };
         default:

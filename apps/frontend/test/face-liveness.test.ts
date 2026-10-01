@@ -140,14 +140,19 @@ test("a hung api times out as network, it never hangs the screen", async () => {
 });
 
 test("cancelled or failed capture is incomplete and the api is never asked for a verdict", async () => {
-  for (const runImpl of [
-    async () => ({ status: "failed" as const, code: "userCancelled" }),
-    async () => {
-      throw new Error("NoViewControllerException");
-    },
-  ]) {
+  for (const [runImpl, reason] of [
+    [async () => ({ status: "failed" as const, code: "user_cancelled" }), "cancelled"],
+    // A build before the stable codes sent the SDK's message: still incomplete, with generic advice.
+    [async () => ({ status: "failed" as const, code: "User cancelled the face liveness check." }), "other"],
+    [
+      async () => {
+        throw new Error("NoViewControllerException");
+      },
+      "other",
+    ],
+  ] as const) {
     const { calls, fetchImpl } = happyApi();
-    assert.deepEqual(await run({ capture: capture(runImpl).c, fetchImpl }), { state: "incomplete" });
+    assert.deepEqual(await run({ capture: capture(runImpl).c, fetchImpl }), { state: "incomplete", reason });
     assert.deepEqual(calls.map((x) => x.url), ["https://api.example.test/liveness/session"]);
   }
 });
@@ -362,8 +367,15 @@ const uiText = (src: string) => src.replace(/^\s*\/\/.*$/gm, "");
 test("outcome copy: every non-pass says reporting still works; only a pass is success", () => {
   const outcomes = [
     { state: "not-confirmed" },
-    { state: "incomplete" },
-    ...(["off", "not-configured", "no-module", "rate-limited", "api", "network"] as const).map((reason) => ({ state: "unavailable", reason })),
+    ...(["face-position", "multiple-faces", "interrupted", "cancelled", "camera", "other"] as const).map((reason) => ({
+      state: "incomplete",
+      reason,
+    })),
+    ...(["off", "not-configured", "no-module", "rate-limited", "api", "network", "cooling-down"] as const).map((reason) => ({
+      state: "unavailable",
+      reason,
+      until: Date.now() + 60_000,
+    })),
   ] as Parameters<typeof outcomeCopy>[0][];
   for (const o of outcomes) {
     const c = outcomeCopy(o);
