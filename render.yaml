@@ -91,6 +91,10 @@ services:
       # the coordinator plan sees a sample inbox.
       - key: PROGRAMME_STAFF_APP_USER_IDS
         sync: false
+      # Codes a coordinator enters in the app to join the staff (8+ chars, comma separated). Removing a
+      # code ends the access of everyone who joined with it.
+      - key: COORDINATOR_INVITE_CODES
+        sync: false
       # Who may enrol members and start rounds: the dashboard's COORDINATOR_APP_USER_ID (comma
       # separated). Empty closes enrolment.
       - key: PERSONHOOD_ADMIN_APP_USER_IDS

@@ -68,6 +68,9 @@ const NULLIFIERS_FIELD = "__nullifiers__";
 // Reserved key for sealed-evidence bookkeeping (see evidence.ts). Side data only: the blob itself
 // lives in the storage adapter, and nothing here is part of an Entry or any public route.
 const EVIDENCE_FIELD = "__evidence__";
+// Reserved key: app user ids that joined the programme staff with an invitation code, each with the
+// hash of the code it used (coordinator-join.ts). Never returned by a route.
+const STAFF_JOINS_FIELD = "__staffJoins__";
 
 /**
  * Bookkeeping for one proof's sealed evidence photo. Holds times, a size and a digest of the
@@ -123,6 +126,7 @@ const byHash = new Map<string, Entry>();
 const notifiedKeys = new Set<string>();
 const personhoodGroups = new Map<string, PersonhoodGroupRecord>();
 const nullifiers = new Set<string>();
+const staffJoins = new Map<string, string>();
 const evidence = new Map<string, EvidenceRecord>();
 let flushTimer: NodeJS.Timeout | null = null;
 
@@ -155,6 +159,7 @@ function load(): void {
   personhoodGroups.clear();
   nullifiers.clear();
   evidence.clear();
+  staffJoins.clear();
   let raw: string;
   try {
     raw = readFileSync(storePath, "utf8");
@@ -179,6 +184,14 @@ function load(): void {
         }
         if (hash === EVIDENCE_FIELD) {
           loadEvidence(value);
+          continue;
+        }
+        if (hash === STAFF_JOINS_FIELD) {
+          if (value && typeof value === "object") {
+            for (const [id, codeHash] of Object.entries(value as Record<string, unknown>)) {
+              if (typeof codeHash === "string" && /^[0-9a-f]{64}$/.test(codeHash)) staffJoins.set(id, codeHash);
+            }
+          }
           continue;
         }
         const v = value as Entry;
@@ -217,6 +230,7 @@ function load(): void {
     personhoodGroups.clear();
     nullifiers.clear();
     evidence.clear();
+    staffJoins.clear();
   }
 }
 
@@ -269,6 +283,7 @@ function flushNow(): void {
     if (personhoodGroups.size > 0) out[PERSONHOOD_GROUPS_FIELD] = Object.fromEntries(personhoodGroups);
     if (nullifiers.size > 0) out[NULLIFIERS_FIELD] = [...nullifiers];
     if (evidence.size > 0) out[EVIDENCE_FIELD] = Object.fromEntries(evidence);
+    if (staffJoins.size > 0) out[STAFF_JOINS_FIELD] = Object.fromEntries(staffJoins);
     writeFileSync(tmp, JSON.stringify(out));
     renameSync(tmp, storePath);
   } catch {
@@ -390,6 +405,16 @@ export function addNullifier(key: string): void {
     nullifiers.add(key);
     scheduleFlush();
   }
+}
+
+/** The invitation-code hash an app user id joined the staff with, if any. */
+export function getStaffJoin(appUserId: string): string | undefined {
+  return staffJoins.get(appUserId);
+}
+
+export function putStaffJoin(appUserId: string, codeHash: string): void {
+  staffJoins.set(appUserId, codeHash);
+  scheduleFlush();
 }
 
 export function getEvidenceRecord(proofHash: string): EvidenceRecord | undefined {
