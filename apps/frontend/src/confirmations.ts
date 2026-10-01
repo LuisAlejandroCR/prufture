@@ -14,7 +14,14 @@ export interface ConfirmationReport {
   verifiedPersonDegraded: boolean | null;
   /** Verified programme pass. Missing from an older api reads as false, so it never counts. */
   membershipVerified: boolean;
+  /**
+   * Round (personhood epoch) of that pass. A new round lets a member prove once more per task, so
+   * passes of different rounds may be one person and never add up. Missing reads as round 0.
+   */
+  round?: number;
 }
+
+const roundOf = (r: ConfirmationReport) => r.round ?? 0;
 
 /** A report counts only from within this distance of the assignment cell (same as "Nearby"). */
 export const NEARBY_KM = 5;
@@ -55,18 +62,19 @@ export function liveConfirmations(
   identityStepEnabled: boolean,
 ): LiveConfirmations | null {
   if (task.selfStarted || !task.confirmations) return null;
-  let have = 0;
   let notConfirmed = 0;
-  let ownCounts = false;
+  const counting: ConfirmationReport[] = [];
   for (const r of reports) {
-    if (countsAsConfirmation(task, r, identityStepEnabled)) {
-      have += 1;
-      if (r.own) ownCounts = true;
-    } else if (isNearAssignment(task, r.geohashRegion)) {
-      notConfirmed += 1;
-    }
+    if (countsAsConfirmation(task, r, identityStepEnabled)) counting.push(r);
+    else if (isNearAssignment(task, r.geohashRegion)) notConfirmed += 1;
   }
-  return { have, need: task.confirmations.need, notConfirmed, ownCounts, highAssurance: task.highAssurance };
+  // One round only, the same rule as the public page: the reporter's own round when their report
+  // counts, else the round with the most. Passes of other rounds may be the same people.
+  const perRound = new Map<number, number>();
+  for (const r of counting) perRound.set(roundOf(r), (perRound.get(roundOf(r)) ?? 0) + 1);
+  const own = counting.find((r) => r.own);
+  const have = own ? perRound.get(roundOf(own)) ?? 0 : Math.max(0, ...perRound.values());
+  return { have, need: task.confirmations.need, notConfirmed, ownCounts: !!own, highAssurance: task.highAssurance };
 }
 
 /** "2 of 3 confirmations". Never claims more than the target. */
@@ -125,7 +133,13 @@ export function parseConfirmations(body: unknown): ConfirmationReport[] | null {
     verifiedPerson: r.verifiedPerson,
     verifiedPersonDegraded: r.verifiedPersonDegraded,
     membershipVerified: (r as unknown as { membershipVerified?: unknown }).membershipVerified === true,
+    ...roundField((r as unknown as { round?: unknown }).round),
   }));
+}
+
+/** Only a whole, non-negative round survives parsing; anything else is left out (round 0). */
+function roundField(v: unknown): { round?: number } {
+  return typeof v === "number" && Number.isSafeInteger(v) && v >= 0 ? { round: v } : {};
 }
 
 /** GET the independent reports for the task of `proofHash`. null on any failure. Never throws. */
