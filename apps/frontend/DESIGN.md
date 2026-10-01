@@ -125,6 +125,17 @@ programme pass code and its enrolment copy live on `app/programme-pass.tsx`, the
 motion switches on `app/accessibility.tsx`. There is no Language row (English only) and no second
 "waiting to send" banner: the Offline storage row already says it.
 
+## Coordinator review
+
+`app/coordinator.tsx` is the paid screen. It opens with a summary card (To review / Accepted /
+Rejected and the most reported activities), then **Email summary** (the phone's own mail app,
+no recipient, counts only), then the Accept / Reject list. The full list and the CSV export stay
+on the web dashboard. The api decides what the list holds: the programme's staff get its real
+reports; any other subscriber gets a sample inbox (`x-prufture-sample: 1`). A sample inbox
+opens with an info notice ("Sample reports. Your programme's reports appear here once the
+programme team adds your account…") and hides Email summary, so sample rows are never mistaken
+for, or sent as, a programme's work.
+
 ## Links open in-app
 
 Public pages never send the reporter out of Prufture. `src/links.ts` builds every URL from the one
