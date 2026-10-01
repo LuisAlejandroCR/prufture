@@ -8,3 +8,4 @@ export * from "./geohash.js";
 export * from "./csv.js";
 export * from "./limits.js";
 export * from "./signature.js";
+export * from "./nearby.js";

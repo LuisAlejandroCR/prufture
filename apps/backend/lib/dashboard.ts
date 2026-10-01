@@ -63,9 +63,15 @@ export function programmeName(rawTaskId: string): string {
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const STALE_MS = 3 * 24 * 60 * 60 * 1000;
 
+/**
+ * Dashboard status of one report. "Confirmed" is the community rule the public /verify page uses
+ * (two pass-carrying reports nearby), decided by the api; it is never inferred from the on-chain
+ * count, which is at most 1 per proof. An anchored report that is not yet confirmed needs another
+ * community report; one not yet anchored is ready to review, or needs attention once stale.
+ */
 export function reviewStatus(p: ProofSummary): ReviewStatus {
-  if (p.attestationCount >= 2) return "confirmed";
-  if (p.attestationCount === 1) return "needs-another";
+  if (p.communityConfirmed === true) return "confirmed";
+  if (p.attestationCount >= 1) return "needs-another";
   const captured = new Date(p.capturedAt).getTime();
   if (!Number.isNaN(captured) && Date.now() - captured > STALE_MS) return "attention";
   return "ready";

@@ -34,19 +34,21 @@ test("decode helpers: empty / invalid input -> null", () => {
   assert.equal(geohashCenter(""), null);
 });
 
-function proof(region: string, attestationCount = 0): ProofSummary {
+// level: 0 = not anchored, 1 = anchored, 2 = anchored and community-confirmed.
+function proof(region: string, level = 0): ProofSummary {
   return {
     proofHash: `${region}-${Math.random()}`,
     taskId: "solar-panel-install",
     geohashRegion: region,
     capturedAt: "2026-09-07T10:00:00.000Z",
-    attestationCount,
+    attestationCount: Math.min(level, 1),
+    communityConfirmed: level >= 2,
   };
 }
 
 test("coverage: groups 3 reports in one region into one cell of count 3, drops undecodable, counts confirmed", () => {
   const cells = coverage([
-    proof("s0000", 2), // confirmed (attestationCount >= 2)
+    proof("s0000", 2), // community-confirmed
     proof("s0000", 0),
     proof("s0000", 1),
     proof("il000"), // undecodable region -> dropped

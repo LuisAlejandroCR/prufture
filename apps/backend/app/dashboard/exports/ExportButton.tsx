@@ -11,7 +11,7 @@ import { placeLabel } from "../../../lib/places";
 
 /** Exported for tests: the exact CSV the download button produces. */
 export function csv(proofs: ProofSummary[]): string {
-  const head = ["activity", "programme", "approximate_region", "area_name", "captured_date", "review_status", "confirmations"];
+  const head = ["activity", "programme", "approximate_region", "area_name", "captured_date", "review_status", "public_record"];
   const lines = proofs.map((p) => {
     const d = new Date(p.capturedAt);
     return [
@@ -21,7 +21,7 @@ export function csv(proofs: ProofSummary[]): string {
       placeLabel(p.geohashRegion),
       Number.isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10),
       REVIEW_LABEL[reviewStatus(p)],
-      String(p.attestationCount),
+      p.attestationCount >= 1 ? "anchored" : "not yet",
     ]
       .map(csvCell)
       .join(",");

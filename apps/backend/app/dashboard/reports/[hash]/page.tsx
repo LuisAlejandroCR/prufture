@@ -73,21 +73,25 @@ export default async function ReportReviewPage({
   const { proof } = result;
   // Same rule as the table, including "needs attention" for unreviewed reports older than 3 days.
   const status = reviewStatus(proof);
+  // Same rule as the public page: "confirmed" comes from the api's community check, never from
+  // the on-chain count (one relayer anchors each proof once, so that count is 0 or 1).
+  const anchored = proof.attestationCount >= 1;
+  const confirmed = proof.communityConfirmed;
   const stages: { label: string; note: string; done: boolean; current?: boolean }[] = [
     { label: "Received", note: "Signed on the phone and delivered.", done: true },
     {
-      label: "Under review",
-      note: "Visible to the programme team.",
-      done: proof.attestationCount >= 1,
-      current: proof.attestationCount === 0,
+      label: "Public record",
+      note: "Anchored so anyone can check it was not changed.",
+      done: anchored,
+      current: !anchored && !confirmed,
     },
     {
       label: "Second community report",
-      note: "Another community member reports the same activity.",
-      done: proof.attestationCount >= 2,
-      current: proof.attestationCount === 1,
+      note: "Another community member with a programme pass reports the same activity nearby.",
+      done: confirmed,
+      current: anchored && !confirmed,
     },
-    { label: "Confirmed", note: "Anchored as a public record.", done: proof.attestationCount >= 2 },
+    { label: "Confirmed", note: "Two community reports agree.", done: confirmed },
   ];
   const captured = new Date(proof.capturedAt);
   const capturedText = Number.isNaN(captured.getTime())
@@ -174,8 +178,8 @@ export default async function ReportReviewPage({
             </div>
             <div className="fact">
               <span className="fact-icon"><Icon name="users" /></span>
-              <small>Confirmations</small>
-              <strong>{proof.attestationCount}</strong>
+              <small>Public record</small>
+              <strong>{anchored ? "Anchored" : "Not yet"}</strong>
             </div>
           </div>
 

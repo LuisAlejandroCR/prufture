@@ -29,7 +29,7 @@ export default async function ExportsPage() {
           <h3>Coarse report list (CSV)</h3>
           <p className="muted">
             One row per report: activity, programme, approximate region, capture date, review status,
-            and confirmation count.
+            and whether it is anchored as a public record.
           </p>
           <p className="faint" style={{ fontSize: "0.9rem" }}>
             Excluded: reporter identity, exact location, full reference, photos, and any internal
