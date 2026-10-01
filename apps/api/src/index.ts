@@ -48,6 +48,7 @@ import {
   expectedScope,
   isCommitment,
   isProgrammeId,
+  personhoodEnabled,
   storeNullifiers,
   verifyMembership,
 } from "./personhood.js";
@@ -138,6 +139,9 @@ app.get("/health", (c) =>
     ok: true,
     chainId: env.chainId,
     coordinatorBilling: Boolean(env.revenuecatSecretKey && env.revenuecatProjectId && coordinatorEntitlementId()),
+    // Whether the programme pass is checked at all (PERSONHOOD_PROVIDER=semaphore). Off means no
+    // report carries a pass, so no community confirmation can be reached.
+    programmePass: personhoodEnabled(),
     // Whether anyone may enrol members (PERSONHOOD_ADMIN_APP_USER_IDS); never who.
     personhoodEnrolment: env.personhoodAdminAppUserIds.length > 0,
   }),

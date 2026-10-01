@@ -297,3 +297,10 @@ test("/health says whether a programme admin is configured, never who", async ()
   const off = (await (await app.request("/health")).json()) as { personhoodEnrolment: boolean };
   assert.equal(off.personhoodEnrolment, false);
 });
+
+test("/health says whether the programme pass is on", async () => {
+  process.env.PERSONHOOD_PROVIDER = "semaphore";
+  assert.equal(((await (await app.request("/health")).json()) as { programmePass: boolean }).programmePass, true);
+  delete process.env.PERSONHOOD_PROVIDER;
+  assert.equal(((await (await app.request("/health")).json()) as { programmePass: boolean }).programmePass, false);
+});

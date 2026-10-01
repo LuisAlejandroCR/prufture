@@ -83,9 +83,10 @@ services:
       # /precise-location.
       - key: REQUIRE_EVIDENCE_TOKEN
         sync: false
-      # Programme pass: "semaphore" turns it on.
+      # Programme pass on, matching the production app build (EXPO_PUBLIC_PERSONHOOD_PROVIDER). Not a
+      # secret. Off, no report carries a pass and no community confirmation can be reached.
       - key: PERSONHOOD_PROVIDER
-        sync: false
+        value: semaphore
       # Programme staff (comma separated app user ids): they review the real reports. Anyone else with
       # the coordinator plan sees a sample inbox.
       - key: PROGRAMME_STAFF_APP_USER_IDS
