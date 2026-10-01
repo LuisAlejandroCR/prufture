@@ -122,8 +122,11 @@ export function DashboardTable({
   // tile) brings a new `initial`; without this the table would keep the previous view's filters
   // under the new URL.
   useEffect(() => {
-    setF(fromUrl());
+    const next = fromUrl();
+    setF(next);
     setShown(PAGE);
+    // Show "More filters" open whenever the new view uses one of them, closed when it does not.
+    setMoreOpen(Boolean(next.programme || next.area || next.from || next.to));
     // Deliberately keyed on `initial` alone: it changes once per navigation, never per keystroke.
   }, [initial]);
 

@@ -30,3 +30,10 @@ test("the QR opens full screen in a native dialog and can be closed", () => {
   assert.match(CARD, /aria-label="Show the QR code full screen"/);
   assert.match(CARD, /\.close\(\)/);
 });
+
+test("an empty install-link variable falls back to the default link, never a QR of an empty string", () => {
+  const page = readFileSync(new URL("../app/page.tsx", import.meta.url), "utf8");
+  assert.doesNotMatch(page, /NEXT_PUBLIC_(ANDROID_BUILD|IOS_TESTFLIGHT)_URL \?\?/);
+  assert.match(page, /NEXT_PUBLIC_ANDROID_BUILD_URL\?\.trim\(\) \|\|/);
+  assert.match(page, /NEXT_PUBLIC_IOS_TESTFLIGHT_URL\?\.trim\(\) \|\|/);
+});

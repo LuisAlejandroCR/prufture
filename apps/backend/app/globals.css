@@ -606,7 +606,8 @@ details.tech { border-radius: var(--radius-md); }
 .staff-signin { min-height: 100vh; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); background: var(--bg); }
 .signin-brand {
   position: relative; overflow: hidden; padding: clamp(28px, 5vw, 64px); display: flex; flex-direction: column; justify-content: space-between; gap: 40px;
-  background: var(--brand); color: #fff;
+  /* A fixed brand red, not var(--brand): dark mode lightens --brand, and white text on it fell to ~2.6:1. */
+  background: #c8533a; color: #fff;
 }
 .signin-brand::before, .signin-brand::after { content: ""; position: absolute; border-radius: 50%; border: 1px solid #ffffff2e; }
 .signin-brand::before { width: 420px; height: 420px; right: -160px; top: -140px; box-shadow: 0 0 0 70px #ffffff0d, 0 0 0 140px #ffffff08; }
