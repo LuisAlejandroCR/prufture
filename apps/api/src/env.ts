@@ -87,6 +87,16 @@ export const env = {
       .filter(Boolean);
   },
 
+  // App user ids of the programme's staff: they review the real reports on /coordinator/*. Enrolment
+  // admins count too. Any other coordinator_pro subscriber gets a sample inbox (coordinator-sample.ts).
+  get programmeStaffAppUserIds(): string[] {
+    const staff = (process.env.PROGRAMME_STAFF_APP_USER_IDS ?? "")
+      .split(",")
+      .map((s: string) => s.trim())
+      .filter(Boolean);
+    return [...new Set([...staff, ...this.personhoodAdminAppUserIds])];
+  },
+
   // RevenueCat entitlement check: the secret key never reaches the client.
   get revenuecatSecretKey(): string {
     return process.env.REVENUECAT_SECRET_KEY ?? "";

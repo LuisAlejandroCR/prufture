@@ -21,7 +21,7 @@ type ListState =
   | { kind: "loading" }
   | { kind: "locked" }
   | { kind: "unavailable" }
-  | { kind: "ready"; rows: CoordinatorReport[] };
+  | { kind: "ready"; rows: CoordinatorReport[]; sample: boolean };
 
 export default function CoordinatorScreen() {
   const router = useRouter();
@@ -38,7 +38,7 @@ export default function CoordinatorScreen() {
       return;
     }
     const result = await fetchCoordinatorReports(API_URL, id.data);
-    setList(result.kind === "ok" ? { kind: "ready", rows: result.data } : { kind: result.kind });
+    setList(result.kind === "ok" ? { kind: "ready", ...result.data } : { kind: result.kind });
   }, []);
 
   // Re-check on focus so returning from the paywall picks up a new purchase.
@@ -65,7 +65,7 @@ export default function CoordinatorScreen() {
     if (result.kind === "ok") {
       setList((prev) =>
         prev.kind === "ready"
-          ? { kind: "ready", rows: prev.rows.map((r) => (r.proofHash === row.proofHash ? result.data : r)) }
+          ? { ...prev, rows: prev.rows.map((r) => (r.proofHash === row.proofHash ? result.data : r)) }
           : prev,
       );
       return;
@@ -171,6 +171,12 @@ function ReportList({
   const s = coordinatorSummary(list.rows);
   return (
     <View style={{ gap: space.md }}>
+      {list.sample ? (
+        <Notice tone="info">
+          Sample reports. Your programme's reports appear here once the programme team adds your
+          account. Reviews you make here only change this sample.
+        </Notice>
+      ) : null}
       <Card>
         <View style={styles.stats}>
           <Stat value={s.counts.pending} label="To review" />
@@ -183,7 +189,9 @@ function ReportList({
           </Text>
         ) : null}
       </Card>
-      <SecondaryButton label="Email summary" icon="report" onPress={() => onEmail(list.rows)} disabled={list.rows.length === 0} />
+      {!list.sample ? (
+        <SecondaryButton label="Email summary" icon="report" onPress={() => onEmail(list.rows)} disabled={list.rows.length === 0} />
+      ) : null}
       <Text style={styles.hint}>The full list and the CSV export are on the web dashboard.</Text>
       <SectionLabel>Reports</SectionLabel>
       {list.rows.length === 0 ? (

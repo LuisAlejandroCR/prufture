@@ -87,6 +87,10 @@ services:
       # secret. Off, no report carries a pass and no community confirmation can be reached.
       - key: PERSONHOOD_PROVIDER
         value: semaphore
+      # Programme staff (comma separated app user ids): they review the real reports. Anyone else with
+      # the coordinator plan sees a sample inbox.
+      - key: PROGRAMME_STAFF_APP_USER_IDS
+        sync: false
       # Who may enrol members and start rounds: the dashboard's COORDINATOR_APP_USER_ID (comma
       # separated). Empty closes enrolment.
       - key: PERSONHOOD_ADMIN_APP_USER_IDS

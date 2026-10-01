@@ -35,9 +35,26 @@ function fakeFetch(status: number, body: unknown, seen: { url?: string; init?: R
 test("reports: sends the anonymous app user id and returns the rows", async () => {
   const seen: { url?: string; init?: RequestInit } = {};
   const result = await fetchCoordinatorReports("https://api.test/", "$RCAnonymousID:1", fakeFetch(200, [row], seen));
-  assert.deepEqual(result, { kind: "ok", data: [row] });
+  assert.deepEqual(result, { kind: "ok", data: { rows: [row], sample: false } });
   assert.equal(seen.url, "https://api.test/coordinator/reports");
   assert.equal((seen.init?.headers as Record<string, string>)[APP_USER_HEADER], "$RCAnonymousID:1");
+});
+
+test("a sample inbox (not programme staff) is reported as such, so the screen can label it", async () => {
+  const sampleFetch = (async () =>
+    new Response(JSON.stringify([row]), { status: 200, headers: { "x-prufture-sample": "1" } })) as unknown as typeof fetch;
+  assert.deepEqual(await fetchCoordinatorReports("https://api.test", "u", sampleFetch), {
+    kind: "ok",
+    data: { rows: [row], sample: true },
+  });
+});
+
+test("the screen labels a sample inbox and does not offer to email it", () => {
+  const screen = readFileSync(new URL("../app/coordinator.tsx", import.meta.url), "utf8");
+  assert.match(screen, /list\.sample \?/);
+  assert.match(screen, /Sample reports/);
+  assert.match(screen, /programme team/);
+  assert.match(screen, /!list\.sample \? \(\s*<SecondaryButton label="Email summary"/);
 });
 
 test("402 from the server is locked, whatever the SDK said", async () => {
