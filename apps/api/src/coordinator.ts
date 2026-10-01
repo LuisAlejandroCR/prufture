@@ -58,18 +58,21 @@ export interface CoordinatorRow {
   geohashRegion: string;
   capturedAt: string;
   attestationCount: number;
+  /** Two pass-carrying reports of this task nearby: the public /verify rule (confirmations.ts). */
+  communityConfirmed: boolean;
   reviewStatus: ReviewStatus;
   reviewNote: string;
   reviewedAt: string;
 }
 
-export function toCoordinatorRow(entry: Entry, regionLen: number): CoordinatorRow {
+export function toCoordinatorRow(entry: Entry, regionLen: number, communityConfirmed: boolean): CoordinatorRow {
   return {
     proofHash: entry.payload.proofHash,
     taskId: entry.payload.taskId,
     geohashRegion: entry.payload.geohash.slice(0, regionLen),
     capturedAt: entry.payload.capturedAt,
     attestationCount: entry.attestations.length,
+    communityConfirmed,
     reviewStatus: entry.review?.status ?? "pending",
     reviewNote: entry.review?.note ?? "",
     reviewedAt: entry.review?.reviewedAt ?? "",
@@ -82,6 +85,7 @@ export const CSV_HEADER = [
   "geohashRegion",
   "capturedAt",
   "attestationCount",
+  "communityConfirmed",
   "reviewStatus",
   "reviewNote",
   "reviewedAt",
@@ -99,6 +103,7 @@ export function toCsv(rows: CoordinatorRow[]): string {
         r.geohashRegion,
         r.capturedAt,
         String(r.attestationCount),
+        String(r.communityConfirmed),
         r.reviewStatus,
         r.reviewNote,
         r.reviewedAt,

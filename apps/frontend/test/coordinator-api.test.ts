@@ -6,6 +6,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
   APP_USER_HEADER,
+  COMMUNITY_LABEL,
+  communityState,
   fetchCoordinatorReports,
   recordReview,
   reviewCounts,
@@ -120,4 +122,21 @@ test("the paywall is reached from the coordinator screen, and that screen from M
 test("coordinator and paywall copy keep DESIGN.md rules: no em-dash in UI strings", () => {
   assert.doesNotMatch(strip(coordinator), /—/);
   assert.doesNotMatch(strip(paywall).split("\n").slice(3).join("\n"), /—/);
+});
+
+test("community state comes from the api's rule, never from the on-chain count", () => {
+  assert.equal(communityState({ attestationCount: 1, communityConfirmed: true }), "confirmed");
+  assert.equal(communityState({ attestationCount: 0, communityConfirmed: true }), "confirmed");
+  // One on-chain record is the public record of this proof, not a second report.
+  assert.equal(communityState({ attestationCount: 1, communityConfirmed: false }), "waiting");
+  // An older api without the field never shows a report as confirmed.
+  assert.equal(communityState({ attestationCount: 2 }), "waiting");
+  assert.equal(communityState({ attestationCount: 0 }), "unanchored");
+  assert.equal(COMMUNITY_LABEL.confirmed, "Confirmed by the community");
+});
+
+test("the inbox row shows the community state, not an attestation count as confirmations", () => {
+  const screen = readFileSync(new URL("../app/coordinator.tsx", import.meta.url), "utf8");
+  assert.match(screen, /COMMUNITY_LABEL\[communityState\(row\)\]/);
+  assert.doesNotMatch(screen, /attestationCount === 1 \? "confirmation"/);
 });

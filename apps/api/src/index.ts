@@ -655,13 +655,20 @@ app.post("/coordinator/personhood/epoch", async (c) => {
   return c.json({ epoch: group.epoch + 1 }, 200);
 });
 
+/** The programme's real inbox, each row with the same community-confirmed flag as GET /proofs. */
+function staffRows() {
+  const entries = allProofs();
+  const confirmed = communityConfirmedHashes(entries, REGION_PREFIX_LEN);
+  return entries.map((e) => toCoordinatorRow(e, REGION_PREFIX_LEN, confirmed.has(e.payload.proofHash)));
+}
+
 // coordinator_pro is sold to anyone, so the plan alone never opens the programme's reports.
 app.get("/coordinator/reports", (c) => {
   if (!isProgrammeStaff(c)) {
     c.header(SAMPLE_HEADER, "1");
     return c.json(sampleRows(c.req.header(APP_USER_HEADER)!.trim()));
   }
-  return c.json(allProofs().map((e) => toCoordinatorRow(e, REGION_PREFIX_LEN)));
+  return c.json(staffRows());
 });
 
 app.post("/coordinator/review", async (c) => {
@@ -692,14 +699,15 @@ app.post("/coordinator/review", async (c) => {
   if (!recorded) return c.json({ error: "unknown proofHash" }, 404);
 
   const entry = getProof(proofHash)!;
-  return c.json({ status: "recorded", review: toCoordinatorRow(entry, REGION_PREFIX_LEN) }, 200);
+  const confirmed = communityConfirmed(allProofs(), proofHash, REGION_PREFIX_LEN);
+  return c.json({ status: "recorded", review: toCoordinatorRow(entry, REGION_PREFIX_LEN, confirmed) }, 200);
 });
 
 app.get("/coordinator/export.csv", (c) => {
   const staff = isProgrammeStaff(c);
   const csv = toCsv(
     staff
-      ? allProofs().map((e) => toCoordinatorRow(e, REGION_PREFIX_LEN))
+      ? staffRows()
       : sampleRows(c.req.header(APP_USER_HEADER)!.trim()),
   );
   return new Response(csv, {

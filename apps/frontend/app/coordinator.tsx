@@ -9,6 +9,8 @@ import { useCallback, useState } from "react";
 import { ActivityIndicator, Linking, Platform, Pressable, Share, StyleSheet, Text, TextInput, View } from "react-native";
 import { BackLink, Card, Notice, PrimaryButton, Screen, ScreenTitle, SecondaryButton, SectionLabel } from "../src/components/ui";
 import {
+  COMMUNITY_LABEL,
+  communityState,
   fetchCoordinatorReports,
   joinProgramme,
   recordReview,
@@ -323,8 +325,7 @@ function ReviewRow({
       <View style={{ gap: space.xs }}>
         <Text style={styles.rowTitle}>{title}</Text>
         <Text style={styles.rowMeta}>
-          {when} · area {row.geohashRegion} · {row.attestationCount}{" "}
-          {row.attestationCount === 1 ? "confirmation" : "confirmations"}
+          {when} · area {row.geohashRegion} · {COMMUNITY_LABEL[communityState(row)]}
         </Text>
         <Text style={[styles.rowStatus, row.reviewStatus !== "pending" && { color: color.text }]}>
           {STATUS_LABEL[row.reviewStatus]}

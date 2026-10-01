@@ -10,11 +10,34 @@ export interface CoordinatorReport {
   taskId: string;
   geohashRegion: string;
   capturedAt: string;
+  /** On-chain records of this proof. One relayer anchors each proof once, so this is 0 or 1. */
   attestationCount: number;
+  /**
+   * Two pass-carrying reports of this task nearby: the rule of the public page and the dashboard.
+   * Missing from an older api reads as not confirmed.
+   */
+  communityConfirmed?: boolean;
   reviewStatus: ReviewStatus;
   reviewNote: string;
   reviewedAt: string;
 }
+
+export type CommunityState = "confirmed" | "waiting" | "unanchored";
+
+/**
+ * Where a report stands with the community, from the api's own rule. Never inferred from the
+ * on-chain count, which is a public record of the proof, not a second community report.
+ */
+export function communityState(row: Pick<CoordinatorReport, "attestationCount" | "communityConfirmed">): CommunityState {
+  if (row.communityConfirmed === true) return "confirmed";
+  return row.attestationCount >= 1 ? "waiting" : "unanchored";
+}
+
+export const COMMUNITY_LABEL: Record<CommunityState, string> = {
+  confirmed: "Confirmed by the community",
+  waiting: "Waiting for a second community report",
+  unanchored: "Not on the public record yet",
+};
 
 /**
  * `locked`: the server says there is no active plan (402), even if the SDK disagrees.
