@@ -7,9 +7,8 @@ import { qrPath } from "../lib/qr";
 import { ScrollFilms } from "./ScrollFilms";
 import { HeroPhone } from "./HeroPhone";
 
-const SAMPLE_HASH =
-  process.env.NEXT_PUBLIC_SAMPLE_HASH ??
-  "992f8d6232210e99a6ed60a9c23dc22b3a304cd0c0d13bbdecf16f3c573d5d75";
+// Goes through /verify/sample, which opens a report the store holds right now (lib/sample.ts).
+const SAMPLE_REPORT_HREF = "/verify/sample";
 
 const ANDROID_BUILD_URL =
   process.env.NEXT_PUBLIC_ANDROID_BUILD_URL ??
@@ -65,7 +64,7 @@ export default function Home() {
       <nav className="landing-nav" aria-label="Primary navigation">
         <Link className="brand-link" href="/"><Mark /></Link>
         <div className="nav-links"><a href="#how">How it works</a><a href="#privacy">Privacy</a><Link href="/dashboard">Dashboard</Link></div>
-        <Link className="nav-action" href={`/verify/${SAMPLE_HASH}`}>View a report</Link>
+        <Link className="nav-action" href={SAMPLE_REPORT_HREF}>View a report</Link>
       </nav>
 
       <section className="landing-hero">
@@ -75,7 +74,7 @@ export default function Home() {
           <h1>Proof from the field.<br /><em>Ready for the world.</em></h1>
           <p className="hero-lede">Communities document completed work without signal, accounts, or personal data. Prufture keeps every report clear, private, and ready to verify.</p>
           <div className="hero-actions">
-            <Link className="landing-btn landing-btn-primary" href={`/verify/${SAMPLE_HASH}`}>Explore a real report <ArrowIcon /></Link>
+            <Link className="landing-btn landing-btn-primary" href={SAMPLE_REPORT_HREF}>Explore a real report <ArrowIcon /></Link>
             <a className="landing-btn landing-btn-ghost" href="#how">See how it works</a>
           </div>
           <div className="trust-row" aria-label="Product qualities"><span><CheckIcon /> Offline first</span><span><CheckIcon /> No account</span><span><CheckIcon /> Publicly checkable</span></div>
@@ -122,11 +121,11 @@ export default function Home() {
       </section>
 
       <section className="try-section" id="try">
-        <div className="try-copy"><div className="section-index">05 / TRY PRUFTURE</div><h2>See the full journey.<br /><em>Then take it with you.</em></h2><p>Explore a sample public report, open the programme dashboard, or install the Android preview. The prototype is open and honest about what is live today.</p><div className="try-links"><Link className="landing-btn landing-btn-primary" href={`/verify/${SAMPLE_HASH}`}>Open sample report <ArrowIcon /></Link><Link className="landing-btn landing-btn-ghost" href="/dashboard">View dashboard</Link></div></div>
+        <div className="try-copy"><div className="section-index">05 / TRY PRUFTURE</div><h2>See the full journey.<br /><em>Then take it with you.</em></h2><p>Explore a sample public report, open the programme dashboard, or install the Android preview. The prototype is open and honest about what is live today.</p><div className="try-links"><Link className="landing-btn landing-btn-primary" href={SAMPLE_REPORT_HREF}>Open sample report <ArrowIcon /></Link><Link className="landing-btn landing-btn-ghost" href="/dashboard">View dashboard</Link></div></div>
         <a className="download-card" href={ANDROID_BUILD_URL} target="_blank" rel="noreferrer noopener"><svg viewBox={`0 0 ${size} ${size}`} role="img" aria-label="QR code to install the Android preview"><rect width={size} height={size} fill="#ffffff" /><path d={path} fill="#1c1c1e" /></svg><span><small>ANDROID PREVIEW</small><strong>Scan to install</strong><em>No store or account required</em></span><ArrowIcon /></a>
       </section>
 
-      <section className="closing-section"><Mark compact /><p>Evidence should travel farther than connectivity.</p><h2>Make every completed task<br /><em>visible, verifiable, and human.</em></h2><Link className="landing-btn landing-btn-white" href={`/verify/${SAMPLE_HASH}`}>Explore Prufture <ArrowIcon /></Link></section>
+      <section className="closing-section"><Mark compact /><p>Evidence should travel farther than connectivity.</p><h2>Make every completed task<br /><em>visible, verifiable, and human.</em></h2><Link className="landing-btn landing-btn-white" href={SAMPLE_REPORT_HREF}>Explore Prufture <ArrowIcon /></Link></section>
 
       <footer className="landing-footer"><div><Mark /><p>An open prototype for community field reporting.</p></div><div className="footer-links"><Link href="/dashboard">Dashboard</Link><Link href="/support">Support</Link><Link href="/privacy">Privacy</Link></div><p className="footer-note">Built for a hackathon. Not a UNICEF product or endorsement.</p></footer>
     </main>

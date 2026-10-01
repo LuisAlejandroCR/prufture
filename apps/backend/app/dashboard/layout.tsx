@@ -10,6 +10,8 @@ import { Sidebar } from "./Sidebar";
 export const metadata = {
   title: { template: "%s · Prufture dashboard", default: "Overview · Prufture dashboard" },
   description: "Programme coverage and report review. Region level only, no personal data.",
+  // The workspace can run open (no staff keys); it is never meant for search results.
+  robots: { index: false, follow: false },
 };
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
