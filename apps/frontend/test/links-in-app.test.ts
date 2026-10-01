@@ -36,9 +36,12 @@ test("no screen hands a web link to the system browser", () => {
 });
 
 test("the support contact links are exact", () => {
-  assert.equal(SUPPORT_WHATSAPP, "+573013935156");
+  // A WhatsApp username, not a phone number: the number is not published.
+  assert.equal(SUPPORT_WHATSAPP, "@aleo._.o");
   assert.equal(SUPPORT_EMAIL, "luisalejandrocardenasr@gmail.com");
-  assert.equal(whatsappUrl(), "https://wa.me/573013935156");
+  assert.equal(whatsappUrl(), "https://wa.me/@aleo._.o");
+  assert.equal(whatsappUrl("@AleO._.O"), "https://wa.me/@aleo._.o", "usernames are lowercase");
+  // A number still works, digits only.
   assert.equal(whatsappUrl("+57 301 393 5156", "Hi"), "https://wa.me/573013935156?text=Hi");
   assert.equal(mailtoUrl(), "mailto:luisalejandrocardenasr@gmail.com?subject=Prufture%20support");
 });
