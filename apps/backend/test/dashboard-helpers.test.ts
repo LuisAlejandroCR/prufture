@@ -17,17 +17,20 @@ import {
   relativeDay,
   reportsHref,
   sortReports,
+  reviewStatus,
   statusBreakdown,
 } from "../lib/dashboard.js";
 import type { ProofSummary } from "../lib/api.js";
 
 const NOW = Date.parse("2026-09-29T12:00:00Z");
-const p = (capturedAt: string, attestationCount = 0): ProofSummary => ({
-  proofHash: capturedAt + attestationCount,
+// level: 0 = not anchored, 1 = anchored, 2 = anchored and community-confirmed.
+const p = (capturedAt: string, level = 0): ProofSummary => ({
+  proofHash: capturedAt + level,
   taskId: "water-pump-repair",
   geohashRegion: "6gkzw",
   capturedAt,
-  attestationCount,
+  attestationCount: Math.min(level, 1),
+  communityConfirmed: level >= 2,
 });
 
 test("statusBreakdown: fixed order, every status present, counts sum to the input", () => {
@@ -35,6 +38,20 @@ test("statusBreakdown: fixed order, every status present, counts sum to the inpu
   assert.deepEqual(rows.map((r) => r.status), ["confirmed", "needs-another", "ready", "attention"]);
   assert.equal(rows.find((r) => r.status === "confirmed")?.count, 2);
   assert.equal(rows.reduce((n, r) => n + r.count, 0), 3);
+});
+
+test("reviewStatus: Confirmed is the community rule from the api, never the on-chain count", () => {
+  const fresh = new Date().toISOString();
+  const base = { proofHash: "x", taskId: "water-pump-repair", geohashRegion: "6gkzw", capturedAt: fresh };
+  assert.equal(reviewStatus({ ...base, attestationCount: 1, communityConfirmed: true }), "confirmed");
+  // Confirmed by the community even while the relayer has not anchored it yet.
+  assert.equal(reviewStatus({ ...base, attestationCount: 0, communityConfirmed: true }), "confirmed");
+  // The old rule (two on-chain records) no longer means confirmed.
+  assert.equal(reviewStatus({ ...base, attestationCount: 2, communityConfirmed: false }), "needs-another");
+  // An older api without the field never shows a report as confirmed.
+  assert.equal(reviewStatus({ ...base, attestationCount: 2 }), "needs-another");
+  assert.equal(reviewStatus({ ...base, attestationCount: 0 }), "ready");
+  assert.equal(reviewStatus({ ...base, capturedAt: "2026-01-01T00:00:00Z", attestationCount: 0 }), "attention");
 });
 
 test("dailyCounts: zero-filled, oldest first, ends today, ignores out-of-range and bad dates", () => {
@@ -71,7 +88,7 @@ test("sortReports: oldest keeps bad dates last; status puts attention first", ()
   // 2026-09-01 with no confirmation is stale ("attention"); the confirmed one ranks last.
   const byStatus = sortReports(input, "status");
   assert.equal(byStatus[0].capturedAt, "2026-09-01T00:00:00Z");
-  assert.equal(byStatus[byStatus.length - 1].attestationCount, 2);
+  assert.equal(byStatus[byStatus.length - 1].communityConfirmed, true);
 });
 
 test("parseReportFilters: keeps valid values, drops unknown status, sort and bad dates", () => {
@@ -93,9 +110,9 @@ test("reportsHref: round-trips through parseReportFilters and omits defaults", (
 
 test("applyReportFilters: status, programme, search, inclusive dates, then sort", () => {
   const list: ProofSummary[] = [
-    { proofHash: "a", taskId: "water-pump-repair", geohashRegion: "6gkzw", capturedAt: "2026-09-10T08:00:00Z", attestationCount: 2 },
-    { proofHash: "b", taskId: "solar-panel-install", geohashRegion: "d2g6f", capturedAt: "2026-09-12T08:00:00Z", attestationCount: 2 },
-    { proofHash: "c", taskId: "latrine-construction", geohashRegion: "6gkzw", capturedAt: "2026-09-14T08:00:00Z", attestationCount: 2 },
+    { proofHash: "a", taskId: "water-pump-repair", geohashRegion: "6gkzw", capturedAt: "2026-09-10T08:00:00Z", attestationCount: 1, communityConfirmed: true },
+    { proofHash: "b", taskId: "solar-panel-install", geohashRegion: "d2g6f", capturedAt: "2026-09-12T08:00:00Z", attestationCount: 1, communityConfirmed: true },
+    { proofHash: "c", taskId: "latrine-construction", geohashRegion: "6gkzw", capturedAt: "2026-09-14T08:00:00Z", attestationCount: 1, communityConfirmed: true },
     { proofHash: "d", taskId: "water-pump-repair", geohashRegion: "6gkzm", capturedAt: "2026-09-16T08:00:00Z", attestationCount: 1 },
   ];
   assert.deepEqual(applyReportFilters(list, {}).map((p) => p.proofHash), ["d", "c", "b", "a"]);

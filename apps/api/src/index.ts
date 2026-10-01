@@ -31,7 +31,7 @@ import {
   upsertProof,
 } from "./store.js";
 import { attestOnce } from "./relayer.js";
-import { taskReports } from "./confirmations.js";
+import { communityConfirmed, communityConfirmedHashes, taskReports } from "./confirmations.js";
 import {
   checkLivenessVerdict,
   createLivenessSession,
@@ -563,6 +563,8 @@ app.get("/proof/:hash", (c) => {
       typeof entry.verifiedPerson === "boolean" ? entry.verifiedPersonDegraded === true : null,
     // Additive: "verified" once a group-membership proof was accepted for this report, else null.
     membership: entry.membership ?? null,
+    // Additive: two pass-carrying reports of this task nearby (@proof/core isCommunityConfirmed).
+    communityConfirmed: communityConfirmed(allProofs(), entry.payload.proofHash, REGION_PREFIX_LEN),
   });
 });
 
@@ -574,17 +576,21 @@ app.get("/proof/:hash/confirmations", (c) => {
   return c.json({ reports });
 });
 
-app.get("/proofs", (c) =>
-  c.json(
-    allProofs().map((e) => ({
+app.get("/proofs", (c) => {
+  const entries = allProofs();
+  // Additive: the dashboard's "Confirmed" uses the same community rule as the public /verify page.
+  const confirmed = communityConfirmedHashes(entries, REGION_PREFIX_LEN);
+  return c.json(
+    entries.map((e) => ({
       proofHash: e.payload.proofHash,
       taskId: e.payload.taskId,
       geohashRegion: e.payload.geohash.slice(0, REGION_PREFIX_LEN),
       capturedAt: e.payload.capturedAt,
       attestationCount: e.attestations.length,
+      communityConfirmed: confirmed.has(e.payload.proofHash),
     })),
-  ),
-);
+  );
+});
 
 // Coordinator surface: requires an active coordinator_pro entitlement, checked server-side on every
 // request. Adds review state only — never a reporter identity, a

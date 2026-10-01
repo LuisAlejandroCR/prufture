@@ -29,6 +29,8 @@ export interface ProofView {
   verifiedPersonDegraded: boolean | null;
   /** Programme pass (Semaphore group membership). "verified" once accepted, else null. */
   membership: "verified" | null;
+  /** Two pass-carrying reports of this task nearby (the /verify rule). Missing from an older api reads as false. */
+  communityConfirmed: boolean;
 }
 
 export interface ProofSummary {
@@ -36,7 +38,14 @@ export interface ProofSummary {
   taskId: string;
   geohashRegion: string;
   capturedAt: string;
+  /** On-chain records of this proof. One relayer anchors each proof once, so this is 0 or 1. */
   attestationCount: number;
+  /**
+   * Two pass-carrying reports of this task nearby: the same rule as the public /verify page,
+   * computed by the api. Missing (an older api) reads as false, so nothing is ever shown as
+   * confirmed without it.
+   */
+  communityConfirmed?: boolean;
 }
 
 export type ProofResult =
@@ -56,6 +65,7 @@ interface RawProof {
   verifiedPerson?: unknown;
   verifiedPersonDegraded?: unknown;
   membership?: unknown;
+  communityConfirmed?: unknown;
 }
 
 export function toRegion(geohash: string | undefined): string {
@@ -86,6 +96,7 @@ export async function fetchProof(hash: string): Promise<ProofResult> {
         verifiedPersonDegraded:
           typeof raw.verifiedPersonDegraded === "boolean" ? raw.verifiedPersonDegraded : null,
         membership: raw.membership === "verified" ? "verified" : null,
+        communityConfirmed: raw.communityConfirmed === true,
       },
     };
   } catch {
@@ -108,7 +119,9 @@ export async function fetchProofs(): Promise<{ proofs: ProofSummary[]; degraded:
   try {
     const r = await fetch(`${BASE}/proofs`, { cache: "no-store" });
     if (!r.ok) return { proofs: [], degraded: true };
-    return { proofs: (await r.json()) as ProofSummary[], degraded: false };
+    const rows = (await r.json()) as ProofSummary[];
+    // Normalise to a strict boolean: only an explicit true from the api means confirmed.
+    return { proofs: rows.map((p) => ({ ...p, communityConfirmed: p.communityConfirmed === true })), degraded: false };
   } catch {
     return { proofs: [], degraded: true };
   }

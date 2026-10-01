@@ -89,6 +89,16 @@ test("fetchProofs: non-ok and throw both degrade to empty + degraded flag", asyn
     const okr = await fetchProofs();
     assert.equal(okr.degraded, false);
     assert.equal(okr.proofs.length, 1);
+    // An api without the field, or a non-boolean value, never reads as confirmed.
+    assert.equal(okr.proofs[0].communityConfirmed, false);
+    stub(() => ({
+      status: 200,
+      json: [
+        { proofHash: "p", taskId: "t", geohashRegion: "9q8yy", capturedAt: "2026-09-07", attestationCount: 1, communityConfirmed: true },
+        { proofHash: "q", taskId: "t", geohashRegion: "9q8yy", capturedAt: "2026-09-07", attestationCount: 1, communityConfirmed: "true" },
+      ],
+    }));
+    assert.deepEqual((await fetchProofs()).proofs.map((x) => x.communityConfirmed), [true, false]);
   } finally {
     restore();
   }

@@ -4,7 +4,7 @@
 // are two different enrolled members; reports without a pass never count. The same rows give each
 // photo its report's pass and face check (reportChecks). Pure.
 
-import { geohashCenter } from "./geohash";
+import { CONFIRMED_MIN_REPORTS, cellDistanceKm, nearbyPassReportCount } from "@proof/core";
 
 /** One independent field report for the same task, as the api returns it. */
 export interface ConfirmationReport {
@@ -18,49 +18,26 @@ export interface ConfirmationReport {
   verifiedPersonDegraded: boolean | null;
 }
 
-/** A report counts only from within this distance of this report's area (same as the app). */
-export const NEARBY_KM = 5;
-
+// The rule itself lives in @proof/core, shared with the api's dashboard status, so /verify and the
+// dashboard can never disagree on what "Confirmed" means.
+export { NEARBY_KM } from "@proof/core";
 export type Stage = "received" | "waiting" | "confirmed";
 
-const EARTH_KM = 6371;
-
 /** Great-circle distance between two geohash cell centres. null if either is not a geohash. */
-export function regionDistanceKm(a: string, b: string): number | null {
-  const p = geohashCenter(a);
-  const q = geohashCenter(b);
-  if (!p || !q) return null;
-  const rad = (d: number) => (d * Math.PI) / 180;
-  const dLat = rad(q.lat - p.lat);
-  const dLng = rad(q.lng - p.lng);
-  const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(p.lat)) * Math.cos(rad(q.lat)) * Math.sin(dLng / 2) ** 2;
-  return 2 * EARTH_KM * Math.asin(Math.min(1, Math.sqrt(h)));
-}
+export const regionDistanceKm = cellDistanceKm;
 
 /**
  * Pass-confirmed reports near `ownRegion`, this report included when it carries a pass. A report
  * without a pass, or with an unreadable region, never counts.
  */
-export function nearbyReportCount(ownRegion: string, reports: ConfirmationReport[]): number {
-  let n = 0;
-  for (const r of reports) {
-    if (!r.membershipVerified) continue;
-    if (r.own) {
-      n += 1;
-      continue;
-    }
-    const d = regionDistanceKm(ownRegion, r.geohashRegion);
-    if (d !== null && d < NEARBY_KM) n += 1;
-  }
-  return n;
-}
+export const nearbyReportCount: (ownRegion: string, reports: ConfirmationReport[]) => number = nearbyPassReportCount;
 
 /**
  * Confirmed needs two pass-confirmed reports nearby. Without that (or when the confirmations
  * route is unavailable, `nearby === null`) the stage falls back to whether the report is anchored.
  */
 export function stageFor(nearby: number | null, attestationCount: number): Stage {
-  if (nearby !== null && nearby >= 2) return "confirmed";
+  if (nearby !== null && nearby >= CONFIRMED_MIN_REPORTS) return "confirmed";
   return attestationCount >= 1 ? "waiting" : "received";
 }
 

@@ -21,7 +21,7 @@ export default function SettingsPage() {
             <li>Activity, programme grouping, and review status.</li>
             <li>Approximate region only, at most five characters of a geohash.</li>
             <li>An area name from the nearest large city, when one is within 40 km. Broader than the region itself.</li>
-            <li>Capture date and confirmation count.</li>
+            <li>Capture date, review status and whether it is anchored as a public record.</li>
           </ul>
         </article>
 

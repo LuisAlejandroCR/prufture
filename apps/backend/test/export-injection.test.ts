@@ -49,14 +49,14 @@ for (const attack of ATTACKS) {
 test("an ordinary report exports unchanged and still has a header", () => {
   const out = csv([proof("solar-panel-install")]);
   const [head, row] = out.split("\n");
-  assert.equal(head, "activity,programme,approximate_region,area_name,captured_date,review_status,confirmations");
+  assert.equal(head, "activity,programme,approximate_region,area_name,captured_date,review_status,public_record");
   assert.ok(row?.includes("Solar panels installed"), row);
   assert.ok(row?.includes("u4pru"), row);
   assert.ok(!row?.includes("'"), "nothing benign should be quote-prefixed");
 });
 
 test("no rows means header only", () => {
-  assert.equal(csv([]), "activity,programme,approximate_region,area_name,captured_date,review_status,confirmations");
+  assert.equal(csv([]), "activity,programme,approximate_region,area_name,captured_date,review_status,public_record");
 });
 
 test("the area name column names a known city and stays empty otherwise", () => {
