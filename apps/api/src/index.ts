@@ -144,6 +144,11 @@ app.get("/health", (c) =>
     programmePass: personhoodEnabled(),
     // Whether anyone may enrol members (PERSONHOOD_ADMIN_APP_USER_IDS); never who.
     personhoodEnrolment: env.personhoodAdminAppUserIds.length > 0,
+    // Whether PROGRAMME_STAFF_APP_USER_IDS lists anyone; never who. False means only the enrolment
+    // admins see real reports in Coordinator review, and every other subscriber sees the sample.
+    programmeStaff: (process.env.PROGRAMME_STAFF_APP_USER_IDS ?? "").split(",").some((s: string) => s.trim() !== ""),
+    // REQUIRE_EVIDENCE_TOKEN: public writes without the syncing phone's token are refused.
+    strictEvidenceToken: env.requireEvidenceToken,
   }),
 );
 
