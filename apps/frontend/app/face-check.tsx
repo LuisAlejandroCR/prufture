@@ -9,6 +9,7 @@ import { configureLiveness, livenessModuleAvailable, startLivenessCapture } from
 import { announce, note } from "../src/announce";
 import { BackLink, Notice, PrimaryButton, Screen, ScreenTitle, SecondaryButton } from "../src/components/ui";
 import {
+  GET_READY_TIPS,
   loadLivenessPass,
   outcomeCopy,
   passUntilLabel,
@@ -91,6 +92,17 @@ export default function FaceCheckScreen() {
         </Notice>
       ) : null}
 
+      {!copy || copy.retry ? (
+        <View style={styles.tips} accessible accessibilityLabel={`Before you start. ${GET_READY_TIPS.join(" ")}`}>
+          <Text style={styles.tipsTitle}>Before you start</Text>
+          {GET_READY_TIPS.map((tip) => (
+            <Text key={tip} style={styles.text}>
+              {`\u2022 ${tip}`}
+            </Text>
+          ))}
+        </View>
+      ) : null}
+
       <View style={styles.body}>
         <Text style={styles.text}>
           This check asks one question: is a live person holding the phone? It does not identify you
@@ -112,6 +124,8 @@ export default function FaceCheckScreen() {
 
 const styles = StyleSheet.create({
   body: { gap: space.md },
+  tips: { gap: space.xs, marginBottom: space.md },
+  tipsTitle: { ...type.subtitle, color: color.text },
   text: { ...type.body, color: color.text },
   footer: { gap: space.sm },
 });
